@@ -1,6 +1,8 @@
-# Python
+# Python (a local venv for running the hub off-VM, per hub/requirements.txt)
 __pycache__/
 *.pyc
+.venv/
+venv/
 
 # SQLite (hub.db and its WAL/SHM siblings) — runtime data, never checked in
 *.db
@@ -16,6 +18,18 @@ hub/agent/
 
 # Local drift-checker marker (see .claude/settings.json Stop hook)
 .claude/.drift-checked
+
+# Claude Code per-user state. settings.json, agents/ and skills/ are shared
+# and tracked; personal overrides and worktree checkouts are not.
+.claude/settings.local.json
+.claude/worktrees/
+
+# Editor / OS clutter
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
 
 # Ad-hoc session screenshots, not project deliverables
 Claude outputs/
