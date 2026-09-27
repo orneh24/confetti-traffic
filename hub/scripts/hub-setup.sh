@@ -89,7 +89,7 @@ esac
 
 echo
 echo "About to set: ${IP_CIDR} via ${GATEWAY}"
-echo "  DNS:      ${DNS:-none (pervium-update and NTP by name won't work)}"
+echo "  DNS:      ${DNS:-none (pervium-update and NTP by name will not work)}"
 echo "  Hostname: ${NEW_HOSTNAME}"
 printf 'Apply now? [y/N] '
 read -r CONFIRM || CONFIRM=""

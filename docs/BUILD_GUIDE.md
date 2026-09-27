@@ -415,7 +415,7 @@ ssh -i /etc/pervium/id_pervium root@<peer-ip> echo ok
 iperf3 -c <peer-ip> -t 2
 smbclient -N //<peer-ip>/labshare -c 'get probe.bin /dev/null'
 fping -c 5 <peer-ip>
-printf 'EHLO test\r\nQUIT\r\n' | nc -w 3 <peer-ip> 25
+nc <peer-ip> 25          # wait for the 220 line, then type EHLO test, then QUIT
 traceroute <peer-ip>
 ```
 

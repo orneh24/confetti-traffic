@@ -1,9 +1,17 @@
 #!/bin/sh
-# Dev shim for the hand-rolled SMTP conversation `nc -w 5 TARGET PORT` reads.
-# run_smtp_test only checks the banner (first line, "220...") and that a
-# "250"-prefixed line follows somewhere — it never reads past what it pipes
-# in, so a fixed healthy banner + EHLO capability list is enough. Drain
-# stdin first so the writer side of the pipe (run_smtp_test's generator)
-# never sees SIGPIPE before it finishes.
-cat >/dev/null
-printf '220 dev-smtp.local ESMTP\r\n250-dev-smtp.local Hello\r\n250-STARTTLS\r\n250 HELP\r\n'
+# Dev shim for the hand-rolled SMTP conversation `nc -w 5 TARGET PORT`.
+# Behaves like a real server, in order: banner first, then one reply per
+# command. run_smtp_test waits for the 220 banner before it sends EHLO, and
+# for the final "250 " EHLO line before the rest, so a shim that read all of
+# stdin before answering would stall it until the timeout.
+printf '220 dev-smtp.local ESMTP\r\n'
+while IFS= read -r _line; do
+    case "$_line" in
+        EHLO*) printf '250-dev-smtp.local Hello\r\n250-STARTTLS\r\n250 HELP\r\n' ;;
+        MAIL*) printf '250 2.0.0 Ok\r\n' ;;
+        RCPT*) printf '550 Invalid recipient\r\n' ;;
+        RSET*) printf '250 2.0.0 Reset state\r\n' ;;
+        QUIT*) printf '221 2.0.0 Bye\r\n'; exit 0 ;;
+        *)     printf '500 5.5.1 Invalid command\r\n' ;;
+    esac
+done

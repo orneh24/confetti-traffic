@@ -631,29 +631,44 @@ run_smtp_test() {
     _timeout="${SMTP_TIMEOUT:-10}"
     _start_s=$(date +%s)
 
-    # The leading `sleep 1` before writing anything is not padding: anti-spam
-    # "early talker" detection drops clients that speak before reading the
-    # 220 banner, which is exactly the false failure this test must not
-    # cause. Everything from EHLO onward is pipelined deliberately (RFC 2920
-    # permits pipelining once EHLO has succeeded) -- that's what keeps this
-    # near 3s instead of 6s. Both `sleep 1`s stay: they give the server time
-    # to finish writing its full multiline 250- capability list before
-    # anything downstream reads the buffer, and reliably capturing that full
-    # list is this test's entire value.
+    # The client never speaks out of turn. nc writes the server's replies to
+    # a file, and the generator reads that file to wait for each reply
+    # before sending the next command:
     #
-    # `timeout` wraps nc only, not this whole pipeline: the generator here
-    # has nothing but fixed sleeps and printf, so it cannot hang on its own.
-    # If nc exits first (timeout, refusal, RST), the generator gets EPIPE on
-    # its next write, which the trailing `|| true` on the whole assignment
-    # absorbs.
-    _output=$( { sleep 1
-                 printf 'EHLO %s\r\n' "$_helo"
-                 sleep 1
-                 printf 'MAIL FROM:<%s>\r\n' "$_from"
-                 printf 'RCPT TO:<%s>\r\n' "$_rcpt"
-                 printf 'RSET\r\n'
-                 printf 'QUIT\r\n'
-               } | timeout "$_timeout" nc -w 5 "$_target_ip" "$_port" 2>&1 ) || true
+    #   - Wait for the 220 banner before EHLO. A fixed sleep here failed:
+    #     OpenSMTPD looks up the peer's name before greeting, which can take
+    #     several seconds, and a client that talks first is an "early
+    #     talker" -- rejected, so the test failed on a healthy path.
+    #   - Wait for the last EHLO line ("250 ", space not dash), so the full
+    #     capability list is captured. That list is this test's entire value.
+    #   - Then one command at a time, 0.3s apart. No pipelining: OpenSMTPD
+    #     does not offer it and answers a batch with "500 Pipelining not
+    #     supported".
+    #
+    # Every wait is capped at the same _timeout that caps nc, so the
+    # generator cannot outlive the connection by more than that. If nc exits
+    # first (timeout, refusal, RST), the generator's next write gets EPIPE,
+    # which `|| true` absorbs.
+    _smtp_out="/tmp/pervium-smtp.$$"
+    : > "$_smtp_out"
+    _smtp_wait() {   # $1 = regex to wait for in the reply file
+        _w=0
+        while ! grep -qE "$1" "$_smtp_out" 2>/dev/null; do
+            [ "$_w" -ge $(( _timeout * 5 )) ] && return 1
+            sleep 0.2
+            _w=$(( _w + 1 ))
+        done
+    }
+    { _smtp_wait '^220' || exit 0
+      printf 'EHLO %s\r\n' "$_helo"
+      _smtp_wait '^250 ' || exit 0
+      for _cmd in "MAIL FROM:<$_from>" "RCPT TO:<$_rcpt>" "RSET" "QUIT"; do
+          printf '%s\r\n' "$_cmd"
+          sleep 0.3
+      done
+    } | timeout "$_timeout" nc -w 5 "$_target_ip" "$_port" > "$_smtp_out" 2>&1 || true
+    _output=$(cat "$_smtp_out")
+    rm -f "$_smtp_out"
 
     _end_s=$(date +%s)
     _elapsed=$(( _end_s - _start_s ))
