@@ -1,4 +1,4 @@
-# Mesh Probe — Build Guide
+# Mesh Flux — Build Guide
 
 Detail behind each step of the [README quick start](../README.md#quick-start)
 and the `DEPLOYMENT.md` checklist. You build one Alpine base VM, clone it,
@@ -61,7 +61,7 @@ Boot the ISO, log in as `root` (no password) and run `setup-alpine`:
 | Prompt | Answer |
 |---|---|
 | Keyboard layout | your layout |
-| Hostname | `mesh-probe` (each clone renames itself) |
+| Hostname | `mesh-flux` (each clone renames itself) |
 | Network interface | `eth0`, `dhcp` |
 | Root password | anything; the build sets it to `lab123` (see below) |
 | Timezone | `UTC` or your lab's timezone |
@@ -81,7 +81,7 @@ ping -c 2 alpinelinux.org
 ```
 
 The build scripts set the root password to `lab123`. To use your own, run
-the build with `MESH_PROBE_ROOT_PASSWORD=<password>` set.
+the build with `MESH_FLUX_ROOT_PASSWORD=<password>` set.
 
 Now clone the VM twice (hub and node template).
 
@@ -92,7 +92,7 @@ Now clone the VM twice (hub and node template).
 On each clone, run as root:
 
 ```sh
-wget -O- https://github.com/orneh24/mesh-probe/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/mesh-probe-main /root/mesh-probe && sh /root/mesh-probe/install.sh
+wget -O- https://github.com/orneh24/mesh-flux/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/mesh-flux-main /root/mesh-flux && sh /root/mesh-flux/install.sh
 ```
 
 Pick **hub** on one clone and **node** on the other. The build enables the
@@ -113,28 +113,28 @@ restarts networking and starts the hub. To do it by hand instead:
 ```sh
 set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
 rc-service networking restart
-rc-service mesh-probe-hub start
+rc-service mesh-flux-hub start
 ```
 
 Or set `guestinfo.hub.ip` (e.g. `10.0.0.100/24`) and `guestinfo.hub.gateway`
-on the VM and reboot; the `mesh-probe-hub-firstboot` service applies them.
+on the VM and reboot; the `mesh-flux-hub-firstboot` service applies them.
 
 Open `http://<hub-ip>/` to check. Settings live in
-`/opt/mesh-probe-hub/hub.env`; restart the hub after editing it.
+`/opt/mesh-flux-hub/hub.env`; restart the hub after editing it.
 
 A lab normally has one hub, so you don't need to make it a template.
 
 ### 4.2 Node template
 
-The build leaves the node clean: no config, hostname `mesh-probe-template`,
+The build leaves the node clean: no config, hostname `mesh-flux-template`,
 no SSH host keys, no login stamp. Shut it down and convert it to a template:
 
 ```sh
-rm -rf /root/mesh-probe   # optional
+rm -rf /root/mesh-flux   # optional
 poweroff
 ```
 
-Name the template something like `mesh-probe-node-template-v1`.
+Name the template something like `mesh-flux-node-template-v1`.
 
 **Don't run `setup.sh` or answer the login prompt on the template.** That
 writes a config, hostname, SSH host keys and login stamp, and every clone
@@ -154,7 +154,7 @@ would inherit them. Test on the first clone instead.
 ### 5.2 Configure: guestinfo (recommended)
 
 Set the keys on the VM before first boot. On boot, the
-`mesh-probe-firstboot` service runs `setup.sh` with them, and the node
+`mesh-flux-firstboot` service runs `setup.sh` with them, and the node
 configures and registers itself with no console session.
 
 The keys are listed in the [README](../README.md#vmware-guestinfo-keys).
@@ -165,39 +165,39 @@ add one row per key.
 With PowerCLI:
 
 ```powershell
-$vm = Get-VM "mp-site-a"
-$vm | New-AdvancedSetting -Name guestinfo.meshprobe.hub_url -Value "http://10.0.0.100" -Confirm:$false
-$vm | New-AdvancedSetting -Name guestinfo.meshprobe.group   -Value "site-a"            -Confirm:$false
+$vm = Get-VM "mf-site-a"
+$vm | New-AdvancedSetting -Name guestinfo.meshflux.hub_url -Value "http://10.0.0.100" -Confirm:$false
+$vm | New-AdvancedSetting -Name guestinfo.meshflux.group   -Value "site-a"            -Confirm:$false
 ```
 
 To change a key later, use `Get-AdvancedSetting | Set-AdvancedSetting`;
 `New-AdvancedSetting` fails if the key exists. To deploy a whole lab at once,
-use `deploy/Deploy-MeshProbe.ps1` (see `deploy/README.md`).
+use `deploy/Deploy-MeshFlux.ps1` (see `deploy/README.md`).
 
 With govc:
 
 ```sh
-govc vm.change -vm mp-site-a \
-  -e guestinfo.meshprobe.hub_url=http://10.0.0.100 \
-  -e guestinfo.meshprobe.group=site-a
+govc vm.change -vm mf-site-a \
+  -e guestinfo.meshflux.hub_url=http://10.0.0.100 \
+  -e guestinfo.meshflux.group=site-a
 ```
 
-To check from inside the guest: `vmware-rpctool "info-get guestinfo.meshprobe.group"`.
+To check from inside the guest: `vmware-rpctool "info-get guestinfo.meshflux.group"`.
 `No value found` just means the key isn't set.
 
-The first-boot service logs to `/var/log/mesh-probe/firstboot.log`. With no
+The first-boot service logs to `/var/log/mesh-flux/firstboot.log`. With no
 keys set it does nothing, and the login prompt takes over. To run it again:
 
 ```sh
-rm /etc/mesh-probe/.firstboot-done /etc/mesh-probe/config
-rc-service mesh-probe-firstboot start
+rm /etc/mesh-flux/.firstboot-done /etc/mesh-flux/config
+rc-service mesh-flux-firstboot start
 ```
 
 ### 5.3 Configure: at login
 
 Boot the clone and log in. `node-setup.sh` asks
 `Configure this node now? [Y/n]` and runs `setup.sh`, which asks for anything
-not already set. You can also run `/usr/local/bin/mesh-probe/setup.sh`
+not already set. You can also run `/usr/local/bin/mesh-flux/setup.sh`
 yourself at any time.
 
 The prompt appears only in an interactive login on a real terminal, never
@@ -206,11 +206,11 @@ again; `node-setup.sh --force` asks again later.
 
 Each value comes from guestinfo first, then an environment variable, then a
 prompt. `SUBNET` is taken from the DHCP lease before prompting. The hostname
-is `mp-<group>-<ip>` unless you set one.
+is `mf-<group>-<ip>` unless you set one.
 
 ### 5.4 What `setup.sh` does
 
-It writes `/etc/mesh-probe/config`, sets the hostname, starts the services,
+It writes `/etc/mesh-flux/config`, sets the hostname, starts the services,
 adds the cron jobs (every 60 s for tests, every 5 min for registration) and
 registers with the hub. It is safe to re-run: it keeps an existing config.
 
@@ -220,9 +220,9 @@ The node appears on the dashboard within seconds, and results within a
 minute. On the node:
 
 ```sh
-hostname                                   # e.g. mp-site-a-10-1-1-10
+hostname                                   # e.g. mf-site-a-10-1-1-10
 test-status                                # last cycle's results (-f to follow)
-tail -f /var/log/mesh-probe/test-cycle.log
+tail -f /var/log/mesh-flux/test-cycle.log
 ```
 
 ---
@@ -279,11 +279,11 @@ name gets a 400.
 
 ### 6.3 Updating the node scripts
 
-The hub serves `test-cycle.sh` from `/opt/mesh-probe-hub/agent/`. Edit it
+The hub serves `test-cycle.sh` from `/opt/mesh-flux-hub/agent/`. Edit it
 there, and every node picks it up at its next registration (within 5
 minutes). A node only accepts the new version if its checksum matches, it
 passes `sh -n`, and a real test cycle succeeds. Otherwise it keeps the old
-one. Watch `/var/log/mesh-probe/register.log`. To stop a node updating, set
+one. Watch `/var/log/mesh-flux/register.log`. To stop a node updating, set
 `AGENT_AUTOUPDATE=false` in its config.
 
 Only `test-cycle.sh` updates itself. Copy changes to `register.sh`,
@@ -311,7 +311,7 @@ python3 -c "import socket; socket.socket(socket.AF_INET, socket.SOCK_DGRAM).send
 curl -s 'http://localhost/api/syslog?minutes=5'
 ```
 
-You should get one row with host `SW-TEST`. If `/var/log/mesh-probe-hub.log`
+You should get one row with host `SW-TEST`. If `/var/log/mesh-flux-hub.log`
 doesn't show `[syslog] listening on ...:514`, the port was taken or the hub
 isn't running as root. The hub keeps collecting results either way.
 
@@ -351,7 +351,7 @@ curl -v http://<hub-ip>/ 2>&1 | head -20
 ```
 
 Usual causes: wrong port group, no route between the subnets, or the hub
-isn't running (`rc-service mesh-probe-hub status` on the hub).
+isn't running (`rc-service mesh-flux-hub status` on the hub).
 
 ### No DHCP address
 
@@ -369,9 +369,9 @@ The zero-touch path can't ask, so it leaves the node unconfigured.
 Run a cycle by hand, or test one service against a peer:
 
 ```sh
-/usr/local/bin/mesh-probe/test-cycle.sh
+/usr/local/bin/mesh-flux/test-cycle.sh
 curl -s http://<peer-ip>/
-ssh -i /etc/mesh-probe/id_mesh_probe root@<peer-ip> echo ok
+ssh -i /etc/mesh-flux/id_mesh_flux root@<peer-ip> echo ok
 iperf3 -c <peer-ip> -t 2
 smbclient -N //<peer-ip>/labshare -c 'get probe.bin /dev/null'
 fping -c 5 <peer-ip>
@@ -380,7 +380,7 @@ traceroute <peer-ip>
 ```
 
 Usual causes: the service isn't running on the peer (dropbear,
-`mesh-probe-httpd`, `iperf3`, `mesh-probe-smbd`, `mesh-probe-smtpd`), or a
+`mesh-flux-httpd`, `iperf3`, `mesh-flux-smbd`, `mesh-flux-smtpd`), or a
 firewall on the path blocks the port.
 
 ### Dashboard doesn't load
@@ -388,13 +388,13 @@ firewall on the path blocks the port.
 On the hub:
 
 ```sh
-rc-service mesh-probe-hub status
-tail -50 /var/log/mesh-probe-hub.log
+rc-service mesh-flux-hub status
+tail -50 /var/log/mesh-flux-hub.log
 netstat -tlnp | grep ':80 '
 ```
 
 To see startup errors directly, stop the service and run it in the
-foreground: `rc-service mesh-probe-hub stop; cd /opt/mesh-probe-hub && sh run.sh`.
+foreground: `rc-service mesh-flux-hub stop; cd /opt/mesh-flux-hub && sh run.sh`.
 
 If the log warns that waitress is missing, the hub fell back to Flask's
 single-threaded server and will be slow. Install it with
@@ -435,7 +435,7 @@ Then copy from your workstation with `scp -O`. The `-O` matters: modern scp
 uses SFTP by default, and dropbear has no SFTP server.
 
 ```sh
-scp -O -r mesh-probe root@<vm-ip>:/root/
+scp -O -r mesh-flux root@<vm-ip>:/root/
 ```
 
-Then run `sh /root/mesh-probe/install.sh` on the VM.
+Then run `sh /root/mesh-flux/install.sh` on the VM.

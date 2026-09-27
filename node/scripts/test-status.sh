@@ -9,8 +9,8 @@
 
 set -u
 
-SNAPSHOT_FILE="${SNAPSHOT_FILE:-/run/mesh-probe/last-cycle.txt}"
-LOG_FILE="${LOG_FILE:-/var/log/mesh-probe/test-cycle.log}"
+SNAPSHOT_FILE="${SNAPSHOT_FILE:-/run/mesh-flux/last-cycle.txt}"
+LOG_FILE="${LOG_FILE:-/var/log/mesh-flux/test-cycle.log}"
 
 usage() {
     cat <<EOF
@@ -28,7 +28,7 @@ show_last() {
         cat "$SNAPSHOT_FILE"
     else
         echo "No test cycle has completed yet (no $SNAPSHOT_FILE)."
-        echo "Check that crond is running and /etc/mesh-probe/config is set up."
+        echo "Check that crond is running and /etc/mesh-flux/config is set up."
     fi
 }
 

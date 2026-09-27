@@ -1,4 +1,4 @@
-# Mesh Probe — Roadmap and Open Items
+# Mesh Flux — Roadmap and Open Items
 
 What is designed but not built, what is still unverified, and what was
 decided against. History lives in git; architecture in `CLAUDE.md`.
@@ -44,9 +44,3 @@ Nothing here works today. Checked against the code 2026-09-27.
 - **An IP→device map for syslog.** Where a device's syslog hostname differs
   from a node's group, the filtered link comes back empty (see `CLAUDE.md`,
   Syslog). Fixing that needs device identity, which is out of scope here.
-
-## Ideas
-
-- **Rename to `mesh-flux`**, to pair with `gp-flux`. Checked 2026-09-23: name
-  unused on GitHub, PyPI, npm and Alpine. Cost: the scripted rename again, a
-  second GitHub repo rename, and renaming guestinfo keys on deployed VMs.

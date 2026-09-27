@@ -8,7 +8,7 @@
 // Same key as the dashboard, so one choice covers both pages. Set before
 // first paint so a saved light choice doesn't flash dark on load.
 try {
-    if (localStorage.getItem('mesh-probe-theme') === 'light') {
+    if (localStorage.getItem('mesh-flux-theme') === 'light') {
         document.documentElement.setAttribute('data-theme', 'light');
     }
 } catch (e) {}
@@ -17,7 +17,7 @@ function toggleTheme() {
     var light = root.getAttribute('data-theme') !== 'light';
     if (light) root.setAttribute('data-theme', 'light');
     else root.removeAttribute('data-theme');
-    try { localStorage.setItem('mesh-probe-theme', light ? 'light' : 'dark'); } catch (e) {}
+    try { localStorage.setItem('mesh-flux-theme', light ? 'light' : 'dark'); } catch (e) {}
     syncThemeButton();
 }
 function syncThemeButton() {

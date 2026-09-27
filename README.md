@@ -1,4 +1,4 @@
-# Mesh Probe
+# Mesh Flux
 
 > **AI disclaimer:** This project was created using [Claude Code](https://claude.com/claude-code).
 
@@ -23,7 +23,7 @@ this as root. It downloads the repo and starts `install.sh`, which asks
 whether the VM becomes the hub or a node:
 
 ```sh
-wget -O- https://github.com/orneh24/mesh-probe/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/mesh-probe-main /root/mesh-probe && sh /root/mesh-probe/install.sh
+wget -O- https://github.com/orneh24/mesh-flux/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/mesh-flux-main /root/mesh-flux && sh /root/mesh-flux/install.sh
 ```
 
 **2. Hub** (the clone where you picked *hub*). Log out and back in:
@@ -33,7 +33,7 @@ hub. Or run the same steps by hand:
 ```sh
 set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
 rc-service networking restart
-rc-service mesh-probe-hub start
+rc-service mesh-flux-hub start
 ```
 
 Check that `http://<hub-ip>/` loads.
@@ -46,11 +46,11 @@ clone instead.
 **4. Nodes.** Clone the template once per network segment and put each clone
 on its segment's port group. Then either:
 
-- set `guestinfo.meshprobe.hub_url` and `guestinfo.meshprobe.group` on the
+- set `guestinfo.meshflux.hub_url` and `guestinfo.meshflux.group` on the
   clone before first boot, and it configures itself, or
 - boot it, log in, and answer the `node-setup.sh` prompt.
 
-The hostname is set automatically (`mp-<group>-<ip>`). Check that the node
+The hostname is set automatically (`mf-<group>-<ip>`). Check that the node
 appears at `http://<hub-ip>/endpoints`.
 
 `install.sh` refuses to run on a VM that is already a hub or node, because
@@ -59,9 +59,9 @@ re-running a build wipes its config or the hub's database. Pass `hub` or
 
 **Single VM, no cloning.** Run the step 1 command on a fresh Alpine VM,
 then finish in place: for a hub, step 2; for a node, log out and back in and
-answer the `node-setup.sh` prompt (or run `/usr/local/bin/mesh-probe/setup.sh`).
+answer the `node-setup.sh` prompt (or run `/usr/local/bin/mesh-flux/setup.sh`).
 Ignore the node build's "convert to template" message. Fresh VM only: an
-existing `/root/mesh-probe` makes the `mv` put the new copy inside it.
+existing `/root/mesh-flux` makes the `mv` put the new copy inside it.
 
 ### VMware guestinfo keys
 
@@ -71,12 +71,12 @@ two marked keys are required.
 
 | Key | Role | Example | Notes |
 |---|---|---|---|
-| `guestinfo.meshprobe.hub_url` | node | `http://10.0.0.100` | **required** |
-| `guestinfo.meshprobe.group` | node | `site-a` | **required**; groups nodes on the dashboard |
-| `guestinfo.meshprobe.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
-| `guestinfo.meshprobe.hostname` | node | `mp-site-a` | `mp-<group>-<ip>` if unset; must be unique |
-| `guestinfo.meshprobe.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
-| `guestinfo.meshprobe.dns_query` | node | `example.com` | name the DNS test looks up |
+| `guestinfo.meshflux.hub_url` | node | `http://10.0.0.100` | **required** |
+| `guestinfo.meshflux.group` | node | `site-a` | **required**; groups nodes on the dashboard |
+| `guestinfo.meshflux.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
+| `guestinfo.meshflux.hostname` | node | `mf-site-a` | `mf-<group>-<ip>` if unset; must be unique |
+| `guestinfo.meshflux.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
+| `guestinfo.meshflux.dns_query` | node | `example.com` | name the DNS test looks up |
 | `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `hub-setup.sh` asks at login |
 | `guestinfo.hub.gateway` | hub | `10.0.0.1` | |
 
