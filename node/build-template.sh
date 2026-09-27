@@ -81,10 +81,10 @@ apk_step() {
 }
 
 log "Updating package index"
-apk_step apk update
+apk_step apk update --no-progress
 
 log "Installing packages"
-apk_step apk add --no-cache \
+apk_step apk add --no-cache --no-progress \
     curl \
     jq \
     traceroute \
@@ -163,7 +163,7 @@ log "Packages installed"
 # test will fail everywhere with a confusing "invalid option" rather than a
 # real result.
 if ! ping -M do -c 1 -s 1 127.0.0.1 >/dev/null 2>&1; then
-    log "WARNING: ping does not support -M do — PMTU tests will not work"
+    log "WARNING: ping does not support -M do -- PMTU tests will not work"
     log "         check that iputils-ping installed over BusyBox's /bin/ping"
 fi
 
@@ -172,16 +172,16 @@ fi
 # with a confusing "not found" rather than a real result, but it should not
 # abort an otherwise-good template build.
 if ! command -v smbclient >/dev/null 2>&1 || ! smbclient --version >/dev/null 2>&1; then
-    log "WARNING: smbclient missing or not runnable — smb tests will not work"
+    log "WARNING: smbclient missing or not runnable -- smb tests will not work"
 fi
 if [ ! -x /usr/sbin/smbd ] || ! /usr/sbin/smbd -b >/dev/null 2>&1; then
-    log "WARNING: smbd missing or not runnable — smb server will not start"
+    log "WARNING: smbd missing or not runnable -- smb server will not start"
 fi
 
 # fping has no BusyBox-replacement gotcha to check for (unlike ping) — a
 # simple presence check is enough to catch a broken install.
 if ! command -v fping >/dev/null 2>&1; then
-    log "WARNING: fping missing — loss/jitter tests will not work"
+    log "WARNING: fping missing -- loss/jitter tests will not work"
 fi
 
 # Enable open-vm-tools on boot
@@ -388,14 +388,14 @@ cp -f "${SCRIPT_DIR}/services/crontab" "$CONFIG_DIR/crontab"
 log "Validating installed smtpd.conf"
 
 if ! /usr/sbin/smtpd -n -f /etc/smtpd/smtpd.conf >/dev/null 2>&1; then
-    log "WARNING: /etc/smtpd/smtpd.conf failed to parse (smtpd -n) — SMTP"
+    log "WARNING: /etc/smtpd/smtpd.conf failed to parse (smtpd -n) -- SMTP"
     log "         tests will not work until this is fixed. Check the"
     log "         resource-cap and match/action directive names against"
     log "         'man smtpd.conf' for the OpenSMTPD version installed."
 fi
 
 if ! command -v nc >/dev/null 2>&1; then
-    log "WARNING: nc missing — run_smtp_test() has no client, SMTP tests"
+    log "WARNING: nc missing -- run_smtp_test() has no client, SMTP tests"
     log "         will not work (nc should come from busybox-extras)"
 fi
 
@@ -404,7 +404,7 @@ fi
 # this file is allowed to have is the "sink" mda action, which is not a
 # relay — this specifically looks for a relay delivery method.
 if grep -qE '^[[:space:]]*action[[:space:]]+.*[[:space:]]relay' /etc/smtpd/smtpd.conf; then
-    log "WARNING: /etc/smtpd/smtpd.conf contains a 'relay' action —"
+    log "WARNING: /etc/smtpd/smtpd.conf contains a 'relay' action --"
     log "         this build would ship with a working outbound relay."
     log "         Check that the cp -f of services/smtpd.conf actually ran."
 fi
@@ -552,7 +552,7 @@ log "=== Template build complete ==="
 log ""
 log "Next steps:"
 log "  1. Shutdown:   poweroff"
-log "  2. In vCenter: right-click VM → Template → Convert to Template"
+log "  2. In vCenter: right-click VM -> Template -> Convert to Template"
 log ""
 log "To deploy a clone (zero-touch, recommended):"
 log "  Set these guestinfo keys on the clone in vCenter, then boot:"

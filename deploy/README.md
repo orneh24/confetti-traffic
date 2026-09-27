@@ -30,6 +30,8 @@ Deploys the hub plus 3 nodes (`site-a`/`site-b`/`site-c` by default) on one
 flat network. `-WhatIf` previews without touching vCenter;
 `-WaitForRegistration` polls the hub afterward and reports which nodes came
 up (best-effort — a slow node is reported, not treated as failure).
+Add `-HubDns 10.0.0.53` so the hub can resolve names (`pervium-update`
+needs this), and `-HubHostname` to name the hub's guest OS.
 
 Full parameter reference: `Get-Help ./Deploy-Pervium.ps1 -Full`.
 

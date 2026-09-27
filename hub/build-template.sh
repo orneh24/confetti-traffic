@@ -82,10 +82,10 @@ apk_step() {
 }
 
 log "Updating package index"
-apk_step apk update
+apk_step apk update --no-progress
 
 log "Installing packages"
-apk_step apk add --no-cache \
+apk_step apk add --no-cache --no-progress \
     python3 \
     py3-pip \
     py3-flask \
@@ -186,7 +186,7 @@ elif [ -d "${SCRIPT_DIR}/agent" ]; then
     cp -f "${SCRIPT_DIR}/agent/"*.sh "$HUB_INSTALL_DIR/agent/" 2>/dev/null || true
     log "  agent scripts copied from ./agent"
 else
-    log "  WARNING: no agent scripts found — self-update will be unavailable"
+    log "  WARNING: no agent scripts found -- self-update will be unavailable"
     log "  copy test-cycle.sh and register.sh into $HUB_INSTALL_DIR/agent/ later"
 fi
 
@@ -204,7 +204,7 @@ fi
 # the dashboard polling every 30s, requests would queue behind each other.
 log "Installing waitress WSGI server"
 if ! python3 -c "import waitress" 2>/dev/null; then
-    apk add --no-cache py3-waitress 2>/dev/null || \
+    apk add --no-cache --no-progress py3-waitress 2>/dev/null || \
         pip3 install --break-system-packages waitress
 fi
 
@@ -343,7 +343,7 @@ rc-update add pervium-hub default
 rc-update add pervium-hub-firstboot default
 
 # SSH access for management
-apk_step apk add --no-cache dropbear
+apk_step apk add --no-cache --no-progress dropbear
 rc-update add dropbear default
 
 log "Services enabled"
@@ -505,10 +505,12 @@ log ""
 log "Only convert to a template if you expect to redeploy the hub more than"
 log "once (e.g. separate labs):"
 log "  1. Shutdown:   poweroff"
-log "  2. In vCenter: right-click VM → Template → Convert to Template"
+log "  2. In vCenter: right-click VM -> Template -> Convert to Template"
 log "  3. Clone it, then either set guestinfo keys on the clone before boot"
 log "     (zero-touch):"
 log "       guestinfo.hub.ip       10.0.0.100/24"
 log "       guestinfo.hub.gateway  10.0.0.1"
+log "       guestinfo.hub.dns      10.0.0.53    (optional)"
+log "       guestinfo.hub.hostname pervium-hub  (optional)"
 log "     or log in (root / ${PERVIUM_ROOT_PASSWORD}) and let hub-setup.sh"
-log "     prompt for both values (manual)"
+log "     prompt for the same values (manual)"

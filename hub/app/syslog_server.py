@@ -254,7 +254,7 @@ def start():
         try:
             server = _Server((config.SYSLOG_BIND, config.SYSLOG_PORT), _Handler)
         except OSError as exc:
-            sys.stderr.write("[syslog] not listening on {}:{} — {}\n".format(
+            sys.stderr.write("[syslog] not listening on {}:{} -- {}\n".format(
                 config.SYSLOG_BIND, config.SYSLOG_PORT, exc))
             return
 

@@ -34,14 +34,16 @@ Build the hub first, so you can test the first node against it.
 - [ ] On the hub clone, run the download command from the README quick start
       and pick **hub**. (No GitHub access? See BUILD_GUIDE §8.)
 - [ ] Set the static IP, one of:
-      - **At login:** log out and back in. `hub-setup.sh` asks for the IP and
-        gateway, restarts networking and starts the hub.
+      - **At login:** log out and back in. `hub-setup.sh` asks for the IP,
+        gateway and an optional DNS server and hostname. Then it restarts
+        networking and starts the hub.
       - **By hand:** `set-static-ip <ip/cidr> <gateway>`,
         `rc-service networking restart`, `rc-service pervium-hub start`.
         The helper rewrites all of `/etc/network/interfaces` for one
         interface.
-      - **guestinfo:** set `guestinfo.hub.ip` and `guestinfo.hub.gateway` on
-        the VM and reboot.
+      - **guestinfo:** set `guestinfo.hub.ip` and `guestinfo.hub.gateway`
+        (optionally `guestinfo.hub.dns` and `guestinfo.hub.hostname`) on the
+        VM and reboot.
 - [ ] Optional: edit `/opt/pervium-hub/hub.env` (each key is commented),
       then `rc-service pervium-hub restart`
 - [ ] Optional: set a real NTP server in `/etc/chrony/chrony.conf`. The build

@@ -5,7 +5,8 @@
 # when the hub hasn't been configured yet, or by hand at any time. Safe to
 # re-run; does nothing once configured unless you pass --force.
 #
-# Sets the static IP, restarts networking and starts pervium-hub -- every
+# Sets the static IP (plus optional DNS server and hostname), restarts
+# networking and starts pervium-hub -- every
 # step between a finished build and a working dashboard. hub.env defaults are
 # sane enough not to need a prompt; edit it by hand afterward if they don't
 # suit.
@@ -69,8 +70,27 @@ if [ -z "$IP_CIDR" ] || [ -z "$GATEWAY" ]; then
     exit 1
 fi
 
+# Both optional. Without DNS the hub can't resolve anything -- the build
+# empties resolv.conf -- so pervium-update can't reach GitHub and a chrony
+# pool hostname won't resolve.
+printf 'DNS server (e.g. 10.0.0.53, blank to skip): '
+read -r DNS || DNS=""
+CURRENT_HOSTNAME=$(hostname)
+printf 'Hostname [%s]: ' "$CURRENT_HOSTNAME"
+read -r NEW_HOSTNAME || NEW_HOSTNAME=""
+[ -n "$NEW_HOSTNAME" ] || NEW_HOSTNAME="$CURRENT_HOSTNAME"
+
+case "$NEW_HOSTNAME" in
+    *[!A-Za-z0-9-]*|-*)
+        echo "Hostname may only contain letters, digits and '-' -- aborting, nothing changed."
+        exit 1
+        ;;
+esac
+
 echo
 echo "About to set: ${IP_CIDR} via ${GATEWAY}"
+echo "  DNS:      ${DNS:-none (pervium-update and NTP by name won't work)}"
+echo "  Hostname: ${NEW_HOSTNAME}"
 printf 'Apply now? [y/N] '
 read -r CONFIRM || CONFIRM=""
 case "$CONFIRM" in
@@ -81,7 +101,7 @@ case "$CONFIRM" in
         ;;
 esac
 
-set-static-ip "$IP_CIDR" "$GATEWAY"
+set-static-ip "$IP_CIDR" "$GATEWAY" "$DNS" "$NEW_HOSTNAME"
 rc-service networking restart
 
 date -u '+%Y-%m-%dT%H:%M:%SZ configured' > "$STAMP"

@@ -188,7 +188,7 @@ update_script() {
     # Gate 1: checksum
     _got=$(sha256sum "$_tmp" | awk '{print $1}')
     if [ "$_got" != "$_want" ]; then
-        log "  checksum mismatch (want $(printf '%s' "$_want" | cut -c1-12)…, got $(printf '%s' "$_got" | cut -c1-12)…), rejecting"
+        log "  checksum mismatch (want $(printf '%s' "$_want" | cut -c1-12)..., got $(printf '%s' "$_got" | cut -c1-12)...), rejecting"
         rm -f "$_tmp"
         return 0
     fi

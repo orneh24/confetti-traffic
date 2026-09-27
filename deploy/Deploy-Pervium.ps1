@@ -48,6 +48,14 @@
 .PARAMETER HubGateway
     Hub's default gateway. Written to guestinfo.hub.gateway.
 
+.PARAMETER HubDns
+    Optional. Hub's DNS server, written to guestinfo.hub.dns. Without one the
+    hub resolves nothing, so pervium-update cannot download from GitHub.
+
+.PARAMETER HubHostname
+    Optional. Hub's guest hostname, written to guestinfo.hub.hostname.
+    Letters, digits and '-' only. Omit to keep the template's hostname.
+
 .PARAMETER HubVMName
     vCenter display name for the hub clone. Default: pervium-hub.
 
@@ -133,6 +141,8 @@ param(
     [ValidatePattern('^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$')]
     [string] $HubIP,
     [Parameter(Mandatory)] [string] $HubGateway,
+    [string] $HubDns,
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9-]*$')] [string] $HubHostname,
     [string] $HubVMName = "pervium-hub",
 
     [ValidateRange(1, 64)] [int] $NodeCount = 3,
@@ -204,6 +214,8 @@ if ($PSCmdlet.ShouldProcess($HubVMName, "Clone from $HubTemplate")) {
 
     Set-Guestinfo -VM $hubVM -Key "guestinfo.hub.ip" -Value $HubIP
     Set-Guestinfo -VM $hubVM -Key "guestinfo.hub.gateway" -Value $HubGateway
+    if ($HubDns)      { Set-Guestinfo -VM $hubVM -Key "guestinfo.hub.dns" -Value $HubDns }
+    if ($HubHostname) { Set-Guestinfo -VM $hubVM -Key "guestinfo.hub.hostname" -Value $HubHostname }
 
     if ($PowerOn) {
         Write-Host "Powering on $HubVMName..."

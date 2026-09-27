@@ -40,8 +40,15 @@ start() {
     _ip=$(_guestinfo "hub.ip")
     _gw=$(_guestinfo "hub.gateway")
 
+    # Optional, like hub-setup.sh's prompts. Empty is passed through and
+    # set-static-ip skips it.
+    _dns=$(_guestinfo "hub.dns")
+    _hn=$(_guestinfo "hub.hostname")
+
     case "$_ip" in *"No value found"*) _ip="" ;; esac
     case "$_gw" in *"No value found"*) _gw="" ;; esac
+    case "$_dns" in *"No value found"*) _dns="" ;; esac
+    case "$_hn" in *"No value found"*) _hn="" ;; esac
 
     if [ -z "$_ip" ] || [ -z "$_gw" ]; then
         ewarn "guestinfo.hub.ip / guestinfo.hub.gateway not set"
@@ -51,7 +58,7 @@ start() {
 
     ebegin "Configuring hub static IP from guestinfo"
     mkdir -p "$CONF_DIR"
-    if set-static-ip "$_ip" "$_gw" && rc-service networking restart; then
+    if set-static-ip "$_ip" "$_gw" "$_dns" "$_hn" && rc-service networking restart; then
         date -u '+%Y-%m-%dT%H:%M:%SZ configured (guestinfo)' > "$STAMP"
         eend 0
     else

@@ -36,7 +36,9 @@ powered on with the right keys set before it ever boots.
   re-reads it later. Any `New-AdvancedSetting` call must land before
   `Start-VM`, not after.
 - Hub keys: `guestinfo.hub.ip` (CIDR, e.g. `10.0.0.100/24`),
-  `guestinfo.hub.gateway`. Both optional on the hub side — absent, its
+  `guestinfo.hub.gateway`, plus optional `guestinfo.hub.dns` and
+  `guestinfo.hub.hostname` (the script's `-HubDns` / `-HubHostname`; only
+  applied together with ip/gateway). With ip/gateway absent, the hub's
   firstboot service stands down and `hub-setup.sh` prompts at first login
   instead.
 - Node keys: `guestinfo.pervium.hub_url`, `guestinfo.pervium.group`,

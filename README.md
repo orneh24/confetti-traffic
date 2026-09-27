@@ -32,8 +32,9 @@ wget -O- https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz | tar
 ```
 
 **2. Hub** (the clone where you picked *hub*). Log out and back in:
-`hub-setup.sh` asks for the static IP, restarts networking and starts the
-hub. Or run the same steps by hand:
+`hub-setup.sh` asks for the static IP and gateway, plus an optional DNS
+server and hostname. Then it restarts networking and starts the hub. Or run
+the same steps by hand:
 
 ```sh
 set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
@@ -98,6 +99,8 @@ two marked keys are required.
 | `guestinfo.pervium.dns_query` | node | `example.com` | name the DNS test looks up |
 | `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `hub-setup.sh` asks at login |
 | `guestinfo.hub.gateway` | hub | `10.0.0.1` | |
+| `guestinfo.hub.dns` | hub | `10.0.0.53` | optional; without it the hub can't resolve names, so `pervium-update` can't download |
+| `guestinfo.hub.hostname` | hub | `pervium-hub` | optional; unset keeps the template's hostname |
 
 More: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) (reference tables) and
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (checklist with verification).

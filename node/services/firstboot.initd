@@ -58,7 +58,7 @@ start() {
 
     if [ -z "$_hub" ] || [ -z "$_group" ]; then
         ewarn "guestinfo.pervium.hub_url / guestinfo.pervium.group not set"
-        ewarn "skipping auto-setup — run $SETUP by hand to configure"
+        ewarn "skipping auto-setup -- run $SETUP by hand to configure"
         return 0
     fi
 
@@ -72,7 +72,7 @@ start() {
         date -u '+%Y-%m-%dT%H:%M:%SZ configured (guestinfo)' > "$SETUP_STAMP"
         eend 0
     else
-        eend 1 "setup failed — see /var/log/pervium/firstboot.log"
+        eend 1 "setup failed -- see /var/log/pervium/firstboot.log"
     fi
 
     return 0

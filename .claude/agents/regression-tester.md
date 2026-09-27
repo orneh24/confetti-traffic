@@ -1,6 +1,6 @@
 ---
 name: regression-tester
-description: Pervium regression gate. Invoke before handing any change to the user, and after any edit under node/, hub/ or the build scripts — it re-runs the fixed battery of checks guarding every numbered constraint in CLAUDE.md, each of which is a bug that already shipped once, plus the wire contract, the two correlation surfaces (R21 /api/time, R22 dashboard syslog links), the first-login setup prompt (R23-R25), and the `--update` build mode (R26) that have no numbered constraint behind them. Reports pass / fail / not-run per constraint with the command output as evidence, and blocks the handover on any fail.
+description: Pervium regression gate. Invoke before handing any change to the user, and after any edit under node/, hub/ or the build scripts — it re-runs the fixed battery of checks guarding every numbered constraint in CLAUDE.md, each of which is a bug that already shipped once, plus the wire contract, the two correlation surfaces (R21 /api/time, R22 dashboard syslog links), the first-login setup prompt (R23-R25), the `--update` build mode (R26), and ASCII-only terminal output (R27) that have no numbered constraint behind them. Reports pass / fail / not-run per constraint with the command output as evidence, and blocks the handover on any fail.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -626,6 +626,31 @@ Also check that node scripts are installed through `install_script` (temp
 file + `mv`) and not with `cp -f` straight onto
 `/usr/local/bin/pervium/*.sh`. Cron may be running them during an update,
 and sh reads a script as it runs.
+
+### R27 — terminal output is plain ASCII
+
+The VM console (vSphere web console, VMRC, a Windows SSH client) is often
+not UTF-8. UTF-8 then shows up as mojibake, like `â”Œâ”€` in the login
+banners and `â–ˆâ–ˆ` from apk's progress bar. Both shipped. Two parts:
+
+```sh
+git grep -n -E '\bapk (add|update|upgrade|del)\b' -- '*.sh' | grep -v -- '--no-progress'
+python - <<'EOF'
+import re, subprocess
+out = re.compile(r'^\s*(log|echo|printf|einfo|ewarn|eerror|ebegin|eend|die|sys\.stderr\.write|print)\b|^\s*[|+].*[|+]\s*$')
+for f in subprocess.run(['git','ls-files','install.sh','update.sh','hub','node'], capture_output=True, text=True).stdout.split():
+    if re.search(r'(\.sh|\.initd|\.py)$', f):
+        for i, l in enumerate(open(f, encoding='utf-8'), 1):
+            if out.search(l) and any(ord(c) > 127 for c in l):
+                print(f"{f}:{i}")
+EOF
+```
+
+Pass: both print nothing. Every `apk` call in a script uses `--no-progress`,
+and no line that writes to a terminal (log/echo/printf, OpenRC `e*`
+messages, stderr writes, MOTD box lines) contains a non-ASCII character.
+Comments, docstrings, HTML pages and stored syslog text are exempt; a browser
+renders UTF-8 fine.
 
 
 ## Tier 2 — dynamic checks

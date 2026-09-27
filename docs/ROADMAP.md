@@ -17,8 +17,6 @@ Nothing here works today. Checked against the code 2026-09-27.
   `received_at` itself (constraint 2).
 - **`set-static-ip` per interface.** It takes no interface argument, so
   configuring a second NIC overwrites the first.
-- **`hub-setup.sh` prompts for DNS and hostname.** `set-static-ip` accepts
-  both, but the wizard only asks for IP and gateway.
 - **`net.ipv4.ip_forward=0` pinned in `/etc/sysctl.d/`.** Alpine defaults to
   0, but the build does not assert it.
 - **Time-based syslog pruning.** Syslog is row-capped only

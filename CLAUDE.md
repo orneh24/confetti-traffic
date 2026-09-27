@@ -329,8 +329,13 @@ set on the hub's own VM object, not the nodes':
 |-----|---------|
 | `guestinfo.hub.ip` | `10.0.0.100/24` |
 | `guestinfo.hub.gateway` | `10.0.0.1` |
+| `guestinfo.hub.dns` | `10.0.0.53` (optional; without it the hub resolves nothing and `pervium-update` can't download) |
+| `guestinfo.hub.hostname` | `pervium-hub` (optional; unset keeps the current hostname) |
 
-Both optional — with neither present, the firstboot service stands down
+`dns` and `hostname` are applied only together with `ip` and `gateway` (all
+four go to `set-static-ip`). `hub-setup.sh` asks for the same four, with DNS
+and hostname optional.
+All optional — with ip/gateway absent, the firstboot service stands down
 (same reasoning as the nodes: no reliable tty inside an OpenRC `start()`
 to prompt from) and `hub-setup.sh` prompts interactively at first login
 instead (`hub/scripts/hub-setup.sh`, invited by `hub/services/login-setup.sh`).

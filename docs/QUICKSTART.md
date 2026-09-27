@@ -128,4 +128,4 @@ BUILD_GUIDE §6.3.
 | Two nodes with the same hostname | one overwrites the other on the hub |
 | Static target lists a test it can't answer | that cell is always red |
 | Node updated before the hub | `pervium-update` warns; the node's `test-cycle.sh` goes back to the hub's copy within 5 minutes |
-| Hub has no DNS server (`hub-setup.sh` doesn't ask for one) | `pervium-update` can't download; add a `nameserver` line to `/etc/resolv.conf` |
+| Hub set up without a DNS server (it is optional in `hub-setup.sh`) | `pervium-update` can't download; add a `nameserver` line to `/etc/resolv.conf` |

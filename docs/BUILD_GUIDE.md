@@ -107,8 +107,10 @@ are wrong.
 
 ### 4.1 Hub
 
-Log out and back in. `hub-setup.sh` asks for the static IP and gateway, then
-restarts networking and starts the hub. To do it by hand instead:
+Log out and back in. `hub-setup.sh` asks for the static IP and gateway, plus
+an optional DNS server and hostname. Then it restarts networking and starts
+the hub. Give it a DNS server if you can: without one the hub can't resolve
+names, so `pervium-update` can't download. To do it by hand instead:
 
 ```sh
 set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
@@ -117,7 +119,8 @@ rc-service pervium-hub start
 ```
 
 Or set `guestinfo.hub.ip` (e.g. `10.0.0.100/24`) and `guestinfo.hub.gateway`
-on the VM and reboot; the `pervium-hub-firstboot` service applies them.
+on the VM, plus optionally `guestinfo.hub.dns` and `guestinfo.hub.hostname`,
+and reboot. The `pervium-hub-firstboot` service applies them.
 
 Open `http://<hub-ip>/` to check. Settings live in
 `/opt/pervium-hub/hub.env`; restart the hub after editing it.
@@ -305,9 +308,9 @@ VMs built before `pervium-update` existed don't have it yet. Fetch it once:
 curl -fsSLo /tmp/pervium-update https://raw.githubusercontent.com/orneh24/pervium/main/update.sh && sh /tmp/pervium-update
 ```
 
-The download needs DNS and a route to GitHub. A hub set up with
-`hub-setup.sh` has no DNS server (the build clears `/etc/resolv.conf` and
-the wizard doesn't ask), so add one first:
+The download needs DNS and a route to GitHub. A hub set up without a DNS
+server has an empty `/etc/resolv.conf` (the build clears it). This includes
+hubs set up before `hub-setup.sh` asked for one. Add one first:
 `echo 'nameserver <dns-ip>' > /etc/resolv.conf`. No GitHub access at all:
 see §8.
 

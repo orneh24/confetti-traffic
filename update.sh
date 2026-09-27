@@ -80,8 +80,8 @@ if [ ! -f "$SCRIPT_DIR/$ROLE/build-template.sh" ]; then
     log "Downloading $UPDATE_URL"
     if ! curl -fsSL --connect-timeout 10 --max-time 300 -o "$TMP/src.tar.gz" "$UPDATE_URL"; then
         rm -rf "$TMP"
-        # A hub set up with hub-setup.sh has an empty resolv.conf: the build
-        # clears it and the wizard doesn't ask for DNS.
+        # A hub set up without a DNS server has an empty resolv.conf: the
+        # build clears it, and DNS is optional in hub-setup.sh.
         if ! grep -q '^nameserver' /etc/resolv.conf 2>/dev/null; then
             log "No nameserver in /etc/resolv.conf -- add one first:"
             log "  echo 'nameserver <dns-ip>' > /etc/resolv.conf"
