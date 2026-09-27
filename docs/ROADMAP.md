@@ -23,6 +23,15 @@ Nothing here works today. Checked against the code 2026-09-27.
   0, but the build does not assert it.
 - **Time-based syslog pruning.** Syslog is row-capped only
   (`HUB_SYSLOG_MAX_ROWS`). Results do have time-based retention (constraint 8).
+- **Rename the project to Pervium.** Decided 2026-09-27, not started. Latin
+  *pervium*: "passable; a passage through". The name is free on PyPI, npm,
+  crates.io and Docker Hub. The `pervium` GitHub organisation is taken
+  (empty, since 2026-04-28), and so is pervium.com; Pervium Consulting is an
+  unrelated consultancy. Do a WIPO/EUIPO trademark check (class 9/42) first.
+  Like the mesh-probe → mesh-flux rename, this touches service names, paths,
+  the `mf` hostname prefix and guestinfo keys, so the VMs need rebuilding.
+  `mesh-flux-update` can't move them in place, because the install paths
+  change.
 
 ## Not yet verified on real VMs
 
