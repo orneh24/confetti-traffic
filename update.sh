@@ -1,0 +1,225 @@
+#!/bin/sh
+# update.sh — pull the latest mesh-flux code onto an already-installed hub
+# or node. Both build scripts install it as /usr/local/bin/mesh-flux-update.
+#
+# Usage:
+#   mesh-flux-update         download the latest code, confirm, apply
+#   mesh-flux-update -y      same, without the confirmation
+#   sh <repo>/update.sh      apply from an unpacked repo instead of
+#                            downloading (no GitHub access: scp the repo over)
+#
+# Update the hub first, then the nodes. The hub serves test-cycle.sh to every
+# node, so a node updated ahead of its hub has that one script swapped back
+# to the hub's copy by self-update within 5 minutes.
+#
+# The apply is `<role>/build-template.sh --update`: the same install steps as
+# the build, so there is no second file list here to drift. It keeps the
+# node's config, hostname and keys, and the hub's hub.env and database.
+#
+# Manual only -- never put this on cron. It replaces register.sh, which
+# constraint 13 says must be pushed deliberately: a broken copy stops
+# registration and the self-update that would repair it. On a node, setup.sh
+# runs at the end, so the new register.sh is tried right away, in front of
+# whoever ran the update.
+
+set -eu
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+UPDATE_URL="${MESH_FLUX_UPDATE_URL:-https://github.com/orneh24/mesh-flux/archive/refs/heads/main.tar.gz}"
+RELEASE_FILE="/etc/mesh-flux-release"
+NODE_CONFIG="/etc/mesh-flux/config"
+
+log() {
+    printf '[update] %s\n' "$1"
+}
+
+die() {
+    printf '[update] FATAL: %s\n' "$1" >&2
+    exit 1
+}
+
+[ "$(id -u)" -eq 0 ] || die "Must run as root"
+
+case "${1:-}" in
+    "") AUTO_YES="" ;;
+    -y|--yes) AUTO_YES="1" ;;
+    *)
+        echo "Usage: mesh-flux-update [-y]" >&2
+        exit 2
+        ;;
+esac
+
+# -------------------------------------------------------------------
+# Which role -- the same markers install.sh refuses to run on
+# -------------------------------------------------------------------
+if [ -f /usr/local/bin/mesh-flux/setup.sh ]; then
+    ROLE="node"
+elif [ -d /opt/mesh-flux-hub ]; then
+    ROLE="hub"
+else
+    die "No mesh-flux install found on this VM. For a fresh Alpine VM, use install.sh."
+fi
+
+# -------------------------------------------------------------------
+# Download, unless this copy is already inside an unpacked repo.
+#
+# The installed copy only downloads. It then runs the update.sh from the
+# download, so the newest update logic always does the apply.
+# -------------------------------------------------------------------
+if [ ! -f "$SCRIPT_DIR/$ROLE/build-template.sh" ]; then
+    TMP=$(mktemp -d /tmp/mesh-flux-update.XXXXXX)
+
+    log "Downloading $UPDATE_URL"
+    if ! curl -fsSL --connect-timeout 10 --max-time 300 -o "$TMP/src.tar.gz" "$UPDATE_URL"; then
+        rm -rf "$TMP"
+        # A hub set up with hub-setup.sh has an empty resolv.conf: the build
+        # clears it and the wizard doesn't ask for DNS.
+        if ! grep -q '^nameserver' /etc/resolv.conf 2>/dev/null; then
+            log "No nameserver in /etc/resolv.conf -- add one first:"
+            log "  echo 'nameserver <dns-ip>' > /etc/resolv.conf"
+        fi
+        die "Download failed. Nothing changed."
+    fi
+
+    if ! tar -xzf "$TMP/src.tar.gz" -C "$TMP"; then
+        rm -rf "$TMP"
+        die "Download is not a valid tarball. Nothing changed."
+    fi
+
+    SRC=""
+    for _d in "$TMP"/*/; do
+        [ -f "${_d}update.sh" ] && SRC="${_d%/}"
+    done
+    if [ -z "$SRC" ] || [ ! -f "$SRC/$ROLE/build-template.sh" ]; then
+        rm -rf "$TMP"
+        die "Download has no update.sh or $ROLE/build-template.sh. Nothing changed."
+    fi
+
+    if ! sh -n "$SRC/update.sh" || ! sh -n "$SRC/$ROLE/build-template.sh"; then
+        rm -rf "$TMP"
+        die "Downloaded scripts do not parse. Nothing changed."
+    fi
+
+    # GitHub archives carry the commit id in the tarball's pax header.
+    COMMIT=$(gzip -dc "$TMP/src.tar.gz" 2>/dev/null | head -c 1024 | tr '\0' '\n' \
+        | sed -n 's/^.*comment=\([0-9a-f]\{40\}\).*$/\1/p' | head -n 1) || COMMIT=""
+
+    _rc=0
+    MESH_FLUX_UPDATE_FROM="$UPDATE_URL" MESH_FLUX_UPDATE_COMMIT="${COMMIT:-unknown}" \
+        sh "$SRC/update.sh" "$@" || _rc=$?
+    rm -rf "$TMP"
+    exit "$_rc"
+fi
+
+# -------------------------------------------------------------------
+# Apply from the repo tree this script sits in
+# -------------------------------------------------------------------
+SRC="$SCRIPT_DIR"
+COMMIT="${MESH_FLUX_UPDATE_COMMIT:-unknown}"
+FROM="${MESH_FLUX_UPDATE_FROM:-$SRC}"
+CURRENT=$(sed -n 's/^commit=//p' "$RELEASE_FILE" 2>/dev/null) || CURRENT=""
+
+echo
+log "Role:      $ROLE"
+log "Installed: ${CURRENT:-unknown}"
+log "New:       $COMMIT"
+log "From:      $FROM"
+echo
+
+if [ -z "$AUTO_YES" ]; then
+    if [ "$ROLE" = "hub" ]; then
+        echo "This updates the hub's code and packages and restarts it."
+        echo "hub.env and the database are kept."
+    else
+        echo "This updates the node's code and packages and re-runs setup.sh."
+        echo "The config, hostname and SSH keys are kept."
+    fi
+    printf 'Update now? [y/N] '
+    read -r ANSWER || ANSWER=""
+    case "$ANSWER" in
+        [yY]*) ;;
+        *)
+            log "Cancelled. Nothing changed."
+            exit 0
+            ;;
+    esac
+fi
+
+# A node can only warn about a hub mismatch while setup.sh has not run yet:
+# setup.sh runs register.sh, whose self-update would already have swapped
+# in the hub's test-cycle.sh by the time we looked.
+check_hub_agent() {
+    # shellcheck source=/dev/null
+    _hub=$( . "$NODE_CONFIG" >/dev/null 2>&1; printf '%s' "${HUB_URL:-}" ) || _hub=""
+    # shellcheck source=/dev/null
+    _auto=$( . "$NODE_CONFIG" >/dev/null 2>&1; printf '%s' "${AGENT_AUTOUPDATE:-true}" ) || _auto="true"
+    [ "$_auto" = "true" ] || return 0
+    [ -n "$_hub" ] || return 0
+
+    _want=$(curl -fsS --connect-timeout 5 --max-time 10 "$_hub/agent/manifest" 2>/dev/null \
+        | jq -r '.scripts["test-cycle.sh"].sha256 // empty' 2>/dev/null) || _want=""
+    _have=$(sha256sum /usr/local/bin/mesh-flux/test-cycle.sh | awk '{print $1}')
+
+    if [ -z "$_want" ]; then
+        log "Could not read the hub's agent manifest -- skipped the hub version check"
+    elif [ "$_want" != "$_have" ]; then
+        log "WARNING: the hub serves a different test-cycle.sh. Self-update will"
+        log "         swap the hub's copy back in on the next registration run."
+        log "         Update the hub too (mesh-flux-update on the hub)."
+    fi
+}
+
+log "Running $ROLE/build-template.sh --update"
+sh "$SRC/$ROLE/build-template.sh" --update || die "build-template.sh --update failed (see above)"
+
+cat > "$RELEASE_FILE" <<EOF
+commit=$COMMIT
+source=$FROM
+updated=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+EOF
+
+STATUS=0
+
+if [ "$ROLE" = "hub" ]; then
+    # The schema migrates itself on start (init_db). Results pushed during
+    # the few seconds of the restart are lost.
+    if rc-service mesh-flux-hub restart; then
+        log "mesh-flux-hub restarted"
+    else
+        log "WARNING: mesh-flux-hub did not restart -- check /var/log/mesh-flux-hub.log"
+        STATUS=1
+    fi
+elif [ -f "$NODE_CONFIG" ]; then
+    check_hub_agent
+
+    # The documented safe re-run: keeps the config, merges cron, restarts
+    # crond and mesh-flux-httpd, and registers with the hub.
+    log "Re-running setup.sh"
+    if ! /usr/local/bin/mesh-flux/setup.sh; then
+        log "WARNING: setup.sh failed (see above)"
+        STATUS=1
+    fi
+
+    # setup.sh only starts these. Restart the ones already running so they
+    # read their new configs.
+    for _svc in mesh-flux-smbd mesh-flux-smtpd iperf3; do
+        if rc-service "$_svc" status >/dev/null 2>&1; then
+            if rc-service "$_svc" restart >/dev/null 2>&1; then
+                log "$_svc restarted"
+            else
+                log "WARNING: $_svc did not restart"
+                STATUS=1
+            fi
+        fi
+    done
+else
+    log "No $NODE_CONFIG: files updated, setup.sh not run."
+fi
+
+echo
+if [ "$STATUS" -eq 0 ]; then
+    log "Update complete ($COMMIT)"
+else
+    log "Update applied with warnings (see above)"
+fi
+exit "$STATUS"

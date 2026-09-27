@@ -238,11 +238,8 @@ update_script() {
 #
 # test-cycle.sh is what actually gets iterated on, and it is safely
 # verifiable. To roll out a register.sh change, update the template or push
-# it deliberately:
-#
-#   for h in test-r1 test-r2 test-r3; do
-#     scp register.sh root@$h:/usr/local/bin/mesh-flux/register.sh
-#   done
+# it deliberately: run mesh-flux-update on the node (update.sh, repo root),
+# which re-runs setup.sh and so tries the new register.sh on the spot.
 update_script "test-cycle.sh"
 
 exit 0

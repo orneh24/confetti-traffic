@@ -1,6 +1,6 @@
 ---
 name: regression-tester
-description: Mesh-flux regression gate. Invoke before handing any change to the user, and after any edit under node/, hub/ or the build scripts — it re-runs the fixed battery of checks guarding every numbered constraint in CLAUDE.md, each of which is a bug that already shipped once, plus the wire contract, the two correlation surfaces (R21 /api/time, R22 dashboard syslog links), and the first-login setup prompt (R23-R25) that have no numbered constraint behind them. Reports pass / fail / not-run per constraint with the command output as evidence, and blocks the handover on any fail.
+description: Mesh-flux regression gate. Invoke before handing any change to the user, and after any edit under node/, hub/ or the build scripts — it re-runs the fixed battery of checks guarding every numbered constraint in CLAUDE.md, each of which is a bug that already shipped once, plus the wire contract, the two correlation surfaces (R21 /api/time, R22 dashboard syslog links), the first-login setup prompt (R23-R25), and the `--update` build mode (R26) that have no numbered constraint behind them. Reports pass / fail / not-run per constraint with the command output as evidence, and blocks the handover on any fail.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -576,7 +576,7 @@ who gets prompted.
 instead of degrading cleanly:
 
 ```sh
-grep -n 'read -r' node/scripts/setup.sh node/scripts/node-setup.sh hub/scripts/hub-setup.sh
+grep -n 'read -r' node/scripts/setup.sh node/scripts/node-setup.sh hub/scripts/hub-setup.sh update.sh
 ```
 
 Pass: every match is either `read -r VAR || VAR=""` on the same line, or the
@@ -597,6 +597,35 @@ also clears `config.bak-*`, the `--force` discard's own backup files). A
 golden image sealed with the stamp present silences the login prompt on
 every clone made from it — the only symptom is a node or hub that never
 gets configured, indistinguishable from one nobody has touched yet.
+
+### R26 — `build-template.sh --update` never reaches cleanup
+
+No numbered constraint either — a design-review catch, added with
+`mesh-flux-update` (`update.sh`), which runs each role's build script with
+`--update` on a live VM. The cleanup section below the early exit deletes
+`hub.db`, empties `resolv.conf`, and removes the node's config, hostname and
+stamps. Reaching it on a live VM is data loss, so this is
+**release-blocking**.
+
+```sh
+for f in hub/build-template.sh node/build-template.sh; do
+  echo "== $f"
+  awk '/UPDATE_MODE" = "yes" \]; then/{g=NR} /^    exit 0/ && g && NR-g<=3 {print "exit at " NR} /Clean up for template conversion/{print "cleanup at " NR}' "$f"
+  grep -n 'UPDATE_MODE' "$f"
+done
+grep -n 'update.sh\|mesh-flux-update' node/services/crontab node/scripts/setup.sh
+```
+
+Pass, for each file: an `exit 0` guarded by `UPDATE_MODE` whose line number
+is *lower* than the `Clean up for template conversion` header. Also, the
+`UPDATE_MODE` guards cover the root-password `chpasswd` (both roles),
+the `hub.env` heredoc (hub), and the placeholder `index.html` (node).
+The last grep must print nothing: `mesh-flux-update` replaces register.sh,
+so scheduling it is the unattended register.sh update constraint 13 forbids.
+Also check that node scripts are installed through `install_script` (temp
+file + `mv`) and not with `cp -f` straight onto
+`/usr/local/bin/mesh-flux/*.sh`. Cron may be running them during an update,
+and sh reads a script as it runs.
 
 
 ## Tier 2 — dynamic checks

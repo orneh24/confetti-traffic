@@ -10,15 +10,24 @@
 #   5. Cleans up for template conversion
 #
 # Usage:
-#   1. SCP the entire hub/ directory to the Alpine VM
-#   2. Run: sh /root/hub/build-template.sh
+#   1. Put the whole repo on the Alpine VM (README quick start, or scp)
+#      -- not just hub/: the build also installs ../node/scripts and ../update.sh
+#   2. Run: sh /root/mesh-flux/install.sh (or this script directly)
 #   3. Shutdown and convert to template in vCenter
 #
 # After cloning:
 #   1. Set a static IP (or a DHCP reservation)
 #   2. Boot — the hub dashboard starts automatically on port 80
+#
+# --update: refresh packages and files on an already-configured hub, as run
+# by update.sh (mesh-flux-update). Skips the root password, keeps hub.env,
+# and skips the whole template cleanup, which would delete the results
+# database and empty resolv.conf.
 
 set -eu
+
+UPDATE_MODE="no"
+[ "${1:-}" = "--update" ] && UPDATE_MODE="yes"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HUB_INSTALL_DIR="/opt/mesh-flux-hub"
@@ -42,7 +51,11 @@ die() {
 # -------------------------------------------------------------------
 [ "$(id -u)" -eq 0 ] || die "Must run as root"
 
-log "=== mesh-flux hub template builder ==="
+if [ "$UPDATE_MODE" = "yes" ]; then
+    log "=== mesh-flux hub update (hub.env and database kept) ==="
+else
+    log "=== mesh-flux hub template builder ==="
+fi
 
 # -------------------------------------------------------------------
 # 1. Enable community repository
@@ -59,11 +72,20 @@ fi
 # -------------------------------------------------------------------
 # 2. Install packages
 # -------------------------------------------------------------------
+# A failed apk step is fatal for a build, but only a warning for --update:
+# the new code still goes in rather than leaving the hub half-updated.
+apk_step() {
+    if ! "$@"; then
+        [ "$UPDATE_MODE" = "yes" ] || die "'$*' failed"
+        log "WARNING: '$1 $2' failed (mirror unreachable?) -- updating the code anyway"
+    fi
+}
+
 log "Updating package index"
-apk update
+apk_step apk update
 
 log "Installing packages"
-apk add --no-cache \
+apk_step apk add --no-cache \
     python3 \
     py3-pip \
     py3-flask \
@@ -89,10 +111,15 @@ rc-update add lldpd default
 # -------------------------------------------------------------------
 # 2b. Set default lab credentials
 # -------------------------------------------------------------------
-log "Setting root password"
-echo "root:${MESH_FLUX_ROOT_PASSWORD}" | chpasswd
+# Not on --update: the operator may have changed it since the build.
+if [ "$UPDATE_MODE" = "yes" ]; then
+    log "Keeping the current root password"
+else
+    log "Setting root password"
+    echo "root:${MESH_FLUX_ROOT_PASSWORD}" | chpasswd
 
-log "Credentials: root / ${MESH_FLUX_ROOT_PASSWORD}"
+    log "Credentials: root / ${MESH_FLUX_ROOT_PASSWORD}"
+fi
 
 # -------------------------------------------------------------------
 # 3. Create directories
@@ -124,6 +151,19 @@ cp -f "${SCRIPT_DIR}/run.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/hub-setup.sh" "$HUB_INSTALL_DIR/"
 chmod +x "$HUB_INSTALL_DIR/run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/hub-setup.sh"
 ln -sf "$HUB_INSTALL_DIR/hub-setup.sh" /usr/local/bin/hub-setup.sh
+
+# The code updater (repo-root update.sh). Copied, not linked: the repo copy
+# this build ran from is usually deleted afterwards. Via a temp name and mv,
+# never cp over it: on --update the installed copy is the script running this
+# build, and sh reads a script as it goes -- overwriting it in place would
+# feed that running copy the new file's bytes at the old offset.
+if [ -f "${SCRIPT_DIR}/../update.sh" ]; then
+    cp -f "${SCRIPT_DIR}/../update.sh" /usr/local/bin/mesh-flux-update.new
+    chmod +x /usr/local/bin/mesh-flux-update.new
+    mv -f /usr/local/bin/mesh-flux-update.new /usr/local/bin/mesh-flux-update
+else
+    log "  WARNING: ../update.sh not found -- mesh-flux-update not installed"
+fi
 
 # -------------------------------------------------------------------
 # Agent scripts served to nodes.
@@ -171,6 +211,11 @@ fi
 # -------------------------------------------------------------------
 # 6. Create hub configuration file
 # -------------------------------------------------------------------
+# Not on --update when one exists: it holds the operator's settings. Keys
+# added here later fall back to config.py's defaults on an older hub.env.
+if [ "$UPDATE_MODE" = "yes" ] && [ -f "$HUB_INSTALL_DIR/hub.env" ]; then
+    log "Keeping existing hub.env"
+else
 log "Creating hub configuration"
 cat > "$HUB_INSTALL_DIR/hub.env" <<'ENVEOF'
 # Hub environment configuration
@@ -227,6 +272,7 @@ HUB_HEALTH_SERVICE_TIMEOUT_S=3
 # gates whether a change gets written.
 HUB_PATH_CHANGE_ENABLED=true
 ENVEOF
+fi
 
 # -------------------------------------------------------------------
 # 7. Create OpenRC init script
@@ -297,7 +343,7 @@ rc-update add mesh-flux-hub default
 rc-update add mesh-flux-hub-firstboot default
 
 # SSH access for management
-apk add --no-cache dropbear
+apk_step apk add --no-cache dropbear
 rc-update add dropbear default
 
 log "Services enabled"
@@ -392,6 +438,13 @@ fi
 SIPEOF
 
 chmod +x /usr/local/bin/set-static-ip
+
+# --update stops here. Everything below prepares a template: it deletes the
+# results database and empties resolv.conf, and must never run on a live hub.
+if [ "$UPDATE_MODE" = "yes" ]; then
+    log "=== Hub files updated ==="
+    exit 0
+fi
 
 # -------------------------------------------------------------------
 # 11. Clean up for template conversion

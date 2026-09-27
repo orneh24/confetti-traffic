@@ -34,10 +34,10 @@ die() {
 # Refuse on an already-built VM
 # -------------------------------------------------------------------
 if [ -f /usr/local/bin/mesh-flux/setup.sh ]; then
-    die "This VM is already a configured node (/usr/local/bin/mesh-flux/setup.sh exists). Re-running build-template.sh here would wipe its config and hostname. Start from a fresh Alpine install instead."
+    die "This VM is already a configured node (/usr/local/bin/mesh-flux/setup.sh exists). Re-running build-template.sh here would wipe its config and hostname. To update its code, run: sh $SCRIPT_DIR/update.sh"
 fi
 if [ -d /opt/mesh-flux-hub ]; then
-    die "This VM is already a hub (/opt/mesh-flux-hub exists). Re-running build-template.sh here would wipe the results database. Start from a fresh Alpine install instead."
+    die "This VM is already a hub (/opt/mesh-flux-hub exists). Re-running build-template.sh here would wipe the results database. To update its code, run: sh $SCRIPT_DIR/update.sh"
 fi
 
 # -------------------------------------------------------------------

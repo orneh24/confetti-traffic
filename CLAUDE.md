@@ -234,9 +234,34 @@ with `AGENT_AUTOUPDATE=false`.
 `test-status.sh` and its login-banner hook are **not** in this manifest — the
 console-output table they render lives inside `test-cycle.sh` and self-updates
 with it, but the viewer command itself is a separate new file, same category
-as `register.sh` (constraint 13): push it deliberately (`setup.sh` or a
-one-off `scp`) to nodes built before it existed. New clones get it from
+as `register.sh` (constraint 13): push it deliberately (`mesh-flux-update`)
+to nodes built before it existed. New clones get it from
 `build-template.sh`.
+
+### Code update (`mesh-flux-update`)
+Everything else reaches an installed VM through `update.sh` (repo root),
+which both builds install as `/usr/local/bin/mesh-flux-update`. Manual only.
+The installed copy downloads the GitHub main tarball
+(`MESH_FLUX_UPDATE_URL` overrides it), then runs the downloaded `update.sh`,
+so the newest update logic always does the apply. Run from an unpacked repo,
+it uses that tree instead, which is the no-GitHub path.
+
+The apply is `<role>/build-template.sh --update`: the build's own install
+steps, so there is no second file list to drift. `--update` skips the root
+password, `hub.env` (if present) and the node's placeholder identity page,
+and **exits before the cleanup section** — that section deletes `hub.db`,
+empties `resolv.conf` and removes the node's config, hostname and stamps.
+Anything added to a build must go above that exit if it installs code, and
+below it if it only prepares a template. Scripts that cron may be running
+are installed via temp file + `mv`, never `cp` over the live file (sh reads
+a script as it runs).
+
+Afterwards the hub restarts; a configured node re-runs `setup.sh`. **Hub
+first:** a node updated ahead of its hub has `test-cycle.sh` reverted by
+self-update, and the updater warns about this by comparing the hub's
+`/agent/manifest` before `setup.sh` runs `register.sh`.
+`/etc/mesh-flux-release` records the commit, read from the tarball's pax
+header.
 
 ### Node (one per network segment under test)
 - Alpine Linux VM, ~128 MB RAM, DHCP on its interface
@@ -321,6 +346,8 @@ VM becomes a hub or a node and runs the matching `build-template.sh`.
 ```
 install.sh             — repo-root entry point: asks hub or node, runs the
                           matching build-template.sh
+update.sh              — updates an installed hub or node from GitHub;
+                          installed as /usr/local/bin/mesh-flux-update
 hub/
   build-template.sh   — builds the hub golden template
   serve.py            — production entrypoint (reads HUB_PORT at runtime)
@@ -420,7 +447,9 @@ These were live bugs that a review caught; each has a comment at the site.
    of it that parses but fails at runtime would stop registration *and*
    disable the mechanism that would repair it, bricking every node at once.
    There is also no non-circular way to verify it. Push register.sh changes
-   deliberately.
+   deliberately — `mesh-flux-update`, run by hand, is that path. **Never put
+   it on cron**: that would turn it into exactly the unattended register.sh
+   update this constraint forbids.
 14. **Package selection on Alpine is load-bearing** (verified against the
    Alpine package index, not assumed):
    - `iputils-ping`, not `iputils`. The ping binary lives in the subpackage;

@@ -65,6 +65,20 @@ answer the `node-setup.sh` prompt (or run `/usr/local/bin/mesh-flux/setup.sh`).
 Ignore the node build's "convert to template" message. Fresh VM only: an
 existing `/root/mesh-flux` makes the `mv` put the new copy inside it.
 
+### Updating
+
+To get the latest code onto an installed VM, run `mesh-flux-update` as root,
+on the hub first and then on each node. It asks before changing anything,
+and keeps configs, the hub database and the root password. On VMs built
+before it existed, fetch it once:
+
+```sh
+curl -fsSLo /tmp/mesh-flux-update https://raw.githubusercontent.com/orneh24/mesh-flux/main/update.sh && sh /tmp/mesh-flux-update
+```
+
+Details, including why the hub goes first:
+[BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
+
 ### VMware guestinfo keys
 
 Set these on the VM in vCenter (VM Options → Advanced → Configuration

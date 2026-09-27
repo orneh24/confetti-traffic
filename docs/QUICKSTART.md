@@ -115,6 +115,11 @@ node's `/var/log/mesh-flux/` before the network.
 **See one node's results from the node itself:** `test-status` (`-f` to
 follow, `-n N` for history).
 
+**Update to the latest code:** `mesh-flux-update` on the hub first, then on
+each node. It keeps configs, the database and the root password.
+`cat /etc/mesh-flux-release` shows the commit a VM is on. Details:
+BUILD_GUIDE §6.3.
+
 ## Traps
 
 | Trap | Symptom |
@@ -122,3 +127,5 @@ follow, `-n N` for history).
 | Node template configured or tested before sealing | every clone starts with the same hostname, and the login prompt never appears |
 | Two nodes with the same hostname | one overwrites the other on the hub |
 | Static target lists a test it can't answer | that cell is always red |
+| Node updated before the hub | `mesh-flux-update` warns; the node's `test-cycle.sh` goes back to the hub's copy within 5 minutes |
+| Hub has no DNS server (`hub-setup.sh` doesn't ask for one) | `mesh-flux-update` can't download; add a `nameserver` line to `/etc/resolv.conf` |

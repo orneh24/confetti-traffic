@@ -10,11 +10,20 @@
 #   5. Cleans up for template conversion
 #
 # Usage:
-#   1. SCP the entire node/ directory to the Alpine VM
-#   2. Run: sh /root/node/build-template.sh
+#   1. Put the whole repo on the Alpine VM (README quick start, or scp)
+#      -- not just node/: the build also installs ../update.sh
+#   2. Run: sh /root/mesh-flux/install.sh (or this script directly)
 #   3. Shutdown and convert to template in vCenter
+#
+# --update: refresh packages and files on an already-configured node, as
+# run by update.sh (mesh-flux-update). Skips the root password, the
+# placeholder identity page and the whole template cleanup, which would wipe
+# the node's config, hostname and stamps.
 
 set -eu
+
+UPDATE_MODE="no"
+[ "${1:-}" = "--update" ] && UPDATE_MODE="yes"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INSTALL_DIR="/usr/local/bin/mesh-flux"
@@ -40,7 +49,11 @@ die() {
 # -------------------------------------------------------------------
 [ "$(id -u)" -eq 0 ] || die "Must run as root"
 
-log "=== mesh-flux node template builder ==="
+if [ "$UPDATE_MODE" = "yes" ]; then
+    log "=== mesh-flux node update (config, hostname and keys kept) ==="
+else
+    log "=== mesh-flux node template builder ==="
+fi
 
 # -------------------------------------------------------------------
 # 1. Enable community repository
@@ -57,11 +70,21 @@ fi
 # -------------------------------------------------------------------
 # 2. Install packages
 # -------------------------------------------------------------------
+# A failed apk step is fatal for a build, but only a warning for --update:
+# the new code still goes in, and the missing package shows up as a failing
+# test rather than a node left half-updated.
+apk_step() {
+    if ! "$@"; then
+        [ "$UPDATE_MODE" = "yes" ] || die "'$*' failed"
+        log "WARNING: '$1 $2' failed (mirror unreachable?) -- updating the code anyway"
+    fi
+}
+
 log "Updating package index"
-apk update
+apk_step apk update
 
 log "Installing packages"
-apk add --no-cache \
+apk_step apk add --no-cache \
     curl \
     jq \
     traceroute \
@@ -178,12 +201,17 @@ rc-update add lldpd default
 # -------------------------------------------------------------------
 # 2b. Set default lab credentials
 # -------------------------------------------------------------------
-log "Setting root password"
-echo "root:${MESH_FLUX_ROOT_PASSWORD}" | chpasswd
+# Not on --update: the operator may have changed it since the build.
+if [ "$UPDATE_MODE" = "yes" ]; then
+    log "Keeping the current root password"
+else
+    log "Setting root password"
+    echo "root:${MESH_FLUX_ROOT_PASSWORD}" | chpasswd
 
-# Dropbear permits root password login by default (no -w in DROPBEAR_OPTS).
+    # Dropbear permits root password login by default (no -w in DROPBEAR_OPTS).
 
-log "Credentials: root / ${MESH_FLUX_ROOT_PASSWORD}"
+    log "Credentials: root / ${MESH_FLUX_ROOT_PASSWORD}"
+fi
 
 # -------------------------------------------------------------------
 # 2c. Shared SSH keypair for the mesh
@@ -246,16 +274,37 @@ chmod 0555 /srv/mesh-flux-smb
 # 4. Install scripts
 # -------------------------------------------------------------------
 log "Installing scripts"
-cp -f "${SCRIPT_DIR}/scripts/register.sh"    "$INSTALL_DIR/register.sh"
-cp -f "${SCRIPT_DIR}/scripts/test-cycle.sh"  "$INSTALL_DIR/test-cycle.sh"
-cp -f "${SCRIPT_DIR}/scripts/setup.sh"       "$INSTALL_DIR/setup.sh"
-cp -f "${SCRIPT_DIR}/scripts/node-setup.sh"  "$INSTALL_DIR/node-setup.sh"
-cp -f "${SCRIPT_DIR}/scripts/test-status.sh" "$INSTALL_DIR/test-status.sh"
-chmod +x "$INSTALL_DIR"/*.sh
+
+# Copy to a temp name and mv into place, never cp over the live file. On
+# --update, cron may be running test-cycle.sh or register.sh right now, and
+# sh reads a script as it goes: overwriting it in place feeds the running
+# copy the new file's bytes at the old offset. mv swaps the name instead, so
+# the running copy finishes on the old file. Same reason register.sh's
+# self-update uses mv.
+install_script() {
+    cp -f "$1" "$2.new"
+    chmod +x "$2.new"
+    mv -f "$2.new" "$2"
+}
+
+install_script "${SCRIPT_DIR}/scripts/register.sh"    "$INSTALL_DIR/register.sh"
+install_script "${SCRIPT_DIR}/scripts/test-cycle.sh"  "$INSTALL_DIR/test-cycle.sh"
+install_script "${SCRIPT_DIR}/scripts/setup.sh"       "$INSTALL_DIR/setup.sh"
+install_script "${SCRIPT_DIR}/scripts/node-setup.sh"  "$INSTALL_DIR/node-setup.sh"
+install_script "${SCRIPT_DIR}/scripts/test-status.sh" "$INSTALL_DIR/test-status.sh"
 
 # On PATH by name, same as the hub's hub-setup.sh / set-static-ip.
 ln -sf "$INSTALL_DIR/node-setup.sh" /usr/local/bin/node-setup.sh
 ln -sf "$INSTALL_DIR/test-status.sh" /usr/local/bin/test-status
+
+# The code updater (repo-root update.sh). Copied, not linked: the repo copy
+# this build ran from is usually deleted afterwards. install_script, not cp:
+# on --update the installed copy is the script running this build.
+if [ -f "${SCRIPT_DIR}/../update.sh" ]; then
+    install_script "${SCRIPT_DIR}/../update.sh" /usr/local/bin/mesh-flux-update
+else
+    log "  WARNING: ../update.sh not found -- mesh-flux-update not installed"
+fi
 
 # -------------------------------------------------------------------
 # 5. Install sample config
@@ -363,6 +412,9 @@ fi
 # -------------------------------------------------------------------
 # 7. Create placeholder identity page
 # -------------------------------------------------------------------
+# Not on --update: a configured node already has its real page, which
+# register.sh keeps current.
+if [ "$UPDATE_MODE" != "yes" ]; then
 log "Creating placeholder identity page"
 cat > "${WEB_ROOT}/index.html" <<'IDEOF'
 <!DOCTYPE html>
@@ -380,6 +432,7 @@ cat > "${WEB_ROOT}/index.html" <<'IDEOF'
 </body>
 </html>
 IDEOF
+fi
 
 # -------------------------------------------------------------------
 # 8. Enable base services (they start on boot)
@@ -422,6 +475,13 @@ cat > /etc/motd <<'MOTDEOF'
   +------------------------------------------------+
 
 MOTDEOF
+
+# --update stops here. Everything below prepares a template: it deletes the
+# node's config, stamps and hostname, and must never run on a live node.
+if [ "$UPDATE_MODE" = "yes" ]; then
+    log "=== Node files updated ==="
+    exit 0
+fi
 
 # -------------------------------------------------------------------
 # 10. Clean up for template conversion

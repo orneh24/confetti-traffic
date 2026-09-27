@@ -277,17 +277,54 @@ curl -X DELETE http://<hub-ip>/targets/gw-a
 Test names: `http ssh traceroute pmtu dns iperf3 smb loss smtp`. An unknown
 name gets a 400.
 
-### 6.3 Updating the node scripts
+### 6.3 Updating
 
-The hub serves `test-cycle.sh` from `/opt/mesh-flux-hub/agent/`. Edit it
-there, and every node picks it up at its next registration (within 5
-minutes). A node only accepts the new version if its checksum matches, it
-passes `sh -n`, and a real test cycle succeeds. Otherwise it keeps the old
-one. Watch `/var/log/mesh-flux/register.log`. To stop a node updating, set
+**To the latest code from GitHub.** Run as root, on the hub first, then on
+each node:
+
+```sh
+mesh-flux-update          # asks before changing anything; -y skips that
+```
+
+It downloads the repo, shows the installed and new commit, and runs the
+build again in `--update` mode: new packages, new code and service files,
+with none of the build's cleanup. It keeps the node's config, hostname and
+SSH keys, the hub's `hub.env` and database, and the root password. Then the
+hub restarts; a node re-runs `setup.sh`, which registers with the hub, so
+you see straight away whether the new `register.sh` works.
+`cat /etc/mesh-flux-release` shows the commit a VM is on.
+
+Update the hub first. It serves `test-cycle.sh` to every node (below), so a
+node updated ahead of its hub gets its `test-cycle.sh` swapped back to the
+hub's copy within 5 minutes. `mesh-flux-update` warns when that will happen.
+A hub update also overwrites any hand edits in `/opt/mesh-flux-hub/agent/`.
+
+VMs built before `mesh-flux-update` existed don't have it yet. Fetch it once:
+
+```sh
+curl -fsSLo /tmp/mesh-flux-update https://raw.githubusercontent.com/orneh24/mesh-flux/main/update.sh && sh /tmp/mesh-flux-update
+```
+
+The download needs DNS and a route to GitHub. A hub set up with
+`hub-setup.sh` has no DNS server (the build clears `/etc/resolv.conf` and
+the wizard doesn't ask), so add one first:
+`echo 'nameserver <dns-ip>' > /etc/resolv.conf`. No GitHub access at all:
+see §8.
+
+Don't update the node *template* in place. Booting it creates SSH host keys
+that every later clone would share; rebuild it instead (§4).
+
+**Only `test-cycle.sh`, between updates.** The hub serves `test-cycle.sh`
+from `/opt/mesh-flux-hub/agent/`. Edit it there, and every node picks it up
+at its next registration (within 5 minutes). A node only accepts the new
+version if its checksum matches, it passes `sh -n`, and a real test cycle
+succeeds. Otherwise it keeps the old one. Watch
+`/var/log/mesh-flux/register.log`. To stop a node updating, set
 `AGENT_AUTOUPDATE=false` in its config.
 
-Only `test-cycle.sh` updates itself. Copy changes to `register.sh`,
-`setup.sh` or `test-status.sh` to nodes yourself (`CLAUDE.md` constraint 13).
+Only `test-cycle.sh` updates itself. `register.sh`, `setup.sh` and
+`test-status.sh` change only through `mesh-flux-update`, run by hand
+(`CLAUDE.md` constraint 13).
 
 > **The hub API has no authentication.** Anyone who can reach it can post
 > results, add targets or change the script every node runs. Keep the hub on
@@ -439,3 +476,7 @@ scp -O -r mesh-flux root@<vm-ip>:/root/
 ```
 
 Then run `sh /root/mesh-flux/install.sh` on the VM.
+
+To update an installed VM the same way, copy the repo over and run
+`sh /root/mesh-flux/update.sh`. It uses the copy instead of downloading.
+Remove any older `/root/mesh-flux` first, or scp puts the new copy inside it.
