@@ -177,7 +177,7 @@ ENABLE_SMB=${_enable_smb}
 
 # Enable the SMTP probe test (true/false). Costs OpenSMTPD's resident memory
 # (multi-process: parent/lka/queue/scheduler/dispatcher/control/ca) on a
-# 128 MB VM plus ~3s typical / up to 10s worst-case per peer in the cycle
+# 128 MB VM plus ~2s typical / up to 20s worst-case per peer in the cycle
 # budget. Never issues DATA — see config.sample for the full safety note.
 ENABLE_SMTP=${_enable_smtp}
 

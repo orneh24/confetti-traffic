@@ -628,7 +628,7 @@ run_smtp_test() {
     _helo="${SMTP_HELO:-$MY_HOSTNAME}"
     _from="${SMTP_MAIL_FROM:-}"
     _rcpt="${SMTP_RCPT:-probe@pervium.invalid}"
-    _timeout="${SMTP_TIMEOUT:-10}"
+    _timeout="${SMTP_TIMEOUT:-20}"
     _start_s=$(date +%s)
 
     # The client never speaks out of turn. nc writes the server's replies to
@@ -666,7 +666,7 @@ run_smtp_test() {
           printf '%s\r\n' "$_cmd"
           sleep 0.3
       done
-    } | timeout "$_timeout" nc -w 5 "$_target_ip" "$_port" > "$_smtp_out" 2>&1 || true
+    } | timeout "$_timeout" nc -w "$_timeout" "$_target_ip" "$_port" > "$_smtp_out" 2>&1 || true
     _output=$(cat "$_smtp_out")
     rm -f "$_smtp_out"
 

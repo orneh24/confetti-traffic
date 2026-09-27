@@ -103,8 +103,10 @@ ENABLE_SMB=false
 # scheduler, dispatcher, control, ca — roughly 7 privileged-separation
 # processes versus smbd's fork-per-connection model), so measure its
 # resident memory alongside ENABLE_SMB if both are enabled on the same node.
-# Typical cost is ~3s per peer in the cycle budget (two deliberate 1s pauses
-# plus connection/round-trip time), up to ~10s worst case (SMTP_TIMEOUT).
+# Typical cost is ~2s per peer in the cycle budget, up to SMTP_TIMEOUT (20s)
+# worst case. The worst case is a slow banner: OpenSMTPD looks up the
+# connecting peer's name before greeting, so a peer whose DNS answers
+# reverse lookups slowly can take ~15s.
 ENABLE_SMTP=false
 
 # The three ENABLE_* switches above can also be set mesh-wide from the hub
@@ -123,7 +125,7 @@ HUB_SETTINGS=true
 #SMTP_HELO=
 #SMTP_MAIL_FROM=
 #SMTP_RCPT=probe@pervium.invalid
-#SMTP_TIMEOUT=10
+#SMTP_TIMEOUT=20
 
 # Loss/jitter probe (fping) tuning — always on, no ENABLE_* flag. Defaults
 # are inline in run_loss_test(); uncomment to override. Fewer/shorter probes

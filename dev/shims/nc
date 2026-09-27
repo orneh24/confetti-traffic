@@ -1,5 +1,5 @@
 #!/bin/sh
-# Dev shim for the hand-rolled SMTP conversation `nc -w 5 TARGET PORT`.
+# Dev shim for the hand-rolled SMTP conversation `nc -w SMTP_TIMEOUT TARGET PORT`.
 # Behaves like a real server, in order: banner first, then one reply per
 # command. run_smtp_test waits for the 220 banner before it sends EHLO, and
 # for the final "250 " EHLO line before the rest, so a shim that read all of
