@@ -6,24 +6,46 @@
 <title>Network Connectivity Tester</title>
 <link rel="icon" href="/favicon.ico" type="image/svg+xml">
 <script>
-// Set before first paint so a saved light choice doesn't flash dark on load.
-try {
-    if (localStorage.getItem('mesh-flux-theme') === 'light') {
-        document.documentElement.setAttribute('data-theme', 'light');
-    }
-} catch (e) {}
-function toggleTheme() {
-    var root = document.documentElement;
-    var light = root.getAttribute('data-theme') !== 'light';
-    if (light) root.setAttribute('data-theme', 'light');
-    else root.removeAttribute('data-theme');
-    try { localStorage.setItem('mesh-flux-theme', light ? 'light' : 'dark'); } catch (e) {}
-    syncThemeButton();
+// Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
+// below; dark is the default and has no attribute. Same localStorage key on
+// both hub pages, so one choice covers both. Applied before first paint so a
+// saved choice doesn't flash dark on load.
+var THEMES = [
+    ['dark', 'Dark'],
+    ['light', 'Light'],
+    ['catppuccin', 'Catppuccin Mocha'],
+    ['gruvbox', 'Gruvbox'],
+    ['terminal', 'Terminal green'],
+];
+function themeKnown(name) {
+    for (var i = 0; i < THEMES.length; i++) { if (THEMES[i][0] === name) return true; }
+    return false;
 }
-function syncThemeButton() {
-    var btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent =
-        document.documentElement.getAttribute('data-theme') === 'light' ? 'Dark mode' : 'Light mode';
+function applyTheme(name) {
+    if (!themeKnown(name) || name === 'dark') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', name);
+}
+function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') || 'dark';
+}
+try { applyTheme(localStorage.getItem('mesh-flux-theme')); } catch (e) {}
+function setTheme(name) {
+    applyTheme(name);
+    try { localStorage.setItem('mesh-flux-theme', currentTheme()); } catch (e) {}
+    syncThemeSelect();
+}
+function syncThemeSelect() {
+    var sel = document.getElementById('theme-select');
+    if (!sel) return;
+    if (!sel.options.length) {
+        THEMES.forEach(function (t) {
+            var o = document.createElement('option');
+            o.value = t[0];
+            o.textContent = t[1];
+            sel.appendChild(o);
+        });
+    }
+    sel.value = currentTheme();
 }
 </script>
 <style>
@@ -72,6 +94,78 @@ function syncThemeButton() {
     --gray:      #d0d7de;
     --blue:      #0969da;
     --cyan:      #0b7a75;
+}
+/* Catppuccin Mocha */
+:root[data-theme="catppuccin"] {
+    --bg:        #1e1e2e;
+    --bg-card:   #262637;
+    --bg-hover:  #313244;
+    --bg-muted:  #313244;
+    --bg-code:   #181825;
+    --stripe:    #222232;
+    --border:    #45475a;
+    --border-soft: #313244;
+    --badge-bg:  #2a2f45;
+    --badge-border: #3b4466;
+    --text:      #cdd6f4;
+    --text-dim:  #a6adc8;
+    --green:     #a6e3a1;
+    --green-bg:  #2b3b31;
+    --red:       #f38ba8;
+    --red-bg:    #4a2838;
+    --yellow:    #f9e2af;
+    --yellow-bg: #443d33;
+    --gray:      #585b70;
+    --blue:      #89b4fa;
+    --cyan:      #94e2d5;
+}
+/* Gruvbox */
+:root[data-theme="gruvbox"] {
+    --bg:        #282828;
+    --bg-card:   #32302f;
+    --bg-hover:  #3c3836;
+    --bg-muted:  #3c3836;
+    --bg-code:   #1d2021;
+    --stripe:    #2c2b2a;
+    --border:    #504945;
+    --border-soft: #3c3836;
+    --badge-bg:  #2f3a36;
+    --badge-border: #45554e;
+    --text:      #ebdbb2;
+    --text-dim:  #bdae93;
+    --green:     #8ec07c;
+    --green-bg:  #2c3d2e;
+    --red:       #fb4934;
+    --red-bg:    #4a2320;
+    --yellow:    #fabd2f;
+    --yellow-bg: #4a3d1e;
+    --gray:      #665c54;
+    --blue:      #83a598;
+    --cyan:      #b8bb26;
+}
+/* Terminal green — mostly one hue by design; red and amber stay distinct so failures still read */
+:root[data-theme="terminal"] {
+    --bg:        #050805;
+    --bg-card:   #0a120a;
+    --bg-hover:  #112011;
+    --bg-muted:  #112011;
+    --bg-code:   #020402;
+    --stripe:    #081008;
+    --border:    #1f4a1f;
+    --border-soft: #112011;
+    --badge-bg:  #0d2412;
+    --badge-border: #1f4a1f;
+    --text:      #33ff66;
+    --text-dim:  #22aa44;
+    --green:     #66ff99;
+    --green-bg:  #0d2b12;
+    --red:       #ff5f5f;
+    --red-bg:    #3a0f0f;
+    --yellow:    #ffcc33;
+    --yellow-bg: #332a0a;
+    --gray:      #1f4a1f;
+    --blue:      #00e676;
+    --cyan:      #7dffb0;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -216,7 +310,8 @@ a:hover { text-decoration: underline; }
     text-decoration: none;
 }
 .btn-nav:hover { background: var(--cyan); color: var(--bg); text-decoration: none; }
-.theme-toggle { cursor: pointer; margin-left: 8px; }
+.theme-select { cursor: pointer; margin-left: 8px; }
+.theme-select option { background: var(--bg-card); color: var(--text); }
 
 /* The current page's own nav button: same shape as .btn-nav, permanently in
    its "active" state and not a link — it marks where you are, not somewhere
@@ -609,8 +704,8 @@ a:hover { text-decoration: underline; }
         <span id="health-summary" class="health-ok">&mdash;</span>
         &nbsp;|&nbsp;
         <span id="clock" class="clock" title="Hub's own NTP sync state (chronyc tracking)">clock: --</span>
-        <button type="button" id="theme-toggle" class="btn-nav theme-toggle" onclick="toggleTheme()">Light mode</button>
-        <script>syncThemeButton();</script>
+        <select id="theme-select" class="btn-nav theme-select" aria-label="Colour theme" onchange="setTheme(this.value)"></select>
+        <script>syncThemeSelect();</script>
     </div>
 </div>
 
