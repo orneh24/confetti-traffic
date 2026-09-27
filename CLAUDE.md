@@ -327,7 +327,12 @@ hub/
   run.sh              — foreground launcher for debugging
   app/                — Flask API (app.py, config.py, pathchange.py,
                         syslog_server.py)
-  templates/          — dashboard.html, syslog.html
+  templates/          — dashboard.html, syslog.html. Colour themes (Dark, Light, Catppuccin Mocha,
+                        Gruvbox, Terminal green) are inline in BOTH pages: a THEMES list in the
+                        head <script> plus one :root[data-theme=NAME] block each, shared
+                        localStorage key mesh-flux-theme. Adding or changing a theme means
+                        editing both pages. syslog.html has its own variable set (--row-line,
+                        and --gray is a text grey there, not a fill).
   static/
   agent/              — scripts served to nodes (created at build time)
   services/           — firstboot.initd, login-setup.sh
