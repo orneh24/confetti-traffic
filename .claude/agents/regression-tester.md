@@ -1,6 +1,6 @@
 ---
 name: regression-tester
-description: Mesh-flux regression gate. Invoke before handing any change to the user, and after any edit under node/, hub/ or the build scripts — it re-runs the fixed battery of checks guarding every numbered constraint in CLAUDE.md, each of which is a bug that already shipped once, plus the wire contract, the two correlation surfaces (R21 /api/time, R22 dashboard syslog links), the first-login setup prompt (R23-R25), and the `--update` build mode (R26) that have no numbered constraint behind them. Reports pass / fail / not-run per constraint with the command output as evidence, and blocks the handover on any fail.
+description: Pervium regression gate. Invoke before handing any change to the user, and after any edit under node/, hub/ or the build scripts — it re-runs the fixed battery of checks guarding every numbered constraint in CLAUDE.md, each of which is a bug that already shipped once, plus the wire contract, the two correlation surfaces (R21 /api/time, R22 dashboard syslog links), the first-login setup prompt (R23-R25), and the `--update` build mode (R26) that have no numbered constraint behind them. Reports pass / fail / not-run per constraint with the command output as evidence, and blocks the handover on any fail.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -49,7 +49,7 @@ entry, which every node then skips as "self".
 
 ```sh
 grep -nE "hostname +TEXT PRIMARY KEY" hub/app/app.py
-grep -n "mesh-flux-template" node/build-template.sh
+grep -n "pervium-template" node/build-template.sh
 grep -n "/etc/hostname" node/scripts/setup.sh
 ```
 
@@ -111,16 +111,16 @@ Pass: both end in `Z`. A space-separated value from either is a fail.
 `BatchMode=yes`, key auth only.
 
 ```sh
-grep -n "id_mesh_flux" node/build-template.sh
+grep -n "id_pervium" node/build-template.sh
 grep -n "dropbear_.*host_key" node/build-template.sh
 ```
 
-Pass: cleanup deletes dropbear *host* keys and leaves `/etc/mesh-flux/id_mesh_flux`
+Pass: cleanup deletes dropbear *host* keys and leaves `/etc/pervium/id_pervium`
 alone. A cleanup line that removes the keypair is a fail however it is
 commented.
 
 **R4 — `setup.sh` must not copy scripts onto themselves.** Source and
-destination both resolve to `/usr/local/bin/mesh-flux/` when run in place;
+destination both resolve to `/usr/local/bin/pervium/` when run in place;
 `cp` exits 1 and `set -e` aborts the install half-done.
 
 ```sh
@@ -129,10 +129,10 @@ sed -n '/Install scripts/,/crontab/p' node/scripts/setup.sh
 
 Pass: the two paths are compared before the `cp` pair.
 
-**R5 — the web server is the OpenRC service `mesh-flux-httpd`.**
+**R5 — the web server is the OpenRC service `pervium-httpd`.**
 
 ```sh
-grep -rn "rc-update add mesh-flux-httpd" node/
+grep -rn "rc-update add pervium-httpd" node/
 grep -rnE '^[^#]*busybox httpd|^[^#]*\bhttpd -p' node/scripts/
 ```
 
@@ -220,7 +220,7 @@ left rotation installed but never triggered, so the disk still filled.
 sed -n '/Install crontab/,/periodic entries/p' node/scripts/setup.sh
 ```
 
-Pass: `crontab -l` read first, any prior mesh-flux block stripped, new
+Pass: `crontab -l` read first, any prior pervium block stripped, new
 entries appended, and the surviving `run-parts` count logged.
 
 **R13 — only `test-cycle.sh` auto-updates.**
@@ -261,7 +261,7 @@ passes. The `samba` metapackage drags in winbind and the AD domain-controller
 machinery; `samba-server` alone does not depend on either. `opensmtpd-openrc`
 would install a bare `smtpd` OpenRC service an operator could enable by
 accident, bypassing `ENABLE_SMTP` and every safety guard in our own
-`smtpd.conf` — this project ships its own `mesh-flux-smtpd` initd instead.
+`smtpd.conf` — this project ships its own `pervium-smtpd` initd instead.
 
 **R14b — the SMTP probe server can never send mail.**
 
@@ -294,7 +294,7 @@ interactively, so auto-running it with no keys present would block the boot
 forever on a console nobody is watching.
 
 ```sh
-grep -n "meshflux.hub_url\|meshflux.group\|/dev/null" node/services/firstboot.initd
+grep -n "pervium.hub_url\|pervium.group\|/dev/null" node/services/firstboot.initd
 ```
 
 Pass: both keys checked before `setup.sh` is invoked, and stdin redirected
@@ -601,7 +601,7 @@ gets configured, indistinguishable from one nobody has touched yet.
 ### R26 — `build-template.sh --update` never reaches cleanup
 
 No numbered constraint either — a design-review catch, added with
-`mesh-flux-update` (`update.sh`), which runs each role's build script with
+`pervium-update` (`update.sh`), which runs each role's build script with
 `--update` on a live VM. The cleanup section below the early exit deletes
 `hub.db`, empties `resolv.conf`, and removes the node's config, hostname and
 stamps. Reaching it on a live VM is data loss, so this is
@@ -613,18 +613,18 @@ for f in hub/build-template.sh node/build-template.sh; do
   awk '/UPDATE_MODE" = "yes" \]; then/{g=NR} /^    exit 0/ && g && NR-g<=3 {print "exit at " NR} /Clean up for template conversion/{print "cleanup at " NR}' "$f"
   grep -n 'UPDATE_MODE' "$f"
 done
-grep -n 'update.sh\|mesh-flux-update' node/services/crontab node/scripts/setup.sh
+grep -n 'update.sh\|pervium-update' node/services/crontab node/scripts/setup.sh
 ```
 
 Pass, for each file: an `exit 0` guarded by `UPDATE_MODE` whose line number
 is *lower* than the `Clean up for template conversion` header. Also, the
 `UPDATE_MODE` guards cover the root-password `chpasswd` (both roles),
 the `hub.env` heredoc (hub), and the placeholder `index.html` (node).
-The last grep must print nothing: `mesh-flux-update` replaces register.sh,
+The last grep must print nothing: `pervium-update` replaces register.sh,
 so scheduling it is the unattended register.sh update constraint 13 forbids.
 Also check that node scripts are installed through `install_script` (temp
 file + `mv`) and not with `cp -f` straight onto
-`/usr/local/bin/mesh-flux/*.sh`. Cron may be running them during an update,
+`/usr/local/bin/pervium/*.sh`. Cron may be running them during an update,
 and sh reads a script as it runs.
 
 
@@ -729,7 +729,7 @@ workflow. Shim `ping`, `ip`, `ssh`, `dig`, `traceroute`, `iperf3`,
 let the `0000` bug through in the first place.
 
 Two edits to the scripts are permitted, because off Alpine there is no
-alternative: redirecting the two OS-root paths (`/etc/mesh-flux` and the
+alternative: redirecting the two OS-root paths (`/etc/pervium` and the
 `/run` lock dir) into fixture directories. Nothing else. Diff your copy
 against the original, confirm only those lines differ, and **say in the report
 which lines you changed** — an unqualified claim of "ran unmodified" is not

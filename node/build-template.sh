@@ -12,11 +12,11 @@
 # Usage:
 #   1. Put the whole repo on the Alpine VM (README quick start, or scp)
 #      -- not just node/: the build also installs ../update.sh
-#   2. Run: sh /root/mesh-flux/install.sh (or this script directly)
+#   2. Run: sh /root/pervium/install.sh (or this script directly)
 #   3. Shutdown and convert to template in vCenter
 #
 # --update: refresh packages and files on an already-configured node, as
-# run by update.sh (mesh-flux-update). Skips the root password, the
+# run by update.sh (pervium-update). Skips the root password, the
 # placeholder identity page and the whole template cleanup, which would wipe
 # the node's config, hostname and stamps.
 
@@ -26,11 +26,11 @@ UPDATE_MODE="no"
 [ "${1:-}" = "--update" ] && UPDATE_MODE="yes"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-INSTALL_DIR="/usr/local/bin/mesh-flux"
-CONFIG_DIR="/etc/mesh-flux"
-LOG_DIR="/var/log/mesh-flux"
+INSTALL_DIR="/usr/local/bin/pervium"
+CONFIG_DIR="/etc/pervium"
+LOG_DIR="/var/log/pervium"
 WEB_ROOT="/var/www/localhost/htdocs"
-MESH_FLUX_ROOT_PASSWORD="${MESH_FLUX_ROOT_PASSWORD:-lab123}"
+PERVIUM_ROOT_PASSWORD="${PERVIUM_ROOT_PASSWORD:-lab123}"
 
 # -------------------------------------------------------------------
 # Helpers
@@ -50,9 +50,9 @@ die() {
 [ "$(id -u)" -eq 0 ] || die "Must run as root"
 
 if [ "$UPDATE_MODE" = "yes" ]; then
-    log "=== mesh-flux node update (config, hostname and keys kept) ==="
+    log "=== pervium node update (config, hostname and keys kept) ==="
 else
-    log "=== mesh-flux node template builder ==="
+    log "=== pervium node template builder ==="
 fi
 
 # -------------------------------------------------------------------
@@ -151,11 +151,11 @@ log "Packages installed"
 #                      script installs as the bare /etc/init.d/smtpd (verified
 #                      against the installed package), the same generic-name
 #                      collision risk this project already avoided with
-#                      mesh-flux-httpd (not httpd). It would let an operator
+#                      pervium-httpd (not httpd). It would let an operator
 #                      `rc-update add smtpd` by accident, bypassing
 #                      ENABLE_SMTP and every guard smtpd.conf writes in. This
 #                      project ships its own service/smtpd.initd instead,
-#                      installed as mesh-flux-smtpd — see that file's header.
+#                      installed as pervium-smtpd — see that file's header.
 #                      run_smtp_test() drives smtpd for the SMTP ESMTP-
 #                      capability-masking probe.
 
@@ -206,11 +206,11 @@ if [ "$UPDATE_MODE" = "yes" ]; then
     log "Keeping the current root password"
 else
     log "Setting root password"
-    echo "root:${MESH_FLUX_ROOT_PASSWORD}" | chpasswd
+    echo "root:${PERVIUM_ROOT_PASSWORD}" | chpasswd
 
     # Dropbear permits root password login by default (no -w in DROPBEAR_OPTS).
 
-    log "Credentials: root / ${MESH_FLUX_ROOT_PASSWORD}"
+    log "Credentials: root / ${PERVIUM_ROOT_PASSWORD}"
 fi
 
 # -------------------------------------------------------------------
@@ -226,19 +226,19 @@ fi
 # nowhere else — do not reuse this template outside it.
 # -------------------------------------------------------------------
 log "Generating shared lab SSH keypair"
-mkdir -p /etc/mesh-flux /root/.ssh
+mkdir -p /etc/pervium /root/.ssh
 chmod 700 /root/.ssh
 
-if [ ! -f /etc/mesh-flux/id_mesh_flux ]; then
-    ssh-keygen -t ed25519 -N '' -C 'mesh-flux' -f /etc/mesh-flux/id_mesh_flux
+if [ ! -f /etc/pervium/id_pervium ]; then
+    ssh-keygen -t ed25519 -N '' -C 'pervium' -f /etc/pervium/id_pervium
 fi
-chmod 600 /etc/mesh-flux/id_mesh_flux
-chmod 644 /etc/mesh-flux/id_mesh_flux.pub
+chmod 600 /etc/pervium/id_pervium
+chmod 644 /etc/pervium/id_pervium.pub
 
 # Trust the shared key for root logins.
 touch /root/.ssh/authorized_keys
-if ! grep -qF "$(cat /etc/mesh-flux/id_mesh_flux.pub)" /root/.ssh/authorized_keys 2>/dev/null; then
-    cat /etc/mesh-flux/id_mesh_flux.pub >> /root/.ssh/authorized_keys
+if ! grep -qF "$(cat /etc/pervium/id_pervium.pub)" /root/.ssh/authorized_keys 2>/dev/null; then
+    cat /etc/pervium/id_pervium.pub >> /root/.ssh/authorized_keys
 fi
 chmod 600 /root/.ssh/authorized_keys
 
@@ -260,10 +260,10 @@ mkdir -p "$INSTALL_DIR" "$CONFIG_DIR" "$LOG_DIR" "$WEB_ROOT"
 # Samba state databases, not this directory).
 # -------------------------------------------------------------------
 log "Creating SMB probe share"
-mkdir -p /srv/mesh-flux-smb
-dd if=/dev/zero of=/srv/mesh-flux-smb/probe.bin bs=1M count=8 2>/dev/null
-chmod 0444 /srv/mesh-flux-smb/probe.bin
-chmod 0555 /srv/mesh-flux-smb
+mkdir -p /srv/pervium-smb
+dd if=/dev/zero of=/srv/pervium-smb/probe.bin bs=1M count=8 2>/dev/null
+chmod 0444 /srv/pervium-smb/probe.bin
+chmod 0555 /srv/pervium-smb
 
 # No equivalent probe-payload step for SMTP: unlike SMB's fixed 8 MB
 # probe.bin, run_smtp_test() carries no payload at all (it never issues
@@ -301,9 +301,9 @@ ln -sf "$INSTALL_DIR/test-status.sh" /usr/local/bin/test-status
 # this build ran from is usually deleted afterwards. install_script, not cp:
 # on --update the installed copy is the script running this build.
 if [ -f "${SCRIPT_DIR}/../update.sh" ]; then
-    install_script "${SCRIPT_DIR}/../update.sh" /usr/local/bin/mesh-flux-update
+    install_script "${SCRIPT_DIR}/../update.sh" /usr/local/bin/pervium-update
 else
-    log "  WARNING: ../update.sh not found -- mesh-flux-update not installed"
+    log "  WARNING: ../update.sh not found -- pervium-update not installed"
 fi
 
 # -------------------------------------------------------------------
@@ -318,7 +318,7 @@ cp -f "${SCRIPT_DIR}/config.sample" "$CONFIG_DIR/config.sample"
 log "Installing service configs"
 
 # httpd config
-cp -f "${SCRIPT_DIR}/services/mesh-flux-httpd.conf" /etc/httpd.conf
+cp -f "${SCRIPT_DIR}/services/pervium-httpd.conf" /etc/httpd.conf
 
 # iperf3 OpenRC init script
 cp -f "${SCRIPT_DIR}/services/iperf3.initd" /etc/init.d/iperf3
@@ -326,50 +326,50 @@ chmod +x /etc/init.d/iperf3
 
 # busybox httpd OpenRC init script — without this the web server would not
 # come back after a reboot and every HTTP test in the mesh would fail.
-cp -f "${SCRIPT_DIR}/services/httpd.initd" /etc/init.d/mesh-flux-httpd
-chmod +x /etc/init.d/mesh-flux-httpd
+cp -f "${SCRIPT_DIR}/services/httpd.initd" /etc/init.d/pervium-httpd
+chmod +x /etc/init.d/pervium-httpd
 
 # First-boot autorun — configures the clone from guestinfo with no console
 # session. Stands down when the keys are absent rather than blocking on a
 # prompt nobody is there to answer.
-cp -f "${SCRIPT_DIR}/services/firstboot.initd" /etc/init.d/mesh-flux-firstboot
-chmod +x /etc/init.d/mesh-flux-firstboot
+cp -f "${SCRIPT_DIR}/services/firstboot.initd" /etc/init.d/pervium-firstboot
+chmod +x /etc/init.d/pervium-firstboot
 
 # Invite an unconfigured node to run node-setup.sh at first interactive
 # login, where a real tty is guaranteed (unlike an OpenRC start()).
-cp -f "${SCRIPT_DIR}/services/login-setup.sh" /etc/profile.d/mesh-flux-node-setup.sh
+cp -f "${SCRIPT_DIR}/services/login-setup.sh" /etc/profile.d/pervium-node-setup.sh
 
 # Show the last test cycle plus a test-status usage hint at every
 # interactive login of a configured node — same tty guard as
 # login-setup.sh above, see its own header comment.
-cp -f "${SCRIPT_DIR}/services/login-status.sh" /etc/profile.d/mesh-flux-status.sh
+cp -f "${SCRIPT_DIR}/services/login-status.sh" /etc/profile.d/pervium-status.sh
 
 # Samba (SMB probe server). Config is installed unconditionally like the
-# other service files, but — unlike dropbear/mesh-flux-httpd below — mesh-flux-smbd is
+# other service files, but — unlike dropbear/pervium-httpd below — pervium-smbd is
 # deliberately NOT rc-update'd here. It only starts when a clone's config
 # sets ENABLE_SMB=true, which setup.sh enforces at boot time, matching how
 # iperf3 is handled.
 mkdir -p /etc/samba
 cp -f "${SCRIPT_DIR}/services/smb.conf" /etc/samba/smb.conf
-cp -f "${SCRIPT_DIR}/services/smbd.initd" /etc/init.d/mesh-flux-smbd
-chmod +x /etc/init.d/mesh-flux-smbd
+cp -f "${SCRIPT_DIR}/services/smbd.initd" /etc/init.d/pervium-smbd
+chmod +x /etc/init.d/pervium-smbd
 
 # OpenSMTPD (SMTP probe server). This cp deliberately REPLACES the packaged
 # default /etc/smtpd/smtpd.conf, which (verified against the installed
 # opensmtpd package) ships a working `action "relay" relay` — an open relay
 # for anything originated on the box. See smtpd.conf's own header for why
 # that matters given this lab's NAT + default route to the internet. Like
-# mesh-flux-smbd, mesh-flux-smtpd is installed but deliberately NOT rc-update'd here —
+# pervium-smbd, pervium-smtpd is installed but deliberately NOT rc-update'd here —
 # it only starts when a clone's config sets ENABLE_SMTP=true, enforced by
 # setup.sh at boot time.
 mkdir -p /etc/smtpd
 cp -f "${SCRIPT_DIR}/services/smtpd.conf" /etc/smtpd/smtpd.conf
-cp -f "${SCRIPT_DIR}/services/smtpd.initd" /etc/init.d/mesh-flux-smtpd
-chmod +x /etc/init.d/mesh-flux-smtpd
+cp -f "${SCRIPT_DIR}/services/smtpd.initd" /etc/init.d/pervium-smtpd
+chmod +x /etc/init.d/pervium-smtpd
 
 # Log rotation — test-cycle.sh appends traceroute output every 60 seconds.
 mkdir -p /etc/logrotate.d
-cp -f "${SCRIPT_DIR}/services/logrotate.conf" /etc/logrotate.d/mesh-flux
+cp -f "${SCRIPT_DIR}/services/logrotate.conf" /etc/logrotate.d/pervium
 
 # crontab (installed but not activated until setup.sh runs)
 cp -f "${SCRIPT_DIR}/services/crontab" "$CONFIG_DIR/crontab"
@@ -420,14 +420,14 @@ cat > "${WEB_ROOT}/index.html" <<'IDEOF'
 <!DOCTYPE html>
 <html>
 <head>
-  <title>mesh-flux (unconfigured)</title>
+  <title>pervium (unconfigured)</title>
   <style>
     body { font-family: monospace; margin: 2em; background: #1a1a2e; color: #e0e0e0; }
     h1 { color: #ff6b6b; }
   </style>
 </head>
 <body>
-  <h1>mesh-flux — not configured</h1>
+  <h1>pervium — not configured</h1>
   <p>Log in and run <code>node-setup.sh</code> (or <code>setup.sh</code> directly) to configure this VM.</p>
 </body>
 </html>
@@ -447,10 +447,10 @@ rc-update add crond default
 
 # identity web server — enabled here so it survives reboots even if the
 # operator forgets to re-run setup.sh
-rc-update add mesh-flux-httpd default
+rc-update add pervium-httpd default
 
 # first-boot autoconfiguration from guestinfo
-rc-update add mesh-flux-firstboot default
+rc-update add pervium-firstboot default
 
 log "Services enabled"
 
@@ -461,7 +461,7 @@ log "Creating first-boot setup reminder"
 cat > /etc/motd <<'MOTDEOF'
 
   +------------------------------------------------+
-  |          mesh-flux node                        |
+  |           pervium node                         |
   |                                                |
   |   Not configured yet? Log in and run:          |
   |     node-setup.sh                              |
@@ -469,9 +469,9 @@ cat > /etc/motd <<'MOTDEOF'
   |    node hasn't been configured)                |
   |                                                |
   |   Manual path:                                 |
-  |     1. Edit /etc/mesh-flux/config              |
+  |     1. Edit /etc/pervium/config                |
   |        (copy from config.sample)               |
-  |     2. Run: /usr/local/bin/mesh-flux/setup.sh  |
+  |     2. Run: /usr/local/bin/pervium/setup.sh    |
   +------------------------------------------------+
 
 MOTDEOF
@@ -489,7 +489,7 @@ fi
 log "Cleaning up for template conversion"
 
 # Remove SSH *host* keys so each clone generates its own on first boot.
-# The shared mesh keypair in /etc/mesh-flux/ is deliberately kept — it has
+# The shared mesh keypair in /etc/pervium/ is deliberately kept — it has
 # to survive cloning for the SSH test to work.
 rm -f /etc/dropbear/dropbear_*_host_key
 
@@ -514,14 +514,14 @@ find /var/spool/smtpd/queue -mindepth 1 -delete 2>/dev/null || true
 # prompt on every clone made from it, and the only symptom is a node that
 # never registers. config.bak-* are node-setup.sh --force's own backups of
 # a real (not template) config and must not survive into the image either.
-rm -f /etc/mesh-flux/config /etc/mesh-flux/config.bak-* \
-      /etc/mesh-flux/.firstboot-done /etc/mesh-flux/.setup-done
-rm -f /usr/local/bin/mesh-flux/*.known-good
+rm -f /etc/pervium/config /etc/pervium/config.bak-* \
+      /etc/pervium/.firstboot-done /etc/pervium/.setup-done
+rm -f /usr/local/bin/pervium/*.known-good
 
 # Reset the hostname to an obviously-unconfigured value. setup.sh replaces
 # it with a unique per-clone name; leaving a real one here invites the
 # collision this template is built to avoid.
-printf 'mesh-flux-template\n' > /etc/hostname
+printf 'pervium-template\n' > /etc/hostname
 
 # Clear machine-id (regenerated on boot)
 : > /etc/machine-id 2>/dev/null || true
@@ -556,15 +556,15 @@ log "  2. In vCenter: right-click VM → Template → Convert to Template"
 log ""
 log "To deploy a clone (zero-touch, recommended):"
 log "  Set these guestinfo keys on the clone in vCenter, then boot:"
-log "    guestinfo.meshflux.hub_url   http://10.0.0.100"
-log "    guestinfo.meshflux.group     site-a"
-log "    guestinfo.meshflux.subnet    10.1.1.0/24 (optional -- derives from DHCP)"
-log "    guestinfo.meshflux.hostname  mf-site-a (optional)"
-log "  Then boot -- mesh-flux-firstboot configures and registers the clone"
+log "    guestinfo.pervium.hub_url   http://10.0.0.100"
+log "    guestinfo.pervium.group     site-a"
+log "    guestinfo.pervium.subnet    10.1.1.0/24 (optional -- derives from DHCP)"
+log "    guestinfo.pervium.hostname  pv-site-a (optional)"
+log "  Then boot -- pervium-firstboot configures and registers the clone"
 log "  automatically. Nothing to run by hand."
 log ""
 log "To deploy a clone (manual):"
 log "  1. Clone from template, assign to correct network"
-log "  2. Boot and log in (root / ${MESH_FLUX_ROOT_PASSWORD})"
+log "  2. Boot and log in (root / ${PERVIUM_ROOT_PASSWORD})"
 log "  3. node-setup.sh runs automatically at first login and prompts;"
-log "     or run it (or /usr/local/bin/mesh-flux/setup.sh) by hand any time"
+log "     or run it (or /usr/local/bin/pervium/setup.sh) by hand any time"

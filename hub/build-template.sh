@@ -12,7 +12,7 @@
 # Usage:
 #   1. Put the whole repo on the Alpine VM (README quick start, or scp)
 #      -- not just hub/: the build also installs ../node/scripts and ../update.sh
-#   2. Run: sh /root/mesh-flux/install.sh (or this script directly)
+#   2. Run: sh /root/pervium/install.sh (or this script directly)
 #   3. Shutdown and convert to template in vCenter
 #
 # After cloning:
@@ -20,7 +20,7 @@
 #   2. Boot — the hub dashboard starts automatically on port 80
 #
 # --update: refresh packages and files on an already-configured hub, as run
-# by update.sh (mesh-flux-update). Skips the root password, keeps hub.env,
+# by update.sh (pervium-update). Skips the root password, keeps hub.env,
 # and skips the whole template cleanup, which would delete the results
 # database and empty resolv.conf.
 
@@ -30,9 +30,9 @@ UPDATE_MODE="no"
 [ "${1:-}" = "--update" ] && UPDATE_MODE="yes"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HUB_INSTALL_DIR="/opt/mesh-flux-hub"
-DB_DIR="/var/lib/mesh-flux"
-MESH_FLUX_ROOT_PASSWORD="${MESH_FLUX_ROOT_PASSWORD:-lab123}"
+HUB_INSTALL_DIR="/opt/pervium-hub"
+DB_DIR="/var/lib/pervium"
+PERVIUM_ROOT_PASSWORD="${PERVIUM_ROOT_PASSWORD:-lab123}"
 
 # -------------------------------------------------------------------
 # Helpers
@@ -52,9 +52,9 @@ die() {
 [ "$(id -u)" -eq 0 ] || die "Must run as root"
 
 if [ "$UPDATE_MODE" = "yes" ]; then
-    log "=== mesh-flux hub update (hub.env and database kept) ==="
+    log "=== pervium hub update (hub.env and database kept) ==="
 else
-    log "=== mesh-flux hub template builder ==="
+    log "=== pervium hub template builder ==="
 fi
 
 # -------------------------------------------------------------------
@@ -116,9 +116,9 @@ if [ "$UPDATE_MODE" = "yes" ]; then
     log "Keeping the current root password"
 else
     log "Setting root password"
-    echo "root:${MESH_FLUX_ROOT_PASSWORD}" | chpasswd
+    echo "root:${PERVIUM_ROOT_PASSWORD}" | chpasswd
 
-    log "Credentials: root / ${MESH_FLUX_ROOT_PASSWORD}"
+    log "Credentials: root / ${PERVIUM_ROOT_PASSWORD}"
 fi
 
 # -------------------------------------------------------------------
@@ -158,18 +158,18 @@ ln -sf "$HUB_INSTALL_DIR/hub-setup.sh" /usr/local/bin/hub-setup.sh
 # build, and sh reads a script as it goes -- overwriting it in place would
 # feed that running copy the new file's bytes at the old offset.
 if [ -f "${SCRIPT_DIR}/../update.sh" ]; then
-    cp -f "${SCRIPT_DIR}/../update.sh" /usr/local/bin/mesh-flux-update.new
-    chmod +x /usr/local/bin/mesh-flux-update.new
-    mv -f /usr/local/bin/mesh-flux-update.new /usr/local/bin/mesh-flux-update
+    cp -f "${SCRIPT_DIR}/../update.sh" /usr/local/bin/pervium-update.new
+    chmod +x /usr/local/bin/pervium-update.new
+    mv -f /usr/local/bin/pervium-update.new /usr/local/bin/pervium-update
 else
-    log "  WARNING: ../update.sh not found -- mesh-flux-update not installed"
+    log "  WARNING: ../update.sh not found -- pervium-update not installed"
 fi
 
 # -------------------------------------------------------------------
 # Agent scripts served to nodes.
 #
 # This is the single place agent scripts are edited: drop a new version in
-# /opt/mesh-flux-hub/agent/ and every node picks it up within 5 minutes.
+# /opt/pervium-hub/agent/ and every node picks it up within 5 minutes.
 # Checksums are computed on demand, so no rebuild step is needed after an
 # edit — just save the file.
 # -------------------------------------------------------------------
@@ -222,7 +222,7 @@ cat > "$HUB_INSTALL_DIR/hub.env" <<'ENVEOF'
 # Edit these values after cloning if needed.
 
 # Path to the SQLite database
-HUB_DB_PATH=/var/lib/mesh-flux/hub.db
+HUB_DB_PATH=/var/lib/pervium/hub.db
 
 # How long to keep test results (hours).
 # The hub prunes older rows on each result push; without this the results
@@ -261,7 +261,7 @@ HUB_BUSY_TIMEOUT_MS=5000
 # OpenRC services to report on, comma-separated. Queried with
 # `rc-service <name> status`; a missing binary, timeout, or non-zero exit
 # degrades to a per-service "unknown" rather than failing the endpoint.
-HUB_HEALTH_SERVICES=mesh-flux-hub,chronyd,dropbear,open-vm-tools,lldpd
+HUB_HEALTH_SERVICES=pervium-hub,chronyd,dropbear,open-vm-tools,lldpd
 
 # Timeout for each rc-service check, in seconds.
 HUB_HEALTH_SERVICE_TIMEOUT_S=3
@@ -278,19 +278,19 @@ fi
 # 7. Create OpenRC init script
 # -------------------------------------------------------------------
 log "Creating OpenRC init script"
-cat > /etc/init.d/mesh-flux-hub <<'INITEOF'
+cat > /etc/init.d/pervium-hub <<'INITEOF'
 #!/sbin/openrc-run
 
-name="mesh-flux-hub"
-description="Mesh-flux hub dashboard and API"
+name="pervium-hub"
+description="Pervium hub dashboard and API"
 
-directory="/opt/mesh-flux-hub"
+directory="/opt/pervium-hub"
 command="/usr/bin/python3"
-command_args="/opt/mesh-flux-hub/serve.py"
+command_args="/opt/pervium-hub/serve.py"
 command_background="yes"
-pidfile="/run/mesh-flux-hub.pid"
-output_log="/var/log/mesh-flux-hub.log"
-error_log="/var/log/mesh-flux-hub.log"
+pidfile="/run/pervium-hub.pid"
+output_log="/var/log/pervium-hub.log"
+error_log="/var/log/pervium-hub.log"
 
 # Load environment from hub.env.
 #
@@ -300,36 +300,36 @@ error_log="/var/log/mesh-flux-hub.log"
 # runtime, which is why it exists rather than invoking flask/waitress
 # directly from this line.
 start_pre() {
-    if [ -f /opt/mesh-flux-hub/hub.env ]; then
+    if [ -f /opt/pervium-hub/hub.env ]; then
         while IFS= read -r line; do
             case "$line" in
                 \#*|"") continue ;;
                 *=*) export "$line" ;;
             esac
-        done < /opt/mesh-flux-hub/hub.env
+        done < /opt/pervium-hub/hub.env
     fi
 
-    checkpath --directory --mode 0755 /var/lib/mesh-flux
+    checkpath --directory --mode 0755 /var/lib/pervium
 }
 
 depend() {
     need net
-    after firewall mesh-flux-hub-firstboot
+    after firewall pervium-hub-firstboot
 }
 INITEOF
 
-chmod +x /etc/init.d/mesh-flux-hub
+chmod +x /etc/init.d/pervium-hub
 
 # First-boot autoconfiguration from guestinfo -- mirrors the node image's
-# mesh-flux-firstboot. Stands down when guestinfo.hub.ip/gateway are absent
+# pervium-firstboot. Stands down when guestinfo.hub.ip/gateway are absent
 # rather than blocking on a prompt nobody is there to answer; the interactive
 # path is login-setup.sh below instead.
-cp -f "${SCRIPT_DIR}/services/firstboot.initd" /etc/init.d/mesh-flux-hub-firstboot
-chmod +x /etc/init.d/mesh-flux-hub-firstboot
+cp -f "${SCRIPT_DIR}/services/firstboot.initd" /etc/init.d/pervium-hub-firstboot
+chmod +x /etc/init.d/pervium-hub-firstboot
 
 # Invite an unconfigured hub to run hub-setup.sh at first interactive login,
 # where a real tty is guaranteed (unlike an OpenRC start()).
-cp -f "${SCRIPT_DIR}/services/login-setup.sh" /etc/profile.d/mesh-flux-hub-setup.sh
+cp -f "${SCRIPT_DIR}/services/login-setup.sh" /etc/profile.d/pervium-hub-setup.sh
 
 # -------------------------------------------------------------------
 # 8. Enable services
@@ -337,10 +337,10 @@ cp -f "${SCRIPT_DIR}/services/login-setup.sh" /etc/profile.d/mesh-flux-hub-setup
 log "Enabling services"
 
 # Hub service starts on boot
-rc-update add mesh-flux-hub default
+rc-update add pervium-hub default
 
 # First-boot autoconfiguration from guestinfo
-rc-update add mesh-flux-hub-firstboot default
+rc-update add pervium-hub-firstboot default
 
 # SSH access for management
 apk_step apk add --no-cache dropbear
@@ -355,12 +355,12 @@ log "Creating first-boot instructions"
 cat > /etc/motd <<'MOTDEOF'
 
   +--------------------------------------------------------+
-  |                   mesh-flux hub VM                     |
+  |                    pervium hub VM                      |
   |                                                        |
   |   Dashboard: http://<this-vm-ip>/                      |
-  |   Config:    /opt/mesh-flux-hub/hub.env                |
-  |   DB:        /var/lib/mesh-flux/hub.db                 |
-  |   Logs:      rc-service mesh-flux-hub status           |
+  |   Config:    /opt/pervium-hub/hub.env                  |
+  |   DB:        /var/lib/pervium/hub.db                   |
+  |   Logs:      rc-service pervium-hub status             |
   |                                                        |
   |   Not configured yet? Log in and run:                  |
   |     hub-setup.sh                                       |
@@ -382,13 +382,13 @@ cat > /usr/local/bin/set-static-ip <<'SIPEOF'
 #!/bin/sh
 # Helper to configure a static IP on the hub VM.
 # Usage: set-static-ip <ip/cidr> <gateway> [dns] [hostname]
-# Example: set-static-ip 10.0.0.100/24 10.0.0.1 10.0.0.53 mesh-flux-hub
+# Example: set-static-ip 10.0.0.100/24 10.0.0.1 10.0.0.53 pervium-hub
 
 set -eu
 
 if [ $# -lt 2 ]; then
     echo "Usage: set-static-ip <ip/cidr> <gateway> [dns] [hostname]"
-    echo "Example: set-static-ip 10.0.0.100/24 10.0.0.1 10.0.0.53 mesh-flux-hub"
+    echo "Example: set-static-ip 10.0.0.100/24 10.0.0.1 10.0.0.53 pervium-hub"
     exit 1
 fi
 
@@ -478,7 +478,7 @@ rm -f "$DB_DIR/hub.db"
 
 # Remove any setup stamp left from build-time testing, or the template would
 # consider itself already configured and skip hub-setup.sh on every clone.
-rm -f /etc/mesh-flux-hub/.setup-done
+rm -f /etc/pervium-hub/.setup-done
 
 # Remove this build script (not needed on clones)
 rm -f "${SCRIPT_DIR}/build-template.sh"
@@ -499,7 +499,7 @@ log ""
 log "  (or log in again and let hub-setup.sh do all three steps)"
 log "  set-static-ip <ip/cidr> <gateway> [dns] [hostname]"
 log "  rc-service networking restart"
-log "  rc-service mesh-flux-hub start"
+log "  rc-service pervium-hub start"
 log "  Dashboard: http://<this-vm-ip>/"
 log ""
 log "Only convert to a template if you expect to redeploy the hub more than"
@@ -510,5 +510,5 @@ log "  3. Clone it, then either set guestinfo keys on the clone before boot"
 log "     (zero-touch):"
 log "       guestinfo.hub.ip       10.0.0.100/24"
 log "       guestinfo.hub.gateway  10.0.0.1"
-log "     or log in (root / ${MESH_FLUX_ROOT_PASSWORD}) and let hub-setup.sh"
+log "     or log in (root / ${PERVIUM_ROOT_PASSWORD}) and let hub-setup.sh"
 log "     prompt for both values (manual)"

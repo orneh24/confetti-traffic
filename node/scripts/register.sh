@@ -1,12 +1,12 @@
 #!/bin/sh
-# register.sh — Register this node with the mesh-flux hub.
+# register.sh — Register this node with the pervium hub.
 # Runs on boot and every 5 minutes via cron.
-# Reads config from /etc/mesh-flux/config.
+# Reads config from /etc/pervium/config.
 
 set -u
 
-CONFIG="/etc/mesh-flux/config"
-LOG_TAG="mesh-flux-register"
+CONFIG="/etc/pervium/config"
+LOG_TAG="pervium-register"
 MAX_RETRIES=3
 RETRY_DELAY=5
 
@@ -104,7 +104,7 @@ if [ -d "$WEB_ROOT" ]; then
 <!DOCTYPE html>
 <html>
 <head>
-  <title>${HOSTNAME} - mesh-flux</title>
+  <title>${HOSTNAME} - pervium</title>
   <style>
     body { font-family: monospace; margin: 2em; background: #1a1a2e; color: #e0e0e0; }
     h1 { color: #00d4ff; }
@@ -115,7 +115,7 @@ if [ -d "$WEB_ROOT" ]; then
 </head>
 <body>
   <h1>${HOSTNAME}</h1>
-  <p>mesh-flux endpoint</p>
+  <p>pervium endpoint</p>
   <table>
     <tr><td>Hostname</td><td>${HOSTNAME}</td></tr>
     <tr><td>IP Address</td><td>${IP}</td></tr>
@@ -156,7 +156,7 @@ command -v sha256sum >/dev/null 2>&1 || {
     exit 0
 }
 
-SCRIPT_DIR="/usr/local/bin/mesh-flux"
+SCRIPT_DIR="/usr/local/bin/pervium"
 MANIFEST=$(curl -s --connect-timeout 5 --max-time 10 "${HUB_URL}/agent/manifest" 2>/dev/null) || MANIFEST=""
 
 if [ -z "$MANIFEST" ] || ! printf '%s' "$MANIFEST" | jq empty 2>/dev/null; then
@@ -176,7 +176,7 @@ update_script() {
     fi
 
     log "Update available for ${_name}"
-    _tmp="/tmp/mesh-flux-${_name}.$$"
+    _tmp="/tmp/pervium-${_name}.$$"
 
     if ! curl -s -f --connect-timeout 5 --max-time 20 \
             -o "$_tmp" "${HUB_URL}/agent/${_name}" 2>/dev/null; then
@@ -238,7 +238,7 @@ update_script() {
 #
 # test-cycle.sh is what actually gets iterated on, and it is safely
 # verifiable. To roll out a register.sh change, update the template or push
-# it deliberately: run mesh-flux-update on the node (update.sh, repo root),
+# it deliberately: run pervium-update on the node (update.sh, repo root),
 # which re-runs setup.sh and so tries the new register.sh on the spot.
 update_script "test-cycle.sh"
 

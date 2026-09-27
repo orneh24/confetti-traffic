@@ -1,6 +1,6 @@
 #!/bin/sh
-# Foreground launcher for the mesh-flux hub (manual runs and debugging).
-# In production the OpenRC service mesh-flux-hub runs serve.py directly.
+# Foreground launcher for the pervium hub (manual runs and debugging).
+# In production the OpenRC service pervium-hub runs serve.py directly.
 
 cd "$(dirname "$0")" || exit 1
 

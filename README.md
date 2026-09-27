@@ -1,4 +1,4 @@
-# Mesh Flux
+# Pervium
 
 > **AI disclaimer:** This project was created using [Claude Code](https://claude.com/claude-code).
 
@@ -8,6 +8,9 @@ measures packet loss/jitter, path MTU, DNS and traceroute. Results show on a
 web dashboard, optionally next to syslog from the network devices on the path.
 The dashboard has five colour themes (Dark, Light, Catppuccin Mocha, Gruvbox,
 Terminal green), picked from the header.
+
+*Pervium* is Latin for "passable; a passage through", which is the question
+the tool keeps asking of every path. Formerly mesh-flux.
 
 ![Dashboard with a synthetic 5-node mesh, one failing path selected, and its syslog correlation panel open](docs/img/dashboard-mock.jpg)
 
@@ -25,7 +28,7 @@ this as root. It downloads the repo and starts `install.sh`, which asks
 whether the VM becomes the hub or a node:
 
 ```sh
-wget -O- https://github.com/orneh24/mesh-flux/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/mesh-flux-main /root/mesh-flux && sh /root/mesh-flux/install.sh
+wget -O- https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/pervium-main /root/pervium && sh /root/pervium/install.sh
 ```
 
 **2. Hub** (the clone where you picked *hub*). Log out and back in:
@@ -35,7 +38,7 @@ hub. Or run the same steps by hand:
 ```sh
 set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
 rc-service networking restart
-rc-service mesh-flux-hub start
+rc-service pervium-hub start
 ```
 
 Check that `http://<hub-ip>/` loads.
@@ -48,11 +51,11 @@ clone instead.
 **4. Nodes.** Clone the template once per network segment and put each clone
 on its segment's port group. Then either:
 
-- set `guestinfo.meshflux.hub_url` and `guestinfo.meshflux.group` on the
+- set `guestinfo.pervium.hub_url` and `guestinfo.pervium.group` on the
   clone before first boot, and it configures itself, or
 - boot it, log in, and answer the `node-setup.sh` prompt.
 
-The hostname is set automatically (`mf-<group>-<ip>`). Check that the node
+The hostname is set automatically (`pv-<group>-<ip>`). Check that the node
 appears at `http://<hub-ip>/endpoints`.
 
 `install.sh` refuses to run on a VM that is already a hub or node, because
@@ -61,19 +64,19 @@ re-running a build wipes its config or the hub's database. Pass `hub` or
 
 **Single VM, no cloning.** Run the step 1 command on a fresh Alpine VM,
 then finish in place: for a hub, step 2; for a node, log out and back in and
-answer the `node-setup.sh` prompt (or run `/usr/local/bin/mesh-flux/setup.sh`).
+answer the `node-setup.sh` prompt (or run `/usr/local/bin/pervium/setup.sh`).
 Ignore the node build's "convert to template" message. Fresh VM only: an
-existing `/root/mesh-flux` makes the `mv` put the new copy inside it.
+existing `/root/pervium` makes the `mv` put the new copy inside it.
 
 ### Updating
 
-To get the latest code onto an installed VM, run `mesh-flux-update` as root,
+To get the latest code onto an installed VM, run `pervium-update` as root,
 on the hub first and then on each node. It asks before changing anything,
 and keeps configs, the hub database and the root password. On VMs built
 before it existed, fetch it once:
 
 ```sh
-curl -fsSLo /tmp/mesh-flux-update https://raw.githubusercontent.com/orneh24/mesh-flux/main/update.sh && sh /tmp/mesh-flux-update
+curl -fsSLo /tmp/pervium-update https://raw.githubusercontent.com/orneh24/pervium/main/update.sh && sh /tmp/pervium-update
 ```
 
 Details, including why the hub goes first:
@@ -87,12 +90,12 @@ two marked keys are required.
 
 | Key | Role | Example | Notes |
 |---|---|---|---|
-| `guestinfo.meshflux.hub_url` | node | `http://10.0.0.100` | **required** |
-| `guestinfo.meshflux.group` | node | `site-a` | **required**; groups nodes on the dashboard |
-| `guestinfo.meshflux.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
-| `guestinfo.meshflux.hostname` | node | `mf-site-a` | `mf-<group>-<ip>` if unset; must be unique |
-| `guestinfo.meshflux.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
-| `guestinfo.meshflux.dns_query` | node | `example.com` | name the DNS test looks up |
+| `guestinfo.pervium.hub_url` | node | `http://10.0.0.100` | **required** |
+| `guestinfo.pervium.group` | node | `site-a` | **required**; groups nodes on the dashboard |
+| `guestinfo.pervium.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
+| `guestinfo.pervium.hostname` | node | `pv-site-a` | `pv-<group>-<ip>` if unset; must be unique |
+| `guestinfo.pervium.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
+| `guestinfo.pervium.dns_query` | node | `example.com` | name the DNS test looks up |
 | `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `hub-setup.sh` asks at login |
 | `guestinfo.hub.gateway` | hub | `10.0.0.1` | |
 

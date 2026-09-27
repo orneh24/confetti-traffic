@@ -1,6 +1,6 @@
 # Deploy tooling
 
-`Deploy-MeshFlux.ps1` — PowerCLI script that clones a hub and N nodes from
+`Deploy-Pervium.ps1` — PowerCLI script that clones a hub and N nodes from
 existing vCenter templates and sets the guestinfo keys their firstboot
 services read (see `CLAUDE.md`, "Per-VM configuration: guestinfo"). It only
 does vSphere-side provisioning — everything after power-on is the zero-touch
@@ -18,9 +18,9 @@ firstboot path already built into the templates.
 ```powershell
 Connect-VIServer vcenter.lab.local
 
-./Deploy-MeshFlux.ps1 `
-    -HubTemplate mesh-flux-hub-template `
-    -NodeTemplate mesh-flux-node-template `
+./Deploy-Pervium.ps1 `
+    -HubTemplate pervium-hub-template `
+    -NodeTemplate pervium-node-template `
     -PortGroup "VM Network" `
     -VMHost esxi01.lab.local -Datastore datastore1 `
     -HubIP 10.0.0.100/24 -HubGateway 10.0.0.1
@@ -31,7 +31,7 @@ flat network. `-WhatIf` previews without touching vCenter;
 `-WaitForRegistration` polls the hub afterward and reports which nodes came
 up (best-effort — a slow node is reported, not treated as failure).
 
-Full parameter reference: `Get-Help ./Deploy-MeshFlux.ps1 -Full`.
+Full parameter reference: `Get-Help ./Deploy-Pervium.ps1 -Full`.
 
 ## Multi-segment labs
 

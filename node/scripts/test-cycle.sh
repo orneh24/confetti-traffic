@@ -1,12 +1,12 @@
 #!/bin/sh
-# test-cycle.sh — Run connectivity tests against all other mesh-flux endpoints.
+# test-cycle.sh — Run connectivity tests against all other pervium endpoints.
 # Runs every 60 seconds via cron.
 # Pulls the endpoint list from the hub, tests each one, and POSTs results back.
 
 set -u
 
-CONFIG="/etc/mesh-flux/config"
-LOG_TAG="mesh-flux-test"
+CONFIG="/etc/pervium/config"
+LOG_TAG="pervium-test"
 
 # -------------------------------------------------------------------
 # Logging helper
@@ -33,7 +33,7 @@ ENABLE_IPERF="${ENABLE_IPERF:-false}"
 ENABLE_SMB="${ENABLE_SMB:-false}"
 ENABLE_SMTP="${ENABLE_SMTP:-false}"
 MY_HOSTNAME=$(hostname)
-SSH_KEY="${SSH_KEY:-/etc/mesh-flux/id_mesh_flux}"
+SSH_KEY="${SSH_KEY:-/etc/pervium/id_pervium}"
 
 # Same inline-default reasoning as ENABLE_SMB/ENABLE_SMTP above: no
 # already-deployed config has these lines. Console output defaults ON — the
@@ -41,7 +41,7 @@ SSH_KEY="${SSH_KEY:-/etc/mesh-flux/id_mesh_flux}"
 # with zero configuration; CONSOLE_OUTPUT=false opts a node out.
 CONSOLE_OUTPUT="${CONSOLE_OUTPUT:-true}"
 CONSOLE_DEVICE="${CONSOLE_DEVICE:-/dev/console}"
-SNAPSHOT_FILE="${SNAPSHOT_FILE:-/run/mesh-flux/last-cycle.txt}"
+SNAPSHOT_FILE="${SNAPSHOT_FILE:-/run/pervium/last-cycle.txt}"
 
 # -------------------------------------------------------------------
 # Console / test-status output.
@@ -128,7 +128,7 @@ ROWS=""
 # other and the node ends up running several at once, skewing every timing it
 # reports. Skip this run if the previous one is still going.
 # -------------------------------------------------------------------
-LOCK_DIR="/run/mesh-flux-test-cycle.lock"
+LOCK_DIR="/run/pervium-test-cycle.lock"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
     # Clear a lock left behind by a killed run (older than 10 minutes).
     if [ -d "$LOCK_DIR" ] && [ -z "$(find "$LOCK_DIR" -maxdepth 0 -mmin -10 2>/dev/null)" ]; then
@@ -214,8 +214,8 @@ sync_service() {
         log "Stopped $_svc"
     fi
 }
-sync_service mesh-flux-smbd  "$ENABLE_SMB"
-sync_service mesh-flux-smtpd "$ENABLE_SMTP"
+sync_service pervium-smbd  "$ENABLE_SMB"
+sync_service pervium-smtpd "$ENABLE_SMTP"
 sync_service iperf3          "$ENABLE_IPERF"
 
 # -------------------------------------------------------------------
@@ -548,7 +548,7 @@ run_iperf3_test() {
 # SMB is chatty and session-oriented — the test type most likely to catch an
 # inspection policy, an MSS/MTU problem mid-transfer, or a NAT path that only
 # tolerates short-lived flows, none of which HTTP/SSH/iperf3 would notice.
-# Every node runs smbd exporting one small read-only share (mesh-flux-smbd,
+# Every node runs smbd exporting one small read-only share (pervium-smbd,
 # gated by ENABLE_SMB); this pulls the fixed probe file from a peer.
 #
 # Unlike iperf3, smbd forks a child per connection, so simultaneous peers
@@ -602,7 +602,7 @@ run_smb_test() {
 # edits one.
 #
 # Success stops at EHLO, not RCPT. A real, correctly-configured relay will
-# (and should) reject RCPT TO:<probe@mesh-flux.invalid> with something like
+# (and should) reject RCPT TO:<probe@pervium.invalid> with something like
 # "550 relay access denied" -- that must NOT paint a healthy relay red.
 # Mirrors run_loss_test()'s philosophy: the interesting signal here is data
 # (the capability list, whether it's masked, what MAIL/RCPT/RSET actually
@@ -627,7 +627,7 @@ run_smtp_test() {
     _port="${SMTP_PORT:-25}"
     _helo="${SMTP_HELO:-$MY_HOSTNAME}"
     _from="${SMTP_MAIL_FROM:-}"
-    _rcpt="${SMTP_RCPT:-probe@mesh-flux.invalid}"
+    _rcpt="${SMTP_RCPT:-probe@pervium.invalid}"
     _timeout="${SMTP_TIMEOUT:-10}"
     _start_s=$(date +%s)
 
@@ -702,7 +702,7 @@ run_smtp_test() {
 # the path detail is worth having.
 # -------------------------------------------------------------------
 TRACEROUTE_INTERVAL="${TRACEROUTE_INTERVAL:-300}"
-TRACEROUTE_STAMP="/run/mesh-flux-last-traceroute"
+TRACEROUTE_STAMP="/run/pervium-last-traceroute"
 
 traceroute_due() {
     [ ! -f "$TRACEROUTE_STAMP" ] && return 0

@@ -28,10 +28,10 @@ function applyTheme(name) {
 function currentTheme() {
     return document.documentElement.getAttribute('data-theme') || 'dark';
 }
-try { applyTheme(localStorage.getItem('mesh-flux-theme')); } catch (e) {}
+try { applyTheme(localStorage.getItem('pervium-theme')); } catch (e) {}
 function setTheme(name) {
     applyTheme(name);
-    try { localStorage.setItem('mesh-flux-theme', currentTheme()); } catch (e) {}
+    try { localStorage.setItem('pervium-theme', currentTheme()); } catch (e) {}
     syncThemeSelect();
 }
 function syncThemeSelect() {
@@ -1706,7 +1706,7 @@ a:hover { text-decoration: underline; }
 
     // The groups behind a pair, for a sender-filtered link. Best effort by
     // design: syslog identifies a device by the hostname it puts in its own
-    // messages, which is not necessarily guestinfo.meshflux.group. An unmatched
+    // messages, which is not necessarily guestinfo.pervium.group. An unmatched
     // name yields an empty view rather than a wrong one, and the unfiltered
     // window link beside it always works.
     function pairGroups(src, dst) {
@@ -2009,7 +2009,7 @@ a:hover { text-decoration: underline; }
     // ---------------------------------------------------------------
     // Collapse/Expand for panels that carry a .collapse-toggle button.
     // Remembered per browser; storage can be unavailable, so it's optional.
-    var COLLAPSE_KEY = "mesh-flux-collapsed";
+    var COLLAPSE_KEY = "pervium-collapsed";
     function readCollapsed() {
         try { return JSON.parse(localStorage.getItem(COLLAPSE_KEY)) || []; } catch (e) { return []; }
     }

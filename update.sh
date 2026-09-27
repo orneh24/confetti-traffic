@@ -1,10 +1,10 @@
 #!/bin/sh
-# update.sh — pull the latest mesh-flux code onto an already-installed hub
-# or node. Both build scripts install it as /usr/local/bin/mesh-flux-update.
+# update.sh — pull the latest pervium code onto an already-installed hub
+# or node. Both build scripts install it as /usr/local/bin/pervium-update.
 #
 # Usage:
-#   mesh-flux-update         download the latest code, confirm, apply
-#   mesh-flux-update -y      same, without the confirmation
+#   pervium-update         download the latest code, confirm, apply
+#   pervium-update -y      same, without the confirmation
 #   sh <repo>/update.sh      apply from an unpacked repo instead of
 #                            downloading (no GitHub access: scp the repo over)
 #
@@ -25,9 +25,9 @@
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-UPDATE_URL="${MESH_FLUX_UPDATE_URL:-https://github.com/orneh24/mesh-flux/archive/refs/heads/main.tar.gz}"
-RELEASE_FILE="/etc/mesh-flux-release"
-NODE_CONFIG="/etc/mesh-flux/config"
+UPDATE_URL="${PERVIUM_UPDATE_URL:-https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz}"
+RELEASE_FILE="/etc/pervium-release"
+NODE_CONFIG="/etc/pervium/config"
 
 log() {
     printf '[update] %s\n' "$1"
@@ -44,7 +44,7 @@ case "${1:-}" in
     "") AUTO_YES="" ;;
     -y|--yes) AUTO_YES="1" ;;
     *)
-        echo "Usage: mesh-flux-update [-y]" >&2
+        echo "Usage: pervium-update [-y]" >&2
         exit 2
         ;;
 esac
@@ -52,12 +52,20 @@ esac
 # -------------------------------------------------------------------
 # Which role -- the same markers install.sh refuses to run on
 # -------------------------------------------------------------------
-if [ -f /usr/local/bin/mesh-flux/setup.sh ]; then
+if [ -f /usr/local/bin/pervium/setup.sh ]; then
     ROLE="node"
-elif [ -d /opt/mesh-flux-hub ]; then
+elif [ -d /opt/pervium-hub ]; then
     ROLE="hub"
 else
-    die "No mesh-flux install found on this VM. For a fresh Alpine VM, use install.sh."
+    # A mesh-flux VM's own mesh-flux-update downloads this repo (GitHub
+    # redirects the renamed URL) and lands here. Say why, not just "nothing
+    # found": every path changed in the rename, so there is no in-place move.
+    for _old in /usr/local/bin/mesh-flux /opt/mesh-flux-hub /usr/local/bin/mesh-probe /opt/mesh-probe-hub; do
+        if [ -e "$_old" ]; then
+            die "This VM runs the project under an earlier name ($_old). Pervium can't update it in place -- rebuild it from a fresh Alpine VM."
+        fi
+    done
+    die "No Pervium install found on this VM. For a fresh Alpine VM, use install.sh."
 fi
 
 # -------------------------------------------------------------------
@@ -67,7 +75,7 @@ fi
 # download, so the newest update logic always does the apply.
 # -------------------------------------------------------------------
 if [ ! -f "$SCRIPT_DIR/$ROLE/build-template.sh" ]; then
-    TMP=$(mktemp -d /tmp/mesh-flux-update.XXXXXX)
+    TMP=$(mktemp -d /tmp/pervium-update.XXXXXX)
 
     log "Downloading $UPDATE_URL"
     if ! curl -fsSL --connect-timeout 10 --max-time 300 -o "$TMP/src.tar.gz" "$UPDATE_URL"; then
@@ -105,7 +113,7 @@ if [ ! -f "$SCRIPT_DIR/$ROLE/build-template.sh" ]; then
         | sed -n 's/^.*comment=\([0-9a-f]\{40\}\).*$/\1/p' | head -n 1) || COMMIT=""
 
     _rc=0
-    MESH_FLUX_UPDATE_FROM="$UPDATE_URL" MESH_FLUX_UPDATE_COMMIT="${COMMIT:-unknown}" \
+    PERVIUM_UPDATE_FROM="$UPDATE_URL" PERVIUM_UPDATE_COMMIT="${COMMIT:-unknown}" \
         sh "$SRC/update.sh" "$@" || _rc=$?
     rm -rf "$TMP"
     exit "$_rc"
@@ -115,8 +123,8 @@ fi
 # Apply from the repo tree this script sits in
 # -------------------------------------------------------------------
 SRC="$SCRIPT_DIR"
-COMMIT="${MESH_FLUX_UPDATE_COMMIT:-unknown}"
-FROM="${MESH_FLUX_UPDATE_FROM:-$SRC}"
+COMMIT="${PERVIUM_UPDATE_COMMIT:-unknown}"
+FROM="${PERVIUM_UPDATE_FROM:-$SRC}"
 CURRENT=$(sed -n 's/^commit=//p' "$RELEASE_FILE" 2>/dev/null) || CURRENT=""
 
 echo
@@ -158,14 +166,14 @@ check_hub_agent() {
 
     _want=$(curl -fsS --connect-timeout 5 --max-time 10 "$_hub/agent/manifest" 2>/dev/null \
         | jq -r '.scripts["test-cycle.sh"].sha256 // empty' 2>/dev/null) || _want=""
-    _have=$(sha256sum /usr/local/bin/mesh-flux/test-cycle.sh | awk '{print $1}')
+    _have=$(sha256sum /usr/local/bin/pervium/test-cycle.sh | awk '{print $1}')
 
     if [ -z "$_want" ]; then
         log "Could not read the hub's agent manifest -- skipped the hub version check"
     elif [ "$_want" != "$_have" ]; then
         log "WARNING: the hub serves a different test-cycle.sh. Self-update will"
         log "         swap the hub's copy back in on the next registration run."
-        log "         Update the hub too (mesh-flux-update on the hub)."
+        log "         Update the hub too (pervium-update on the hub)."
     fi
 }
 
@@ -183,26 +191,26 @@ STATUS=0
 if [ "$ROLE" = "hub" ]; then
     # The schema migrates itself on start (init_db). Results pushed during
     # the few seconds of the restart are lost.
-    if rc-service mesh-flux-hub restart; then
-        log "mesh-flux-hub restarted"
+    if rc-service pervium-hub restart; then
+        log "pervium-hub restarted"
     else
-        log "WARNING: mesh-flux-hub did not restart -- check /var/log/mesh-flux-hub.log"
+        log "WARNING: pervium-hub did not restart -- check /var/log/pervium-hub.log"
         STATUS=1
     fi
 elif [ -f "$NODE_CONFIG" ]; then
     check_hub_agent
 
     # The documented safe re-run: keeps the config, merges cron, restarts
-    # crond and mesh-flux-httpd, and registers with the hub.
+    # crond and pervium-httpd, and registers with the hub.
     log "Re-running setup.sh"
-    if ! /usr/local/bin/mesh-flux/setup.sh; then
+    if ! /usr/local/bin/pervium/setup.sh; then
         log "WARNING: setup.sh failed (see above)"
         STATUS=1
     fi
 
     # setup.sh only starts these. Restart the ones already running so they
     # read their new configs.
-    for _svc in mesh-flux-smbd mesh-flux-smtpd iperf3; do
+    for _svc in pervium-smbd pervium-smtpd iperf3; do
         if rc-service "$_svc" status >/dev/null 2>&1; then
             if rc-service "$_svc" restart >/dev/null 2>&1; then
                 log "$_svc restarted"

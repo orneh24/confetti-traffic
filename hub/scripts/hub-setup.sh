@@ -1,18 +1,18 @@
 #!/bin/sh
-# hub-setup.sh — interactive first-time configuration for the mesh-flux hub.
+# hub-setup.sh — interactive first-time configuration for the pervium hub.
 #
 # Run automatically at first interactive login (see services/login-setup.sh)
 # when the hub hasn't been configured yet, or by hand at any time. Safe to
 # re-run; does nothing once configured unless you pass --force.
 #
-# Sets the static IP, restarts networking and starts mesh-flux-hub -- every
+# Sets the static IP, restarts networking and starts pervium-hub -- every
 # step between a finished build and a working dashboard. hub.env defaults are
 # sane enough not to need a prompt; edit it by hand afterward if they don't
 # suit.
 
 set -eu
 
-CONF_DIR="/etc/mesh-flux-hub"
+CONF_DIR="/etc/pervium-hub"
 STAMP="${CONF_DIR}/.setup-done"
 
 mkdir -p "$CONF_DIR"
@@ -23,7 +23,7 @@ if [ -f "$STAMP" ] && [ "${1:-}" != "--force" ]; then
     exit 0
 fi
 
-echo "=== mesh-flux hub setup ==="
+echo "=== pervium hub setup ==="
 echo
 
 CURRENT_IP=$(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | head -1)
@@ -91,11 +91,11 @@ date -u '+%Y-%m-%dT%H:%M:%SZ configured' > "$STAMP"
 # running. Not fatal -- the IP is set and stamped either way, and the fix is
 # the same command by hand.
 echo
-if rc-service mesh-flux-hub restart; then
+if rc-service pervium-hub restart; then
     echo "Hub running. Dashboard: http://${IP_CIDR%/*}/"
 else
-    echo "Static IP set, but mesh-flux-hub failed to start."
-    echo "Check: rc-service mesh-flux-hub status"
+    echo "Static IP set, but pervium-hub failed to start."
+    echo "Check: rc-service pervium-hub status"
 fi
-echo "Edit /opt/mesh-flux-hub/hub.env if the defaults don't suit, then:"
-echo "  rc-service mesh-flux-hub restart"
+echo "Edit /opt/pervium-hub/hub.env if the defaults don't suit, then:"
+echo "  rc-service pervium-hub restart"

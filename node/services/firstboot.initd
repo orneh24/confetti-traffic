@@ -17,8 +17,8 @@
 # already has -- writing "configured (guestinfo)" here rather than reusing
 # node-setup.sh's own words keeps the provenance visible in one `cat`.
 
-name="mesh-flux-firstboot"
-description="Configure mesh-flux on first boot from VMware guestinfo"
+name="pervium-firstboot"
+description="Configure pervium on first boot from VMware guestinfo"
 
 depend() {
     need net
@@ -27,9 +27,9 @@ depend() {
 
 command_background="no"
 
-STAMP="/etc/mesh-flux/.firstboot-done"
-SETUP_STAMP="/etc/mesh-flux/.setup-done"
-SETUP="/usr/local/bin/mesh-flux/setup.sh"
+STAMP="/etc/pervium/.firstboot-done"
+SETUP_STAMP="/etc/pervium/.setup-done"
+SETUP="/usr/local/bin/pervium/setup.sh"
 
 _guestinfo() {
     if command -v vmware-rpctool >/dev/null 2>&1; then
@@ -41,7 +41,7 @@ _guestinfo() {
 
 start() {
     if [ -f "$STAMP" ]; then
-        einfo "mesh-flux already configured; nothing to do"
+        einfo "pervium already configured; nothing to do"
         return 0
     fi
 
@@ -50,29 +50,29 @@ start() {
         return 0
     fi
 
-    _hub=$(_guestinfo "meshflux.hub_url")
-    _group=$(_guestinfo "meshflux.group")
+    _hub=$(_guestinfo "pervium.hub_url")
+    _group=$(_guestinfo "pervium.group")
 
     case "$_hub" in *"No value found"*) _hub="" ;; esac
     case "$_group" in *"No value found"*) _group="" ;; esac
 
     if [ -z "$_hub" ] || [ -z "$_group" ]; then
-        ewarn "guestinfo.meshflux.hub_url / guestinfo.meshflux.group not set"
+        ewarn "guestinfo.pervium.hub_url / guestinfo.pervium.group not set"
         ewarn "skipping auto-setup — run $SETUP by hand to configure"
         return 0
     fi
 
-    ebegin "Configuring mesh-flux from guestinfo"
+    ebegin "Configuring pervium from guestinfo"
 
     # stdin from /dev/null so any unexpected prompt fails fast rather than
     # hanging the boot waiting for input that will never come.
-    if "$SETUP" < /dev/null >> /var/log/mesh-flux/firstboot.log 2>&1; then
-        mkdir -p /etc/mesh-flux
+    if "$SETUP" < /dev/null >> /var/log/pervium/firstboot.log 2>&1; then
+        mkdir -p /etc/pervium
         date -u '+%Y-%m-%dT%H:%M:%SZ' > "$STAMP"
         date -u '+%Y-%m-%dT%H:%M:%SZ configured (guestinfo)' > "$SETUP_STAMP"
         eend 0
     else
-        eend 1 "setup failed — see /var/log/mesh-flux/firstboot.log"
+        eend 1 "setup failed — see /var/log/pervium/firstboot.log"
     fi
 
     return 0

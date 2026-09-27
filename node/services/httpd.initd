@@ -4,13 +4,13 @@
 # Without this the web server had to be started by hand and did not come
 # back after a reboot, which silently broke every HTTP test in the mesh.
 
-name="mesh-flux-httpd"
-description="mesh-flux identity web server (busybox httpd)"
+name="pervium-httpd"
+description="pervium identity web server (busybox httpd)"
 
 command="/usr/sbin/httpd"
 command_args="-f -p 80 -h /var/www/localhost/htdocs -c /etc/httpd.conf"
 command_background="yes"
-pidfile="/run/mesh-flux-httpd.pid"
+pidfile="/run/pervium-httpd.pid"
 
 depend() {
     need net

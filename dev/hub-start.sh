@@ -1,5 +1,5 @@
 #!/bin/sh
-# dev/hub-start.sh — start a local mesh-flux hub for dev/demo use.
+# dev/hub-start.sh — start a local pervium hub for dev/demo use.
 # See dev/README.md.
 set -eu
 

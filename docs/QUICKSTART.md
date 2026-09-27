@@ -1,4 +1,4 @@
-# Mesh Flux — Reference
+# Pervium — Reference
 
 Commands and tables for someone who already knows the setup. Deploy steps:
 the [README quick start](../README.md#quick-start). Checklist with
@@ -11,23 +11,23 @@ reachable.
 
 | What | Where | Port |
 |---|---|---|
-| Dashboard / API | hub, `mesh-flux-hub` (waitress) | 80 |
+| Dashboard / API | hub, `pervium-hub` (waitress) | 80 |
 | Syslog receiver (optional, UDP) | hub, same process | 514 |
-| HTTP test target | node, `mesh-flux-httpd` | 80 |
+| HTTP test target | node, `pervium-httpd` | 80 |
 | SSH test target | node, dropbear | 22 |
-| SMB test target (opt-in) | node, `mesh-flux-smbd` | 445 |
-| SMTP test target (opt-in) | node, `mesh-flux-smtpd` | 25 |
+| SMB test target (opt-in) | node, `pervium-smbd` | 445 |
+| SMTP test target (opt-in) | node, `pervium-smtpd` | 25 |
 | iperf3 (opt-in) | node, `iperf3` | 5201 |
 
 ## Files
 
 | | Hub | Node |
 |---|---|---|
-| Code | `/opt/mesh-flux-hub/` | `/usr/local/bin/mesh-flux/` |
-| Config | `/opt/mesh-flux-hub/hub.env` | `/etc/mesh-flux/config` |
-| Data | `/var/lib/mesh-flux/hub.db` | — |
-| Logs | `/var/log/mesh-flux-hub.log` | `/var/log/mesh-flux/` |
-| Login-prompt stamp | `/etc/mesh-flux-hub/.setup-done` | `/etc/mesh-flux/.setup-done` |
+| Code | `/opt/pervium-hub/` | `/usr/local/bin/pervium/` |
+| Config | `/opt/pervium-hub/hub.env` | `/etc/pervium/config` |
+| Data | `/var/lib/pervium/hub.db` | — |
+| Logs | `/var/log/pervium-hub.log` | `/var/log/pervium/` |
+| Login-prompt stamp | `/etc/pervium-hub/.setup-done` | `/etc/pervium/.setup-done` |
 
 The stamp file says why the login prompt stopped asking: `configured`,
 `skipped`, `configured (guestinfo)` or `configured (existing config)`.
@@ -36,12 +36,12 @@ asked again.
 
 ## Hub config (`hub.env`)
 
-Restart the hub after editing: `rc-service mesh-flux-hub restart`.
+Restart the hub after editing: `rc-service pervium-hub restart`.
 
 | Key | Default | Notes |
 |---|---|---|
 | `HUB_PORT` | 80 | |
-| `HUB_DB_PATH` | `/var/lib/mesh-flux/hub.db` | |
+| `HUB_DB_PATH` | `/var/lib/pervium/hub.db` | |
 | `HUB_RESULT_RETENTION_HOURS` | 24 | old results pruned on each result push |
 | `HUB_STALE_ENDPOINT_HOURS` | 6 | nodes unseen this long are dropped |
 | `HUB_SYSLOG_ENABLED` | true | |
@@ -50,13 +50,13 @@ Restart the hub after editing: `rc-service mesh-flux-hub restart`.
 | `HUB_SYSLOG_MAX_ROWS` | 300000 | syslog is capped by rows, not time |
 | `HUB_BUSY_TIMEOUT_MS` | 5000 | |
 | `HUB_PATH_CHANGE_ENABLED` | true | log traceroute path changes to syslog |
-| `HUB_HEALTH_SERVICES` | `mesh-flux-hub,chronyd,dropbear,open-vm-tools,lldpd` | shown in Hub Health |
+| `HUB_HEALTH_SERVICES` | `pervium-hub,chronyd,dropbear,open-vm-tools,lldpd` | shown in Hub Health |
 | `HUB_HEALTH_SERVICE_TIMEOUT_S` | 3 | time limit for each service check in Hub Health |
 
 The root password (`lab123`) is set at build time. Override it with
-`MESH_FLUX_ROOT_PASSWORD` when running either `build-template.sh`.
+`PERVIUM_ROOT_PASSWORD` when running either `build-template.sh`.
 
-## Node config (`/etc/mesh-flux/config`)
+## Node config (`/etc/pervium/config`)
 
 | Key | Required | Notes |
 |---|---|---|
@@ -64,7 +64,7 @@ The root password (`lab123`) is set at build time. Override it with
 | `GROUP_NAME` | yes | label that groups nodes on the dashboard |
 | `SUBNET` | yes | filled in from the DHCP lease by `setup.sh` |
 | `NODE_HOSTNAME` | no | if empty: `<HOSTNAME_PREFIX>-<group>-<ip>` |
-| `HOSTNAME_PREFIX` | no | default `mf` |
+| `HOSTNAME_PREFIX` | no | default `pv` |
 | `DNS_SERVER` | no | empty skips the DNS test |
 | `DNS_QUERY` | no | default `example.com` |
 | `ENABLE_IPERF` / `ENABLE_SMB` / `ENABLE_SMTP` | no | default false; overridden by the dashboard's Mesh Settings when set there |
@@ -74,7 +74,7 @@ The root password (`lab123`) is set at build time. Override it with
 If `HUB_URL`, `GROUP_NAME` or `SUBNET` is empty, `register.sh` exits and the
 node never appears on the hub. There is no other error.
 
-After editing, re-run `/usr/local/bin/mesh-flux/setup.sh`. It keeps the
+After editing, re-run `/usr/local/bin/pervium/setup.sh`. It keeps the
 config and starts any service you enabled.
 
 ## Verify
@@ -108,16 +108,16 @@ NTP at a real server, not the hub; the hub serves time to nobody.
 
 **A node stopped reporting:** it turns amber in the Endpoints list after 5
 minutes, and its matrix cells go grey (no data, not failure). Check the
-node's `/var/log/mesh-flux/` before the network.
+node's `/var/log/pervium/` before the network.
 
 **Remove a dead node:** `curl -X DELETE http://<hub-ip>/endpoints/<hostname>`
 
 **See one node's results from the node itself:** `test-status` (`-f` to
 follow, `-n N` for history).
 
-**Update to the latest code:** `mesh-flux-update` on the hub first, then on
+**Update to the latest code:** `pervium-update` on the hub first, then on
 each node. It keeps configs, the database and the root password.
-`cat /etc/mesh-flux-release` shows the commit a VM is on. Details:
+`cat /etc/pervium-release` shows the commit a VM is on. Details:
 BUILD_GUIDE §6.3.
 
 ## Traps
@@ -127,5 +127,5 @@ BUILD_GUIDE §6.3.
 | Node template configured or tested before sealing | every clone starts with the same hostname, and the login prompt never appears |
 | Two nodes with the same hostname | one overwrites the other on the hub |
 | Static target lists a test it can't answer | that cell is always red |
-| Node updated before the hub | `mesh-flux-update` warns; the node's `test-cycle.sh` goes back to the hub's copy within 5 minutes |
-| Hub has no DNS server (`hub-setup.sh` doesn't ask for one) | `mesh-flux-update` can't download; add a `nameserver` line to `/etc/resolv.conf` |
+| Node updated before the hub | `pervium-update` warns; the node's `test-cycle.sh` goes back to the hub's copy within 5 minutes |
+| Hub has no DNS server (`hub-setup.sh` doesn't ask for one) | `pervium-update` can't download; add a `nameserver` line to `/etc/resolv.conf` |

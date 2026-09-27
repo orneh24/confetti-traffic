@@ -1,4 +1,4 @@
-# Mesh Flux — Deployment Checklist
+# Pervium — Deployment Checklist
 
 The build order, with a check after each stage. Commands only:
 [README quick start](../README.md#quick-start). Detail: `BUILD_GUIDE.md`.
@@ -37,20 +37,20 @@ Build the hub first, so you can test the first node against it.
       - **At login:** log out and back in. `hub-setup.sh` asks for the IP and
         gateway, restarts networking and starts the hub.
       - **By hand:** `set-static-ip <ip/cidr> <gateway>`,
-        `rc-service networking restart`, `rc-service mesh-flux-hub start`.
+        `rc-service networking restart`, `rc-service pervium-hub start`.
         The helper rewrites all of `/etc/network/interfaces` for one
         interface.
       - **guestinfo:** set `guestinfo.hub.ip` and `guestinfo.hub.gateway` on
         the VM and reboot.
-- [ ] Optional: edit `/opt/mesh-flux-hub/hub.env` (each key is commented),
-      then `rc-service mesh-flux-hub restart`
+- [ ] Optional: edit `/opt/pervium-hub/hub.env` (each key is commented),
+      then `rc-service pervium-hub restart`
 - [ ] Optional: set a real NTP server in `/etc/chrony/chrony.conf`. The build
       enables chrony but doesn't configure it.
 
 Check:
 
 - [ ] `http://<hub-ip>/` loads
-- [ ] `grep syslog /var/log/mesh-flux-hub.log` shows
+- [ ] `grep syslog /var/log/pervium-hub.log` shows
       `[syslog] listening on <bind>:514`
 - [ ] `curl http://<hub-ip>/api/syslog?minutes=5` returns JSON (`[]` is fine)
 - [ ] `curl http://<hub-ip>/api/health` and `/api/time` return 200
@@ -67,7 +67,7 @@ server.
 ## 3. Node template
 
 - [ ] On the node clone, run the download command and pick **node**
-- [ ] Optional: `rm -rf /root/mesh-flux`
+- [ ] Optional: `rm -rf /root/pervium`
 - [ ] `poweroff`, then convert the VM to a template in vCenter
 
 **Don't configure or test the template.** The build ends by clearing the
@@ -83,22 +83,22 @@ For each network segment:
 
 - [ ] Clone the template and set its NIC to that segment's port group
 - [ ] Configure it, one of:
-      - **guestinfo:** set `guestinfo.meshflux.hub_url` and
-        `guestinfo.meshflux.group` before first boot. It configures itself.
+      - **guestinfo:** set `guestinfo.pervium.hub_url` and
+        `guestinfo.pervium.group` before first boot. It configures itself.
       - **At login:** boot, log in, and answer the `node-setup.sh` prompt.
 - [ ] The node shows in `http://<hub-ip>/endpoints` with a recent `last_seen`
 
 On the first clone, also check:
 
 - [ ] `test-status` shows passing tests after a minute
-- [ ] `rc-service dropbear status`, `mesh-flux-httpd`, `crond`, `lldpd` and
-      `open-vm-tools` are running, plus `iperf3` / `mesh-flux-smbd` /
-      `mesh-flux-smtpd` for any `ENABLE_*` flag you set
+- [ ] `rc-service dropbear status`, `pervium-httpd`, `crond`, `lldpd` and
+      `open-vm-tools` are running, plus `iperf3` / `pervium-smbd` /
+      `pervium-smtpd` for any `ENABLE_*` flag you set
 - [ ] With `ENABLE_SMTP=true`: `grep -n relay /etc/smtpd/smtpd.conf` shows
       only comments
 
-The hostname is set automatically (`mf-<group>-<ip>`), so clones don't
-collide. If you set `guestinfo.meshflux.hostname` yourself, make it unique:
+The hostname is set automatically (`pv-<group>-<ip>`), so clones don't
+collide. If you set `guestinfo.pervium.hostname` yourself, make it unique:
 two nodes with one name overwrite each other on the hub.
 
 ---

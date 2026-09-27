@@ -1,7 +1,7 @@
 #requires -Modules VMware.VimAutomation.Core
 <#
 .SYNOPSIS
-    Deploys a mesh-flux hub and N nodes from existing vCenter templates.
+    Deploys a Pervium hub and N nodes from existing vCenter templates.
 
 .DESCRIPTION
     Clones one hub VM and (by default) three node VMs from the two golden
@@ -42,41 +42,41 @@
 .PARAMETER HubIP
     Hub's static IP in CIDR form, e.g. "10.0.0.100/24". Written to
     guestinfo.hub.ip, read by the hub's firstboot service
-    (mesh-flux-hub-firstboot). Required — the hub needs a predictable
+    (pervium-hub-firstboot). Required — the hub needs a predictable
     address for nodes to register against and for an operator to reach.
 
 .PARAMETER HubGateway
     Hub's default gateway. Written to guestinfo.hub.gateway.
 
 .PARAMETER HubVMName
-    vCenter display name for the hub clone. Default: mesh-flux-hub.
+    vCenter display name for the hub clone. Default: pervium-hub.
 
 .PARAMETER NodeCount
     Number of nodes to deploy. Default: 3.
 
 .PARAMETER NodeNamePrefix
-    Prefix for each node's vCenter VM name (<prefix>-<group>). guestinfo.meshflux.
+    Prefix for each node's vCenter VM name (<prefix>-<group>). guestinfo.pervium.
     hostname is deliberately never set by this script — each node derives its
     in-guest hostname as <prefix>-<group>-<ip> (see CLAUDE.md), i.e. the VM
     name plus its IP with dots as hyphens, which -WaitForRegistration relies
     on to match nodes to VMs. Keep this equal to HOSTNAME_PREFIX in the node
-    template's config (default in node/config.sample: mf) or that
+    template's config (default in node/config.sample: pv) or that
     matching breaks.
 
 .PARAMETER NodeGroups
-    One group label per node (guestinfo.meshflux.group) — an arbitrary tag that
+    One group label per node (guestinfo.pervium.group) — an arbitrary tag that
     clusters nodes on the dashboard and filters syslog by sender; it carries
     no network-topology meaning to the hub. Must supply at least $NodeCount
     entries. Default: site-a, site-b, site-c.
 
 .PARAMETER NodeSubnets
     Optional, one entry per node (CIDR, e.g. "10.1.1.0/24"), written to
-    guestinfo.meshflux.subnet. Leave unset (the default) to let each node derive
+    guestinfo.pervium.subnet. Leave unset (the default) to let each node derive
     its subnet from its own DHCP lease at first boot — the normal path;
     only override where that derivation would be wrong.
 
 .PARAMETER DnsServer
-    Optional. Applied to every node as guestinfo.meshflux.dns_server. Omit to
+    Optional. Applied to every node as guestinfo.pervium.dns_server. Omit to
     leave the DNS test disabled on every node (the documented default —
     "unset skips the DNS test").
 
@@ -97,15 +97,15 @@
 
 .EXAMPLE
     Connect-VIServer vcenter.lab.local
-    ./Deploy-MeshFlux.ps1 -HubTemplate mesh-flux-hub-template `
-        -NodeTemplate mesh-flux-node-template -PortGroup "VM Network" `
+    ./Deploy-Pervium.ps1 -HubTemplate pervium-hub-template `
+        -NodeTemplate pervium-node-template -PortGroup "VM Network" `
         -VMHost esxi01.lab.local -Datastore datastore1 `
         -HubIP 10.0.0.100/24 -HubGateway 10.0.0.1
 
     Deploys the hub and 3 nodes (site-a/site-b/site-c) on one flat network.
 
 .EXAMPLE
-    ./Deploy-MeshFlux.ps1 -HubTemplate hub-tmpl -NodeTemplate node-tmpl `
+    ./Deploy-Pervium.ps1 -HubTemplate hub-tmpl -NodeTemplate node-tmpl `
         -PortGroup "VM Network" -VMHost esxi01 -Datastore ds1 `
         -HubIP 10.0.0.100/24 -HubGateway 10.0.0.1 -WhatIf
 
@@ -133,10 +133,10 @@ param(
     [ValidatePattern('^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$')]
     [string] $HubIP,
     [Parameter(Mandatory)] [string] $HubGateway,
-    [string] $HubVMName = "mesh-flux-hub",
+    [string] $HubVMName = "pervium-hub",
 
     [ValidateRange(1, 64)] [int] $NodeCount = 3,
-    [string] $NodeNamePrefix = "mf",
+    [string] $NodeNamePrefix = "pv",
     [string[]] $NodeGroups = @("site-a", "site-b", "site-c"),
     [string[]] $NodeSubnets,
     [string] $DnsServer,
@@ -225,14 +225,14 @@ for ($i = 0; $i -lt $NodeCount; $i++) {
     $nodeCloneParams = New-CloneParams -Name $nodeName -Template $NodeTemplate
     $nodeVM = New-VM @nodeCloneParams
 
-    Set-Guestinfo -VM $nodeVM -Key "guestinfo.meshflux.hub_url" -Value $hubUrl
-    Set-Guestinfo -VM $nodeVM -Key "guestinfo.meshflux.group" -Value $group
+    Set-Guestinfo -VM $nodeVM -Key "guestinfo.pervium.hub_url" -Value $hubUrl
+    Set-Guestinfo -VM $nodeVM -Key "guestinfo.pervium.group" -Value $group
     if ($NodeSubnets) {
-        Set-Guestinfo -VM $nodeVM -Key "guestinfo.meshflux.subnet" -Value $NodeSubnets[$i]
+        Set-Guestinfo -VM $nodeVM -Key "guestinfo.pervium.subnet" -Value $NodeSubnets[$i]
     }
     if ($DnsServer) {
-        Set-Guestinfo -VM $nodeVM -Key "guestinfo.meshflux.dns_server" -Value $DnsServer
-        Set-Guestinfo -VM $nodeVM -Key "guestinfo.meshflux.dns_query" -Value $DnsQuery
+        Set-Guestinfo -VM $nodeVM -Key "guestinfo.pervium.dns_server" -Value $DnsServer
+        Set-Guestinfo -VM $nodeVM -Key "guestinfo.pervium.dns_query" -Value $DnsQuery
     }
 
     if ($PowerOn) {

@@ -27,10 +27,10 @@ function applyTheme(name) {
 function currentTheme() {
     return document.documentElement.getAttribute('data-theme') || 'dark';
 }
-try { applyTheme(localStorage.getItem('mesh-flux-theme')); } catch (e) {}
+try { applyTheme(localStorage.getItem('pervium-theme')); } catch (e) {}
 function setTheme(name) {
     applyTheme(name);
-    try { localStorage.setItem('mesh-flux-theme', currentTheme()); } catch (e) {}
+    try { localStorage.setItem('pervium-theme', currentTheme()); } catch (e) {}
     syncThemeSelect();
 }
 function syncThemeSelect() {

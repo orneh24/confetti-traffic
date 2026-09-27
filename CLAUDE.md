@@ -1,4 +1,4 @@
-# Mesh Flux — Network End-to-End Connectivity Testing
+# Pervium — Network End-to-End Connectivity Testing
 
 ## Project Overview
 A lightweight system for testing end-to-end connectivity between hosts —
@@ -26,10 +26,10 @@ Diagram: `docs/TOPOLOGY.md`.
   - Flask API (registry + result collector) served by **waitress**, not the
     Flask dev server (which is single-threaded and would queue the mesh's
     simultaneous pushes)
-  - SQLite database (WAL mode) at `/var/lib/mesh-flux/hub.db`
+  - SQLite database (WAL mode) at `/var/lib/pervium/hub.db`
   - Web dashboard on **port 80**
   - UDP syslog receiver on **port 514**, in a daemon thread (see Syslog below)
-- Installed to `/opt/mesh-flux-hub/`, started by OpenRC service `mesh-flux-hub`
+- Installed to `/opt/pervium-hub/`, started by OpenRC service `pervium-hub`
 - Entrypoint is `serve.py` — it reads `HUB_PORT` at runtime. Do not move the
   port into the init script's `command_args`: OpenRC expands that at parse
   time, before `start_pre` sources `hub.env`, so the setting would be ignored.
@@ -55,7 +55,7 @@ Diagram: `docs/TOPOLOGY.md`.
     unparseable output) returns `chrony: null` with a `reason`
   - `GET /api/health` — hub self-health for the dashboard's "Hub Health"
     panel: OpenRC service status (`HUB_HEALTH_SERVICES`, default
-    `mesh-flux-hub,chronyd,dropbear,open-vm-tools,lldpd`), syslog listener state,
+    `pervium-hub,chronyd,dropbear,open-vm-tools,lldpd`), syslog listener state,
     load average, memory, disk, uptime. Same never-500 discipline as
     `/api/time` — a check that can't run (e.g. `rc-service` missing) reports
     `null`/a reason rather than failing the page
@@ -83,10 +83,10 @@ firewalls and NAT gateways — masks unrecognised capability verbs (e.g.
 `STARTTLS`) with runs of `X`, so `250-XXXXXXXX` in the recorded `output`
 means an inspection engine is editing the session in flight, not blocking
 it. The probe never issues `DATA` — it holds a real envelope conversation
-(`EHLO` → `MAIL FROM:<>` → `RCPT TO:<probe@mesh-flux.invalid>` → `RSET` → `QUIT`)
+(`EHLO` → `MAIL FROM:<>` → `RCPT TO:<probe@pervium.invalid>` → `RSET` → `QUIT`)
 and aborts before any message exists. `success` gates on the banner + `EHLO`
 response only, never on `RCPT`: a real relay correctly rejects
-`RCPT TO:<probe@mesh-flux.invalid>` with `550`, and that must not paint a healthy
+`RCPT TO:<probe@pervium.invalid>` with `550`, and that must not paint a healthy
 relay red — the response codes are data in `output`, same philosophy as
 `loss`/`pmtu`. The static-target arm is deliberately **ungated** (unlike
 `smb`'s): registering a target is already an explicit opt-in, and the client
@@ -125,7 +125,7 @@ Settings" panel and stored in the hub's `settings` table. Each is
 each node's own `ENABLE_*` config stands, so a lab behaves as before until a
 switch is flipped. `test-cycle.sh` fetches `GET /settings` each cycle, lets a
 set value override its config, and starts/stops the matching server
-(`mesh-flux-smbd`, `mesh-flux-smtpd`, `iperf3`) to follow the flag. A node
+(`pervium-smbd`, `pervium-smtpd`, `iperf3`) to follow the flag. A node
 with `HUB_SETTINGS=false` ignores the hub. A separate route rather than a
 field on `/endpoints`, whose bare-array shape every deployed node parses. Any
 fetch failure falls back to local config — it must never fail a cycle, or
@@ -187,7 +187,7 @@ configured to log to the hub simply has an empty `/syslog`.
 **A second writer, hub-authored.** `POST /results` also writes into `syslog`
 directly (`hub/app/pathchange.py`'s `_note_path_change`, not the UDP
 listener) when it detects a traceroute path change — tagged
-`host=mesh-flux-hub`, `mnemonic=%MESHFLUX-5-PATHCHANGE`, severity 5
+`host=pervium-hub`, `mnemonic=%PERVIUM-5-PATHCHANGE`, severity 5
 (notice: a path change is not inherently a fault), `source_ip=127.0.0.1`
 (literally true — written locally, never received over UDP). This is the one
 row in this table the hub itself can vouch for, and it gains no special
@@ -208,7 +208,7 @@ Off-switch: `HUB_PATH_CHANGE_ENABLED` (default true).
 each test card links to `/syslog` pinned to ±5 min around *that sample*, and
 the pair header links to the same window plus one link per group behind the
 pair. Group links filter on `host`, which is the name the device puts in its
-own messages — **not** `guestinfo.meshflux.group`. Where those differ the filtered
+own messages — **not** `guestinfo.pervium.group`. Where those differ the filtered
 link comes back empty while the unfiltered window beside it still works, which
 is the intended failure: an empty view rather than a wrong one. The hub does
 not maintain an IP→device map.
@@ -224,7 +224,7 @@ Config: `HUB_SYSLOG_ENABLED`, `HUB_SYSLOG_BIND`, `HUB_SYSLOG_PORT`,
 
 ### Agent self-update
 The hub serves `test-cycle.sh` and `register.sh` from
-`/opt/mesh-flux-hub/agent/`; nodes converge on their 5-minute registration run.
+`/opt/pervium-hub/agent/`; nodes converge on their 5-minute registration run.
 Checksums are computed on demand, so editing a file there is the whole
 deploy — no rebuild step. Three gates before anything is trusted: sha256
 match, `sh -n`, and (for test-cycle.sh) a successful real run. The prior
@@ -234,15 +234,15 @@ with `AGENT_AUTOUPDATE=false`.
 `test-status.sh` and its login-banner hook are **not** in this manifest — the
 console-output table they render lives inside `test-cycle.sh` and self-updates
 with it, but the viewer command itself is a separate new file, same category
-as `register.sh` (constraint 13): push it deliberately (`mesh-flux-update`)
+as `register.sh` (constraint 13): push it deliberately (`pervium-update`)
 to nodes built before it existed. New clones get it from
 `build-template.sh`.
 
-### Code update (`mesh-flux-update`)
+### Code update (`pervium-update`)
 Everything else reaches an installed VM through `update.sh` (repo root),
-which both builds install as `/usr/local/bin/mesh-flux-update`. Manual only.
+which both builds install as `/usr/local/bin/pervium-update`. Manual only.
 The installed copy downloads the GitHub main tarball
-(`MESH_FLUX_UPDATE_URL` overrides it), then runs the downloaded `update.sh`,
+(`PERVIUM_UPDATE_URL` overrides it), then runs the downloaded `update.sh`,
 so the newest update logic always does the apply. Run from an unpacked repo,
 it uses that tree instead, which is the no-GitHub path.
 
@@ -260,22 +260,22 @@ Afterwards the hub restarts; a configured node re-runs `setup.sh`. **Hub
 first:** a node updated ahead of its hub has `test-cycle.sh` reverted by
 self-update, and the updater warns about this by comparing the hub's
 `/agent/manifest` before `setup.sh` runs `register.sh`.
-`/etc/mesh-flux-release` records the commit, read from the tarball's pax
+`/etc/pervium-release` records the commit, read from the tarball's pax
 header.
 
 ### Node (one per network segment under test)
 - Alpine Linux VM, ~128 MB RAM, DHCP on its interface
-- Installed to `/usr/local/bin/mesh-flux/`, config at `/etc/mesh-flux/config`
-- Servers: dropbear (SSH), busybox httpd via OpenRC service **`mesh-flux-httpd`**,
-  iperf3, `smbd` via OpenRC service **`mesh-flux-smbd`** (opt-in, `ENABLE_SMB`),
-  `smtpd` (OpenSMTPD) via OpenRC service **`mesh-flux-smtpd`** (opt-in, `ENABLE_SMTP`)
+- Installed to `/usr/local/bin/pervium/`, config at `/etc/pervium/config`
+- Servers: dropbear (SSH), busybox httpd via OpenRC service **`pervium-httpd`**,
+  iperf3, `smbd` via OpenRC service **`pervium-smbd`** (opt-in, `ENABLE_SMB`),
+  `smtpd` (OpenSMTPD) via OpenRC service **`pervium-smtpd`** (opt-in, `ENABLE_SMTP`)
 - Clients: curl, ssh, traceroute, iperf3, smbclient, fping, `nc` (hand-rolled
   SMTP conversation — see below) — driven by cron every 60s
 - Cloned from a single golden template
 - Each cycle's results also render as a compact table (one row per target,
   one column per always-on test — H/S/M/L/T) to `/dev/console`
   (`CONSOLE_OUTPUT`, on by default), the cycle log, a snapshot at
-  `/run/mesh-flux/last-cycle.txt`, and on demand via `test-status`
+  `/run/pervium/last-cycle.txt`, and on demand via `test-status`
   (`-f` to follow, `-n N` for history) — the hub dashboard stays the source
   of truth, but this lets an operator at the node's own console or over SSH
   see whether *this* node's tests are passing without opening it. Shown
@@ -291,7 +291,7 @@ header.
 - ESXi + vCenter, `open-vm-tools` on both roles
 - Two separate golden templates, each built by its own `build-template.sh`
 - Default credentials: **root / lab123** (isolated lab only) — override with
-  `MESH_FLUX_ROOT_PASSWORD` when running either `build-template.sh`
+  `PERVIUM_ROOT_PASSWORD` when running either `build-template.sh`
 - `chrony` on all VMs — the hub's clock is the mesh reference
 - `lldpd` on both roles, always-on, not gated by any `ENABLE_*` flag — LLDP
   neighbor discovery for troubleshooting (e.g. `lldpcli show neighbors` to
@@ -304,25 +304,25 @@ keys set on the VM are read in-guest via `vmware-rpctool "info-get <key>"`:
 
 | Key | Example |
 |-----|---------|
-| `guestinfo.meshflux.hub_url` | `http://10.0.0.100` |
-| `guestinfo.meshflux.group` | `site-a` |
-| `guestinfo.meshflux.subnet` | `10.1.1.0/24` (optional; derived from the DHCP lease if omitted) |
-| `guestinfo.meshflux.hostname` | `mf-site-a` (optional) |
-| `guestinfo.meshflux.dns_server` | `10.0.0.53` (optional; unset skips the DNS test) |
-| `guestinfo.meshflux.dns_query` | `example.com` (optional) |
+| `guestinfo.pervium.hub_url` | `http://10.0.0.100` |
+| `guestinfo.pervium.group` | `site-a` |
+| `guestinfo.pervium.subnet` | `10.1.1.0/24` (optional; derived from the DHCP lease if omitted) |
+| `guestinfo.pervium.hostname` | `pv-site-a` (optional) |
+| `guestinfo.pervium.dns_server` | `10.0.0.53` (optional; unset skips the DNS test) |
+| `guestinfo.pervium.dns_query` | `example.com` (optional) |
 
 Precedence in `setup.sh`: **guestinfo → environment → prompt**, except
 `subnet`, which has one extra fallback before the prompt: derived from the
 interface's own DHCP lease (address + prefix already give you the network).
 If hostname is omitted it is derived as `<HOSTNAME_PREFIX>-<group-slug>-<ip>`
-(dots as hyphens, e.g. `mf-site-a-10-1-1-10`), so two nodes in one
+(dots as hyphens, e.g. `pv-site-a-10-1-1-10`), so two nodes in one
 group never collide (constraint 1).
 `group` is an arbitrary operator-chosen label — it clusters nodes on the
 dashboard and filters syslog by sender; it carries no network-topology
 meaning to the hub.
 
 The table above is read by the nodes. The **hub** has its own, smaller
-set, read by `mesh-flux-hub-firstboot` (`hub/services/firstboot.initd`) and
+set, read by `pervium-hub-firstboot` (`hub/services/firstboot.initd`) and
 set on the hub's own VM object, not the nodes':
 
 | Key | Example |
@@ -347,7 +347,7 @@ VM becomes a hub or a node and runs the matching `build-template.sh`.
 install.sh             — repo-root entry point: asks hub or node, runs the
                           matching build-template.sh
 update.sh              — updates an installed hub or node from GitHub;
-                          installed as /usr/local/bin/mesh-flux-update
+                          installed as /usr/local/bin/pervium-update
 hub/
   build-template.sh   — builds the hub golden template
   serve.py            — production entrypoint (reads HUB_PORT at runtime)
@@ -357,7 +357,7 @@ hub/
   templates/          — dashboard.html, syslog.html. Colour themes (Dark, Light, Catppuccin Mocha,
                         Gruvbox, Terminal green) are inline in BOTH pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
-                        localStorage key mesh-flux-theme. Adding or changing a theme means
+                        localStorage key pervium-theme. Adding or changing a theme means
                         editing both pages. syslog.html has its own variable set (--row-line,
                         and --gray is a text grey there, not a fill).
   static/
@@ -368,11 +368,11 @@ node/
   build-template.sh   — builds the node golden template
   scripts/            — register.sh, test-cycle.sh, setup.sh, node-setup.sh,
                         test-status.sh (console/SSH results viewer)
-  services/           — httpd.initd (mesh-flux-httpd), iperf3.initd,
-                        smbd.initd (mesh-flux-smbd), smb.conf,
-                        smtpd.initd (mesh-flux-smtpd), smtpd.conf, crontab,
-                        mesh-flux-httpd.conf, logrotate.conf,
-                        firstboot.initd (mesh-flux-firstboot),
+  services/           — httpd.initd (pervium-httpd), iperf3.initd,
+                        smbd.initd (pervium-smbd), smb.conf,
+                        smtpd.initd (pervium-smtpd), smtpd.conf, crontab,
+                        pervium-httpd.conf, logrotate.conf,
+                        firstboot.initd (pervium-firstboot),
                         login-setup.sh, login-status.sh
   config.sample
 docs/BUILD_GUIDE.md
@@ -400,7 +400,7 @@ These were live bugs that a review caught; each has a comment at the site.
 1. **Hostnames must be unique per clone.** `endpoints.hostname` is the PRIMARY
    KEY, so duplicate names make clones overwrite each other and the mesh
    collapses to one entry — which every node then skips as "self". `setup.sh`
-   sets the hostname; the template ships as `mesh-flux-template`.
+   sets the hostname; the template ships as `pervium-template`.
 2. **Timestamps: the hub stamps `received_at` and filters on that.** Nodes
    send ISO-8601 (`2026-09-09T08:00:00Z`); SQLite's `datetime('now', ...)`
    yields `2026-09-09 18:04:04`. String-comparing them is wrong because `T`
@@ -408,13 +408,13 @@ These were live bugs that a review caught; each has a comment at the site.
    `received_at` is stored in SQLite's format; `iso()` converts on the way out
    so browsers parse it as UTC rather than local time.
 3. **The SSH test needs the shared keypair.** It runs `BatchMode=yes` (key auth
-   only). `/etc/mesh-flux/id_mesh_flux` is generated at build time and trusted in
+   only). `/etc/pervium/id_pervium` is generated at build time and trusted in
    root's `authorized_keys`, so it must survive cloning — the cleanup step
    deletes dropbear *host* keys but deliberately keeps this one.
 4. **`setup.sh` must not copy scripts onto themselves.** Source and destination
-   both resolve to `/usr/local/bin/mesh-flux/` when run in place; `cp` exits 1
+   both resolve to `/usr/local/bin/pervium/` when run in place; `cp` exits 1
    and `set -e` aborts the script. It compares the paths first.
-5. **The web server is an OpenRC service (`mesh-flux-httpd`).** Launching busybox
+5. **The web server is an OpenRC service (`pervium-httpd`).** Launching busybox
    httpd by hand does not survive a reboot, which silently breaks every HTTP
    test in the mesh.
 6. **`test-cycle.sh` takes a lock.** Traceroutes can outrun the 60s cron
@@ -441,13 +441,13 @@ These were live bugs that a review caught; each has a comment at the site.
    FILE` overwrites wholesale, and Alpine's crontab carries the run-parts
    entries that drive `/etc/periodic/*` — including the daily logrotate run.
    Replacing it left log rotation installed but never triggered, so the disk
-   still filled. It now strips any prior mesh-flux block, appends, and
+   still filled. It now strips any prior pervium block, appends, and
    reports how many periodic entries survived.
 13. **Only `test-cycle.sh` auto-updates.** register.sh is the updater; a copy
    of it that parses but fails at runtime would stop registration *and*
    disable the mechanism that would repair it, bricking every node at once.
    There is also no non-circular way to verify it. Push register.sh changes
-   deliberately — `mesh-flux-update`, run by hand, is that path. **Never put
+   deliberately — `pervium-update`, run by hand, is that path. **Never put
    it on cron**: that would turn it into exactly the unattended register.sh
    update this constraint forbids.
 14. **Package selection on Alpine is load-bearing** (verified against the
@@ -474,7 +474,7 @@ These were live bugs that a review caught; each has a comment at the site.
      service name is bare `smtpd` — as generic and collision-prone as
      `httpd` was — and would let an operator `rc-update add smtpd` by
      accident, bypassing `ENABLE_SMTP` and every safety guard in our own
-     `smtpd.conf`. We ship our own `mesh-flux-smtpd` initd instead. `opensmtpd`
+     `smtpd.conf`. We ship our own `pervium-smtpd` initd instead. `opensmtpd`
      also claims `/usr/sbin/sendmail`/`mailq`/`newaliases`; harmless alone,
      but a hard collision if `postfix`/`ssmtp`/`msmtp` are ever added later.
 15. **Agent definitions use `tools:` as a comma-separated string**, not a
@@ -483,8 +483,8 @@ These were live bugs that a review caught; each has a comment at the site.
    `.claude/agents/` overrides `~/.claude/agents/` on a name collision.
 16. **The first-boot service stands down without guestinfo.** `setup.sh`
    prompts interactively, so auto-running it with no keys present would block
-   the boot forever waiting on input. It checks for `meshflux.hub_url` and
-   `meshflux.group` first and redirects to `/dev/null`. The interactive
+   the boot forever waiting on input. It checks for `pervium.hub_url` and
+   `pervium.group` first and redirects to `/dev/null`. The interactive
    counterpart — `hub-setup.sh` / `node-setup.sh`, invited at login — has its
    own guard: `case "$-" in *i*)` (interactive shell only) plus `[ -t 0 ]`
    (real tty), so it never fires for `ssh host cmd` or scp/rsync's

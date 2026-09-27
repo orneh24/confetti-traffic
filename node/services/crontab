@@ -1,11 +1,11 @@
-# mesh-flux cron entries
+# pervium cron entries
 # Installed by setup.sh, which MERGES these lines into root's existing
 # crontab. Never run `crontab <file>` with this: that replaces root's crontab
 # wholesale and drops Alpine's run-parts entries, so /etc/periodic/* — the
 # daily logrotate run included — stops firing and the disk fills.
 
 # Re-register with the hub every 5 minutes
-*/5 * * * * /usr/local/bin/mesh-flux/register.sh >> /var/log/mesh-flux/register.log 2>&1
+*/5 * * * * /usr/local/bin/pervium/register.sh >> /var/log/pervium/register.log 2>&1
 
 # Run connectivity test cycle every minute
-* * * * * /usr/local/bin/mesh-flux/test-cycle.sh >> /var/log/mesh-flux/test-cycle.log 2>&1
+* * * * * /usr/local/bin/pervium/test-cycle.sh >> /var/log/pervium/test-cycle.log 2>&1

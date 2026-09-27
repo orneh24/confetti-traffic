@@ -85,11 +85,11 @@ EOF
 # also what proves that override is real and not just documented.
 # -------------------------------------------------------------------
 mkdir -p "$NODE_DIR/scripts"
-sed "s#^CONFIG=\"/etc/mesh-flux/config\"#CONFIG=\"$NODE_DIR/config\"#" \
+sed "s#^CONFIG=\"/etc/pervium/config\"#CONFIG=\"$NODE_DIR/config\"#" \
     "$ROOT/node/scripts/register.sh" > "$NODE_DIR/scripts/register.sh"
-sed -e "s#^CONFIG=\"/etc/mesh-flux/config\"#CONFIG=\"$NODE_DIR/config\"#" \
-    -e "s#^LOCK_DIR=\"/run/mesh-flux-test-cycle.lock\"#LOCK_DIR=\"$NODE_DIR/run/lock\"#" \
-    -e "s#^TRACEROUTE_STAMP=\"/run/mesh-flux-last-traceroute\"#TRACEROUTE_STAMP=\"$NODE_DIR/run/last-traceroute\"#" \
+sed -e "s#^CONFIG=\"/etc/pervium/config\"#CONFIG=\"$NODE_DIR/config\"#" \
+    -e "s#^LOCK_DIR=\"/run/pervium-test-cycle.lock\"#LOCK_DIR=\"$NODE_DIR/run/lock\"#" \
+    -e "s#^TRACEROUTE_STAMP=\"/run/pervium-last-traceroute\"#TRACEROUTE_STAMP=\"$NODE_DIR/run/last-traceroute\"#" \
     "$ROOT/node/scripts/test-cycle.sh" > "$NODE_DIR/scripts/test-cycle.sh"
 chmod +x "$NODE_DIR/scripts"/*.sh
 

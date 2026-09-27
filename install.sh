@@ -1,5 +1,5 @@
 #!/bin/sh
-# install.sh — entry point for a freshly downloaded mesh-flux repo on a
+# install.sh — entry point for a freshly downloaded pervium repo on a
 # fresh Alpine base VM. Asks whether this VM becomes a Hub or a Node, then
 # either runs or names the matching build-template.sh.
 #
@@ -10,7 +10,7 @@
 #
 # Deliberately refuses to run on a VM that's already been built into a role
 # (see the guard below) — both build-template.sh scripts are destructive if
-# re-run on a configured system: they wipe /etc/mesh-flux/config and the
+# re-run on a configured system: they wipe /etc/pervium/config and the
 # hostname, or the hub's results database, as their last step. Their only
 # existing protection against that is self-deleting after a successful run,
 # and that protection disappears the moment the repo is re-downloaded.
@@ -33,12 +33,21 @@ die() {
 # -------------------------------------------------------------------
 # Refuse on an already-built VM
 # -------------------------------------------------------------------
-if [ -f /usr/local/bin/mesh-flux/setup.sh ]; then
-    die "This VM is already a configured node (/usr/local/bin/mesh-flux/setup.sh exists). Re-running build-template.sh here would wipe its config and hostname. To update its code, run: sh $SCRIPT_DIR/update.sh"
+if [ -f /usr/local/bin/pervium/setup.sh ]; then
+    die "This VM is already a configured node (/usr/local/bin/pervium/setup.sh exists). Re-running build-template.sh here would wipe its config and hostname. To update its code, run: sh $SCRIPT_DIR/update.sh"
 fi
-if [ -d /opt/mesh-flux-hub ]; then
-    die "This VM is already a hub (/opt/mesh-flux-hub exists). Re-running build-template.sh here would wipe the results database. To update its code, run: sh $SCRIPT_DIR/update.sh"
+if [ -d /opt/pervium-hub ]; then
+    die "This VM is already a hub (/opt/pervium-hub exists). Re-running build-template.sh here would wipe the results database. To update its code, run: sh $SCRIPT_DIR/update.sh"
 fi
+
+# The project's earlier names. A Pervium build next to one of these would run
+# two sets of services fighting over port 80, cron and the SMB/SMTP daemons.
+# The paths all changed with each rename, so there is no in-place upgrade.
+for _old in /usr/local/bin/mesh-flux /opt/mesh-flux-hub /usr/local/bin/mesh-probe /opt/mesh-probe-hub; do
+    if [ -e "$_old" ]; then
+        die "This VM has an install from before the project was renamed ($_old). Rebuild it from a fresh Alpine VM instead."
+    fi
+done
 
 # -------------------------------------------------------------------
 # Role selection
@@ -46,7 +55,7 @@ fi
 ROLE="${1:-}"
 
 if [ -z "$ROLE" ]; then
-    echo "=== mesh-flux install ==="
+    echo "=== pervium install ==="
     echo
     echo "This VM will become a:"
     echo "  1) Hub  -- infrastructure only, one per lab"

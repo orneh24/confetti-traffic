@@ -1,4 +1,4 @@
-"""Mesh-flux hub — collects registrations and test results, serves dashboard."""
+"""Pervium hub — collects registrations and test results, serves dashboard."""
 
 import sqlite3
 import os
@@ -164,7 +164,7 @@ def prune_stale_endpoints(db):
 #
 # A hub-authored syslog row is, honestly, the one row in this table that IS
 # trustworthy — and gains no special protection from that: anything on the
-# segment can send UDP claiming host=mesh-flux-hub with the matching
+# segment can send UDP claiming host=pervium-hub with the matching
 # mnemonic, and /api/path-changes would serve it. The tag is a label, not a
 # boundary. Blast radius is bounded (a spurious marker + a syslog link; no
 # result row is ever altered or lost).
@@ -544,7 +544,7 @@ def delete_target(name):
 # others red.
 #
 # Each key is true, false or null. null (never set, or cleared) means the hub
-# has no opinion and each node keeps its own /etc/mesh-flux/config value — so
+# has no opinion and each node keeps its own /etc/pervium/config value — so
 # an existing lab behaves exactly as before until someone flips a switch.
 # A separate route rather than a field on /endpoints: that response is a bare
 # array every deployed node parses, and changing its shape would break them.

@@ -1,19 +1,19 @@
 ---
 name: drift-checker
-description: Cross-check mesh-flux's docs, config samples, UI labels AND agent definitions against what the code actually does — paths, ports, service names, config keys, test types, API endpoints, dependency lists. Use after adding a feature or renaming anything, and before handing work to the user. This project has drifted repeatedly, and stale instructions are worse than missing ones because they get followed.
+description: Cross-check Pervium's docs, config samples, UI labels AND agent definitions against what the code actually does — paths, ports, service names, config keys, test types, API endpoints, dependency lists. Use after adding a feature or renaming anything, and before handing work to the user. This project has drifted repeatedly, and stale instructions are worse than missing ones because they get followed.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
-You check that mesh-flux's documentation and user-facing labels still match
+You check that Pervium's documentation and user-facing labels still match
 its code. Drift here is not cosmetic: someone follows `BUILD_GUIDE.md`
 literally while building a VM, so a stale path costs a rebuild.
 
 ## This has happened repeatedly
 
-- `BUILD_GUIDE.md` documented port 5000 and `/opt/mesh-flux/scripts/` long
-  after the code moved to port 80 and `/usr/local/bin/mesh-flux/`.
-- It said `rc-service httpd` after the service was renamed `mesh-flux-httpd`.
+- `BUILD_GUIDE.md` documented port 5000 and `/opt/pervium/scripts/` long
+  after the code moved to port 80 and `/usr/local/bin/pervium/`.
+- It said `rc-service httpd` after the service was renamed `pervium-httpd`.
 - The dashboard legend read `H=HTTP S=SSH T=Trace I=iperf` after two new test
   types were added, so cells rendered `M` and `D` with nothing explaining them.
 - `config.sample` lacked keys `setup.sh` had begun writing.
@@ -29,8 +29,8 @@ agent dir, hub port.
 
 **Service names.** Every `rc-service` / `rc-update` name in the docs must
 exist as a file in `node/services/` or be created by a build script.
-Current set: `mesh-flux-httpd`, `iperf3`, `mesh-flux-smbd`, `mesh-flux-smtpd`,
-`mesh-flux-firstboot`, `mesh-flux-hub`, `mesh-flux-hub-firstboot`, plus
+Current set: `pervium-httpd`, `iperf3`, `pervium-smbd`, `pervium-smtpd`,
+`pervium-firstboot`, `pervium-hub`, `pervium-hub-firstboot`, plus
 stock `crond`, `dropbear`, `chronyd`, `open-vm-tools`, `lldpd` (both roles,
 always-on).
 
@@ -56,14 +56,14 @@ documented in the guide and `config.sample`, exactly — a typo'd key silently
 falls through to a prompt.
 
 **Setup stamps — four places, per role.** Every stamp path (hub:
-`/etc/mesh-flux-hub/.setup-done`; node: `/etc/mesh-flux/.firstboot-done`
-and `/etc/mesh-flux/.setup-done`) must agree across: the wizard/service that
+`/etc/pervium-hub/.setup-done`; node: `/etc/pervium/.firstboot-done`
+and `/etc/pervium/.setup-done`) must agree across: the wizard/service that
 writes it, any other writer (`firstboot.initd` writes the node's
 `.setup-done` too, with a distinct provenance word), the login hook that
 reads it to decide whether to prompt, and the matching `build-template.sh`'s
 cleanup that clears it. A stamp cleared in one path but not the guide's
 documented re-clean command (or vice versa) is exactly the class of bug that
-already shipped once for `/etc/mesh-flux/config` itself.
+already shipped once for `/etc/pervium/config` itself.
 
 **Login hooks.** Every `/etc/profile.d/*` file a `build-template.sh` installs
 must exist as a real file in the matching `services/` directory, and must
@@ -78,6 +78,26 @@ diverge from the other.
 each still describes the current code; a constraint describing a fix that was
 later reverted is actively misleading.
 
+**Old project names.** The project was lab-tester, then mesh-probe (hostname
+prefix `mp`), then mesh-flux (`mf`), and is now Pervium (`pv`). Every rename
+changed paths, service names, guestinfo keys and the hostname prefix, so a
+leftover old name is a path that no longer exists on a new VM:
+
+```sh
+git grep -n -I -i -E 'mesh.?flux|mesh_flux|mesh.?probe|lab.?tester|\bm[fp]-[a-z<]|HOSTNAME_PREFIX=m[fp]\b|"m[fp]"'
+```
+
+Pass: the only hits are the deliberate ones, which each name an old
+install on purpose:
+- `install.sh` and `update.sh`: the loop over old install paths that
+  refuses to build or update next to an old install;
+- the README's "Formerly mesh-flux." line;
+- this section of `drift-checker.md` itself.
+
+Anything else, including prose, examples and agent or skill text, is
+drift. `-I` skips `docs/img/dashboard-mock.jpg`, a screenshot that is not
+regenerated on a rename.
+
 ## Agent definitions — the highest-risk drift
 
 `.claude/agents/*.md` are documentation that *acts*. A stale doc misleads
@@ -87,7 +107,7 @@ with the same rigour as the guide, and treat findings as higher severity.
 
 Every project-specific agent has already drifted at least once:
 
-- `mesh-flux-diagnostician` taught that an empty 10-minute window means "node
+- `pervium-diagnostician` taught that an empty 10-minute window means "node
   writing timestamps in local time". That was a real bug, since fixed by
   having the hub stamp `received_at` — so the example sent the diagnostician
   chasing something structurally impossible while the real cause (a rejected
