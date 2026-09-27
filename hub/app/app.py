@@ -87,6 +87,11 @@ def init_db():
             message     TEXT,
             raw         TEXT
         );
+        CREATE TABLE IF NOT EXISTS settings (
+            key     TEXT PRIMARY KEY,
+            value   TEXT NOT NULL,
+            updated TEXT NOT NULL
+        );
         CREATE INDEX IF NOT EXISTS idx_results_received ON results(received_at);
         CREATE INDEX IF NOT EXISTS idx_results_source_target ON results(source, target_hostname);
         CREATE INDEX IF NOT EXISTS idx_results_trace ON results(source, target_hostname, test_type, received_at);
@@ -528,6 +533,68 @@ def delete_target(name):
     if cur.rowcount == 0:
         return jsonify({"error": "not found"}), 404
     return jsonify({"status": "deleted", "name": name})
+
+
+# ---------------------------------------------------------------------------
+# Mesh-wide settings
+#
+# Switches for the opt-in tests, set from the dashboard and pulled by every
+# node's test-cycle.sh. Mesh-wide on purpose: smb/smtp/iperf3 each need a
+# server on every peer, so enabling one on only some nodes just paints the
+# others red.
+#
+# Each key is true, false or null. null (never set, or cleared) means the hub
+# has no opinion and each node keeps its own /etc/mesh-flux/config value — so
+# an existing lab behaves exactly as before until someone flips a switch.
+# A separate route rather than a field on /endpoints: that response is a bare
+# array every deployed node parses, and changing its shape would break them.
+# ---------------------------------------------------------------------------
+
+SETTING_KEYS = ("enable_smb", "enable_smtp", "enable_iperf")
+
+
+def read_settings(db):
+    out = dict.fromkeys(SETTING_KEYS)
+    for key, value in db.execute("SELECT key, value FROM settings").fetchall():
+        if key in out:
+            out[key] = value == "true"
+    return out
+
+
+@app.route("/settings", methods=["GET"])
+def get_settings():
+    return jsonify(read_settings(get_db()))
+
+
+@app.route("/settings", methods=["POST"])
+def update_settings():
+    """Partial update: only keys present in the body change; null clears one."""
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict) or not data:
+        return jsonify({"error": "Body must be a non-empty JSON object"}), 400
+    unknown = [k for k in data if k not in SETTING_KEYS]
+    if unknown:
+        return jsonify({"error": "unknown settings", "unknown": unknown,
+                        "valid": list(SETTING_KEYS)}), 400
+    # bool only: "false" as a string or 0 would otherwise read as a value the
+    # caller didn't mean, and this switches servers on and off on every node.
+    bad = [k for k, v in data.items() if v is not None and not isinstance(v, bool)]
+    if bad:
+        return jsonify({"error": "values must be true, false or null", "invalid": bad}), 400
+
+    db = get_db()
+    now = sqlite_now()
+    for key, value in data.items():
+        if value is None:
+            db.execute("DELETE FROM settings WHERE key = ?", (key,))
+        else:
+            db.execute(
+                """INSERT INTO settings (key, value, updated) VALUES (?, ?, ?)
+                   ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated=excluded.updated""",
+                (key, "true" if value else "false", now),
+            )
+    db.commit()
+    return jsonify(read_settings(db))
 
 
 # ---------------------------------------------------------------------------

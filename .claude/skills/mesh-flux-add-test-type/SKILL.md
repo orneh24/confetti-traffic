@@ -107,7 +107,11 @@ same scrutiny before it ships, not after.
   file this project installs (not the packaged default), it must run
   *after* that install step, not alongside the other package checks.
 - Service-file install (config + initd), `chmod +x` — but do **not**
-  `rc-update add` here; only `setup.sh` does that, gated.
+  `rc-update add` here; `setup.sh` does that at setup, gated, and
+  `test-cycle.sh`'s `sync_service()` keeps it in step with the flag each
+  cycle. A new gated daemon needs a `sync_service` line, and a key in the
+  hub's `SETTING_KEYS` plus the dashboard's Mesh Settings panel if it
+  should be switchable mesh-wide.
 - Template cleanup — clear any per-host state the daemon accumulates
   (queue directories, machine IDs), leaving directory ownership/mode
   untouched if the daemon is picky about it.

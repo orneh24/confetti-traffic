@@ -167,6 +167,58 @@ ENDPOINT_COUNT=$(printf '%s' "$ENDPOINTS" | jq 'length')
 log "Received $ENDPOINT_COUNT endpoints"
 
 # -------------------------------------------------------------------
+# Mesh-wide settings from the hub (the dashboard's "Mesh Settings" panel).
+#
+# A hub value of true/false overrides this node's ENABLE_* config; null
+# means the hub has no opinion and the local config stands. HUB_SETTINGS=false
+# in the config ignores the hub entirely, e.g. for a node without the RAM to
+# spare for smbd. Any failure here (old hub without /settings, bad JSON,
+# timeout) falls back to the local config: it must never stop a cycle, since
+# a self-updated copy of this script is only kept if its first run succeeds.
+# -------------------------------------------------------------------
+HUB_SETTINGS="${HUB_SETTINGS:-true}"
+if [ "$HUB_SETTINGS" = "true" ]; then
+    _settings=$(curl -sf --connect-timeout 5 --max-time 5 "${HUB_URL}/settings" 2>/dev/null) || _settings=""
+    if [ -n "$_settings" ] && printf '%s' "$_settings" | jq -e 'type == "object"' >/dev/null 2>&1; then
+        hub_setting() {
+            printf '%s' "$_settings" | jq -r --arg k "$1" '.[$k] | if type == "boolean" then tostring else empty end'
+        }
+        _v=$(hub_setting enable_smb);   [ -n "$_v" ] && ENABLE_SMB="$_v"
+        _v=$(hub_setting enable_smtp);  [ -n "$_v" ] && ENABLE_SMTP="$_v"
+        _v=$(hub_setting enable_iperf); [ -n "$_v" ] && ENABLE_IPERF="$_v"
+    fi
+fi
+log "Opt-in tests: smb=$ENABLE_SMB smtp=$ENABLE_SMTP iperf3=$ENABLE_IPERF"
+
+# Keep each opt-in test's server in step with its flag, so flipping a switch
+# (on the hub or in the config) needs no manual rc-update/rc-service. A node
+# with the flag on tests every peer, so a peer without the server shows as a
+# failure; starting it here is what makes a mesh-wide switch actually work.
+# Skipped where OpenRC isn't present (the dev/ toolkit).
+sync_service() {
+    _svc="$1"
+    _want="$2"
+    command -v rc-service >/dev/null 2>&1 || return 0
+    [ -x "/etc/init.d/$_svc" ] || return 0
+    if rc-service "$_svc" status >/dev/null 2>&1; then _running=true; else _running=false; fi
+    if [ "$_want" = "true" ] && [ "$_running" = "false" ]; then
+        rc-update add "$_svc" default >/dev/null 2>&1 || true
+        if rc-service "$_svc" start >/dev/null 2>&1; then
+            log "Started $_svc"
+        else
+            log "WARNING: could not start $_svc"
+        fi
+    elif [ "$_want" != "true" ] && [ "$_running" = "true" ]; then
+        rc-service "$_svc" stop >/dev/null 2>&1 || true
+        rc-update del "$_svc" default >/dev/null 2>&1 || true
+        log "Stopped $_svc"
+    fi
+}
+sync_service mesh-flux-smbd  "$ENABLE_SMB"
+sync_service mesh-flux-smtpd "$ENABLE_SMTP"
+sync_service iperf3          "$ENABLE_IPERF"
+
+# -------------------------------------------------------------------
 # Escape a string for safe JSON embedding
 # -------------------------------------------------------------------
 json_escape() {

@@ -42,6 +42,8 @@ Diagram: `docs/TOPOLOGY.md`.
     (see Syslog below); default 10, matching `/api/results`
   - `DELETE /endpoints/<hostname>`
   - `GET|POST /targets`, `DELETE /targets/<name>` — static targets
+  - `GET|POST /settings` — mesh-wide switches for the opt-in tests (see
+    Mesh settings below)
   - `GET /agent/manifest`, `GET /agent/<script>` — agent distribution
   - `GET /api/syslog` — stored messages; `minutes=N` (default 60) *or*
     `from=&to=` for a pinned window, plus `host=`, `severity=N`, `q=`,
@@ -115,6 +117,19 @@ samples reached makes that automatic rather than a separate check. Path
 length alone is never a trigger either — a trace that simply got shorter or
 longer produces no positional mismatch by itself; a real reroute always
 does.
+
+### Mesh settings
+`enable_smb`, `enable_smtp`, `enable_iperf`, set from the dashboard's "Mesh
+Settings" panel and stored in the hub's `settings` table. Each is
+`true`/`false`/`null`; `null` (the default) means the hub has no opinion and
+each node's own `ENABLE_*` config stands, so a lab behaves as before until a
+switch is flipped. `test-cycle.sh` fetches `GET /settings` each cycle, lets a
+set value override its config, and starts/stops the matching server
+(`mesh-flux-smbd`, `mesh-flux-smtpd`, `iperf3`) to follow the flag. A node
+with `HUB_SETTINGS=false` ignores the hub. A separate route rather than a
+field on `/endpoints`, whose bare-array shape every deployed node parses. Any
+fetch failure falls back to local config — it must never fail a cycle, or
+self-update would roll the script back.
 
 ### Static targets
 Addresses that run no agent — gateways, device loopbacks, outside hosts —

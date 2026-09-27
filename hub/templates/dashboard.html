@@ -740,6 +740,32 @@ a:hover { text-decoration: underline; }
             </div>
         </div>
 
+        <!-- Mesh-wide switches for the opt-in tests. Nodes pull these each
+             cycle (GET /settings) and start/stop the matching server
+             themselves; "node config" leaves each node's own ENABLE_* line
+             in charge. -->
+        <div class="section" id="settings-section">
+            <div class="section-header">
+                <span>Mesh Settings</span>
+                <span id="settings-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
+            </div>
+            <div class="section-body">
+                <div class="filter-row">
+                    <label for="set-enable_smb">SMB</label>
+                    <select id="set-enable_smb" data-key="enable_smb"></select>
+                    <label for="set-enable_smtp">SMTP</label>
+                    <select id="set-enable_smtp" data-key="enable_smtp"></select>
+                    <label for="set-enable_iperf">iperf3</label>
+                    <select id="set-enable_iperf" data-key="enable_iperf"></select>
+                </div>
+                <div class="empty-hint" style="padding:0 2px">
+                    Applies to every node within about a minute; each node starts or
+                    stops the matching server itself. A node with
+                    <code>HUB_SETTINGS=false</code> in its config ignores these.
+                </div>
+            </div>
+        </div>
+
         <!-- Hub self-health: the hub is infrastructure, not a test participant,
              but it can still fail quietly (full disk, dead chronyd, a syslog
              listener that never bound). Separate from the mesh matrix above. -->
@@ -1834,6 +1860,56 @@ a:hover { text-decoration: underline; }
     });
 
     // ---------------------------------------------------------------
+    // Mesh settings — true / false / null, where null ("node config")
+    // leaves each node's own ENABLE_* value in charge.
+    // ---------------------------------------------------------------
+    var SETTING_CHOICES = [["", "node config"], ["true", "on"], ["false", "off"]];
+
+    function settingSelects() {
+        return document.querySelectorAll("#settings-section select[data-key]");
+    }
+
+    function renderSettings(s) {
+        settingSelects().forEach(function(sel) {
+            var v = s[sel.getAttribute("data-key")];
+            sel.value = v === true ? "true" : v === false ? "false" : "";
+        });
+    }
+
+    function loadSettings() {
+        fetchJSON("/settings")
+            .then(renderSettings)
+            .catch(function() {
+                document.getElementById("settings-status").textContent = "settings unavailable";
+            });
+    }
+
+    settingSelects().forEach(function(sel) {
+        sel.innerHTML = SETTING_CHOICES.map(function(c) {
+            return "<option value='" + c[0] + "'>" + c[1] + "</option>";
+        }).join("");
+        sel.addEventListener("change", function() {
+            var body = {};
+            body[sel.getAttribute("data-key")] = sel.value === "" ? null : sel.value === "true";
+            var status = document.getElementById("settings-status");
+            fetch("/settings", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(body)
+            }).then(function(r) {
+                return r.json().then(function(s) {
+                    if (!r.ok) throw new Error(s.error || r.status);
+                    renderSettings(s);
+                    status.textContent = "saved " + new Date().toLocaleTimeString();
+                });
+            }).catch(function(e) {
+                status.textContent = "save failed: " + e.message;
+                loadSettings();
+            });
+        });
+    });
+
+    // ---------------------------------------------------------------
     // Init
     // ---------------------------------------------------------------
     // Collapse/Expand for panels that carry a .collapse-toggle button.
@@ -1876,6 +1952,8 @@ a:hover { text-decoration: underline; }
     setInterval(loadClock, 60000);
     loadHealth();
     setInterval(loadHealth, 60000);
+    loadSettings();
+    setInterval(loadSettings, 60000);
 })();
 </script>
 </body>

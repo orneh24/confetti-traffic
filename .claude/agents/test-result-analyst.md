@@ -41,6 +41,7 @@ Sample count, first and last `received_at`, distinct sources and targets.
 - `http`, `ssh`, `pmtu`, `loss` — about one per minute per pair, always on (no gate).
 - `traceroute` — about one per **five** minutes (`TRACEROUTE_INTERVAL`), *plus* extra samples whenever HTTP or SSH to that target failed, since failure triggers it on demand. So a low traceroute count is normal, and an unusually **high** one is a signal that the pair has been failing.
 - `dns` — one per source per cycle, only where `DNS_SERVER` is configured. Absent entirely is normal.
+- The three opt-in types below follow each node's `ENABLE_*` flag, which the hub's Mesh Settings can override mesh-wide — a coverage change appearing on every node within the same minute or two is most likely one dashboard switch, not N config edits.
 - `iperf3` — only where `ENABLE_IPERF=true`, and individual runs are skipped on server contention rather than recorded as failures.
 - `smb` — only where `ENABLE_SMB=true`, about one per minute per pair like `http`/`ssh`/`pmtu`. Unlike iperf3 there is no contention skip — `smbd` forks per connection, so a missing sample means the fetch failed or timed out, not that the server was busy.
 - `smtp` — mesh side only where `ENABLE_SMTP=true`, about one per minute per pair; no contention skip, same reasoning as `smb`. The static-target arm is ungated, so `smtp` rows against a static target can appear even with `ENABLE_SMTP=false`.

@@ -67,7 +67,8 @@ The root password (`lab123`) is set at build time. Override it with
 | `HOSTNAME_PREFIX` | no | default `mf` |
 | `DNS_SERVER` | no | empty skips the DNS test |
 | `DNS_QUERY` | no | default `example.com` |
-| `ENABLE_IPERF` / `ENABLE_SMB` / `ENABLE_SMTP` | no | default false |
+| `ENABLE_IPERF` / `ENABLE_SMB` / `ENABLE_SMTP` | no | default false; overridden by the dashboard's Mesh Settings when set there |
+| `HUB_SETTINGS` | no | default true; false ignores the dashboard's Mesh Settings |
 | `AGENT_AUTOUPDATE` | no | default true |
 
 If `HUB_URL`, `GROUP_NAME` or `SUBNET` is empty, `register.sh` exits and the

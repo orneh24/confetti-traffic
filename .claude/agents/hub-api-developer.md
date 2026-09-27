@@ -24,6 +24,7 @@ You develop the mesh-flux hub: `hub/app/app.py` (Flask), SQLite storage, and `hu
 - `GET /api/results?minutes=N` (default 10), `GET /api/results/<source>/<target>` (LIMIT 200, newest first).
 - `GET /api/path-changes?minutes=N` (default 10) — detected traceroute path changes, `[{source, target, received_at, detail}]`; reads `syslog` rows tagged `host=mesh-flux-hub`/`mnemonic=%MESHFLUX-5-PATHCHANGE` written by the `POST /results` hook (`hub/app/pathchange.py`), not a separate table.
 - `GET|POST /targets`, `DELETE /targets/<name>` — static targets; each declares which tests apply. Unknown test names rejected 400 with the valid list.
+- `GET /settings` — `{enable_smb, enable_smtp, enable_iperf}`, each bool or null (null = node's own config); pulled by `test-cycle.sh` every cycle. `POST /settings` — partial update from the dashboard, bool/null only, unknown keys 400. Never fold these into `/endpoints`' bare array.
 - `GET /agent/manifest`, `GET /agent/<script>` — agent distribution; checksums computed on demand.
 - `GET /api/syslog` — stored messages. `minutes=N` (default 60) *or* `from=&to=` for a pinned window, plus `host=` (one value, matched against parsed hostname or source IP), `severity=N` (at or worse than N), `q=`, `limit=N` (default and cap 2000).
 - `GET /api/syslog/sources` — distinct senders with counts, for the filter dropdown.

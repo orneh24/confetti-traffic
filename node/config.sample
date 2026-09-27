@@ -107,6 +107,16 @@ ENABLE_SMB=false
 # plus connection/round-trip time), up to ~10s worst case (SMTP_TIMEOUT).
 ENABLE_SMTP=false
 
+# The three ENABLE_* switches above can also be set mesh-wide from the hub
+# dashboard's "Mesh Settings" panel. A switch set there overrides the value
+# here; one left on "node config" leaves this file in charge. Either way,
+# test-cycle.sh starts or stops the matching server (mesh-flux-smbd,
+# mesh-flux-smtpd, iperf3) to follow the flag within one cycle.
+#
+# Set to false to ignore the hub's settings on this node, e.g. one without
+# the RAM to spare for smbd.
+HUB_SETTINGS=true
+
 # SMTP probe tuning — defaults are inline in run_smtp_test(); uncomment to
 # override.
 #SMTP_PORT=25

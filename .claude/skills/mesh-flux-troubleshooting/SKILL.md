@@ -68,7 +68,7 @@ Go to the node logs before looking at the network.
 
 A failing direction with a working reverse points at the *target*, not the path:
 
-- Target's server is down — dropbear, busybox httpd, iperf3, or (if `ENABLE_SMB=true`/`ENABLE_SMTP=true`) `mesh-flux-smbd`/`mesh-flux-smtpd` not started. Verify locally on the target first: `nc -z <ip> 22 25 80 445 5201` from a neighbour.
+- Target's server is down — dropbear, busybox httpd, iperf3, or (if `ENABLE_SMB=true`/`ENABLE_SMTP=true`) `mesh-flux-smbd`/`mesh-flux-smtpd` not started. For those three, the dashboard's Mesh Settings (`GET /settings`) can override the local flag on every node at once — check it before editing a node's config. Verify locally on the target first: `nc -z <ip> 22 25 80 445 5201` from a neighbour.
 - Target firewalled at the host level (Alpine default has none — if `iptables` rules exist, someone added them).
 - If both directions fail for every pair crossing one point in the network, and traceroute dies at that hop, that is a real network problem — outside this harness, and the concern of whatever project owns the routing/switching in the lab.
 - Before concluding it's the network, check `lldpcli show neighbors` on the node (always-on, not gated) — a node on the wrong vSwitch port group registers and often still gets a DHCP lease, but is plugged into the wrong place entirely.

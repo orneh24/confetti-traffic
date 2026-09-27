@@ -28,7 +28,9 @@ Nodes are ~128 MB Alpine clones from one golden image. They get an IP by DHCP, r
 
 ## Config
 
-`/etc/mesh-flux/config` (from `node/config.sample`), sourced by both scripts: `HUB_URL` (no trailing slash), `GROUP_NAME` and `SUBNET` — plus optional `ENABLE_IPERF`, `ENABLE_SMB`, `ENABLE_SMTP`, `TRACEROUTE_INTERVAL`, `TRACEROUTE_MAX_HOPS`, `PMTU_SIZE`, `DNS_SERVER`, `DNS_QUERY`, `AGENT_AUTOUPDATE`.
+`/etc/mesh-flux/config` (from `node/config.sample`), sourced by both scripts: `HUB_URL` (no trailing slash), `GROUP_NAME` and `SUBNET` — plus optional `ENABLE_IPERF`, `ENABLE_SMB`, `ENABLE_SMTP`, `TRACEROUTE_INTERVAL`, `TRACEROUTE_MAX_HOPS`, `PMTU_SIZE`, `DNS_SERVER`, `DNS_QUERY`, `AGENT_AUTOUPDATE`, `HUB_SETTINGS`.
+
+**Mesh settings.** Right after `/endpoints`, `test-cycle.sh` fetches `GET /settings`; any boolean there overrides `ENABLE_SMB`/`ENABLE_SMTP`/`ENABLE_IPERF`, null leaves the config value. `sync_service()` then runs `rc-update add` + `rc-service start` (or `stop` + `rc-update del`) so `mesh-flux-smbd`/`mesh-flux-smtpd`/`iperf3` follow the flag. `HUB_SETTINGS=false` ignores the hub. A failed fetch must fall back silently — a cycle that fails here would get a self-updated script rolled back.
 
 **`register.sh` still requires all three of `HUB_URL`, `GROUP_NAME` and `SUBNET`** to be non-empty in the config file at cron time, and `exit 1`s on the first one that is empty. `SUBNET` is the one exception at the *operator-input* layer, though: `setup.sh`'s `derive_subnet()` computes it from the interface's current DHCP lease (address + prefix already give you the network — see the no-bitwise-awk note above) and only falls through to guestinfo/env/prompt if that fails. `HUB_URL` and `GROUP_NAME` are still not derived or defaulted from anything. Per-clone values are therefore: hostname, `GROUP_NAME` — `SUBNET` normally needs nothing at all now.
 
