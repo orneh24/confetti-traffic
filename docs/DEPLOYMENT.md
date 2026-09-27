@@ -2,7 +2,7 @@
 
 The build order, with a check after each stage. Commands only:
 [README quick start](../README.md#quick-start). Detail: `BUILD_GUIDE.md`.
-What is still unverified on real VMs: `HANDOFF.md`.
+What is still unverified on real VMs: `ROADMAP.md`.
 
 The network between nodes is out of scope. This assumes it exists and is
 reachable.

@@ -10,7 +10,7 @@ venv/
 *.db-wal
 *.db-shm
 
-# Local env overrides (see docs/HANDOFF.md "Running the hub locally")
+# Local env overrides (see dev/README.md "Running the hub by hand")
 hub.env
 
 # Generated at build time by hub/build-template.sh — not source

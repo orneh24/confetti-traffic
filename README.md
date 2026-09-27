@@ -113,8 +113,8 @@ minutes around it.
   one template. Cron runs the tests every 60 s and pushes results to the hub.
 
 Full design and the constraints that must not regress:
-[`CLAUDE.md`](CLAUDE.md). Current state and open items:
-[`docs/HANDOFF.md`](docs/HANDOFF.md).
+[`CLAUDE.md`](CLAUDE.md). Open items and roadmap:
+[`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ### Other hypervisors
 
@@ -158,7 +158,7 @@ listener. Ports below 1024 need root, hence the high ports.
 | [`docs/QUICKSTART.md`](docs/QUICKSTART.md) | Reference: ports, files, config keys, admin commands |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Build order and checklist, with verification |
 | [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md) | System diagram |
-| [`docs/HANDOFF.md`](docs/HANDOFF.md) | Current state, recent changes, open items |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Not yet built, not yet verified, decided against |
 | [`CLAUDE.md`](CLAUDE.md) | Architecture, design decisions, constraints |
 | [`dev/README.md`](dev/README.md) | Local hub and simulated mesh, no VMs |
 | [`deploy/README.md`](deploy/README.md) | PowerCLI script to deploy a hub and N nodes |

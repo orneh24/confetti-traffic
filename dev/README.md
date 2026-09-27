@@ -83,6 +83,16 @@ viewer. To send it a test message, use the Python one-liner in
 `docs/BUILD_GUIDE.md` §6.4 with the port changed to `HUB_SYSLOG_PORT`. Reset
 by deleting `dev/run/` and starting over.
 
+## Running the hub by hand
+
+`dev/hub-start.sh` is the easy path. For the manual `serve.py` command, see
+the main README, "Running the hub locally". `hub/run.sh` does the same and
+also loads `hub/hub.env` if present.
+
+Importing `app.app` runs `init_db()` at import time, so any script that
+imports it creates `hub.db` in the current directory unless `HUB_DB_PATH` is
+set. Set it.
+
 ## When to use which
 
 - **Changed the hub API, schema, or dashboard?** `dev/hub-start.sh`, then

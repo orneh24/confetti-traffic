@@ -65,7 +65,7 @@ stamps `received_at` itself and filters on that, so a drifting node skews the
 `timestamp` it reports but cannot hide its own results. The hub's clock is the
 one that matters — see `/api/time` and the `/syslog` header.
 
-Pointing nodes at the hub is designed and unimplemented (`HANDOFF.md`). If you
+Pointing nodes at the hub is designed and unimplemented (`docs/ROADMAP.md`). If you
 build it, it belongs in `setup.sh` beside the other config writes, and the hub
 needs an access list before it will answer.
 

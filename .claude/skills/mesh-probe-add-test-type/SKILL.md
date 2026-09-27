@@ -155,8 +155,8 @@ something structural) · `README.md` (intro sentence, table) ·
 needs explaining, "Test names" line, troubleshooting commands) ·
 `docs/QUICKSTART.md` (ports table if it adds a server, node config table if
 it adds a flag, "Test names" line) · `docs/DEPLOYMENT.md` (first-clone
-checklist line) · `docs/HANDOFF.md` (a dated "Recent changes" entry — the
-one file missed on the `smtp` round) · `.claude/agents/alpine-vm-builder.md`
+checklist line) · `docs/ROADMAP.md` (only if the test leaves something
+designed-but-unbuilt or unverified) · `.claude/agents/alpine-vm-builder.md`
 (package list, budget bullet — recompute the honest worst-case total, don't
 just append) · `.claude/agents/hub-api-developer.md` (test-types line, shim
 list) · `.claude/agents/drift-checker.md` (service-name set) ·
