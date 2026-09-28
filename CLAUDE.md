@@ -419,6 +419,23 @@ docs/BUILD_GUIDE.md
   plain approach until something concrete forces otherwise; the numbered
   constraints below are the exceptions that earned their complexity.
 
+## Branches (redesign in progress)
+A major architecture redesign is under way and may be kept or dropped.
+- `main` is the current, deployed design. `pervium-update` downloads the
+  `main` tarball (`update.sh`), so anything committed there reaches installed
+  VMs. **No redesign commits on `main`.**
+- `redesign` holds all new-architecture work.
+- Tag `pre-redesign` marks the state before the redesign. Never move or
+  delete it.
+- Fixes to the current design go on `main` first, then `main` is merged into
+  `redesign` so the two don't drift apart.
+- To test `redesign` on a VM, set `PERVIUM_UPDATE_URL` to
+  `https://github.com/orneh24/pervium/archive/refs/heads/redesign.tar.gz`,
+  or run `update.sh` from an unpacked checkout of the branch.
+- Kept: merge `redesign` into `main`. Dropped: delete the branch; `main` is
+  unchanged.
+- Remove this section once the decision is made.
+
 ## Working style
 - Keep output minimalistic and use simple English.
 - Do not output large code snippets. Point at `file:line` and say what
