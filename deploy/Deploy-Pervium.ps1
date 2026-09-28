@@ -183,9 +183,10 @@ $hubUrl = "http://$hubAddress"
 function Set-Guestinfo {
     param([Parameter(Mandatory)] $VM, [Parameter(Mandatory)] [string] $Key, [Parameter(Mandatory)] [string] $Value)
     # Advanced settings must land before first boot — firstboot.initd (hub)
-    # and node/services/firstboot.initd (node) both read guestinfo once, at
-    # boot, with no re-check later. Caller is responsible for ordering this
-    # before Start-VM.
+    # and node/services/firstboot.initd (node) configure the VM from guestinfo
+    # then. Later changes apply only at a reboot: every node key, but on the
+    # hub only guestinfo.hub.hostname (its network keys are read once).
+    # Caller is responsible for ordering this before Start-VM.
     New-AdvancedSetting -Entity $VM -Name $Key -Value $Value -Confirm:$false | Out-Null
 }
 
