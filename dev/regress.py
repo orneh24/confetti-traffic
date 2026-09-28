@@ -450,7 +450,8 @@ def _():
 @check("R24", "every interactive read is EOF-guarded")
 def _():
     p = []
-    for f in (SETUP, "node/scripts/node-setup.sh", "hub/scripts/hub-setup.sh", "update.sh"):
+    for f in (SETUP, "node/scripts/node-setup.sh", "hub/scripts/hub-setup.sh",
+              "hub/scripts/pervium-push-node-update.sh", "update.sh"):
         for n, l in grep(r"\bread -r\b", f):
             if is_comment(l):
                 continue

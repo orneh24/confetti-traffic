@@ -307,6 +307,21 @@ node updated ahead of its hub gets its `test-cycle.sh` swapped back to the
 hub's copy within 5 minutes. `pervium-update` warns when that will happen.
 A hub update also overwrites any hand edits in `/opt/pervium-hub/agent/`.
 
+**All nodes at once, from the hub.** After updating the hub:
+
+```sh
+pervium-push-node-update.sh              # nodes seen in the last 10 minutes
+pervium-push-node-update.sh 10.1.1.10    # only these IPs; -y skips the confirmation
+```
+
+It lists the nodes and asks before starting, then asks once for the nodes'
+root password and logs in to each with `sshpass`, one at a time, running
+`pervium-update -y`. Each node still downloads from GitHub itself. It prints
+which nodes updated and which failed (wrong password, unreachable, or a
+rebuilt node whose host key changed: `ssh-keygen -R <ip>` on the hub).
+Run it by hand only; never schedule it (constraint 13 in CLAUDE.md).
+Hubs built before it existed get it, and `sshpass`, from `pervium-update`.
+
 VMs built before `pervium-update` existed don't have it yet. Fetch it once:
 
 ```sh

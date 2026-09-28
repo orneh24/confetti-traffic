@@ -263,6 +263,13 @@ self-update, and the updater warns about this by comparing the hub's
 `/etc/pervium-release` records the commit, read from the tarball's pax
 header.
 
+`pervium-push-node-update.sh` (hub) runs `pervium-update -y` on every node
+seen in the last 10 minutes (or the IPs given), one at a time, over SSH with
+the nodes' root password asked once (`sshpass`; the hub build adds
+`openssh-client` and `sshpass`). Manual only, same as `pervium-update`:
+never on cron (constraint 13). An ssh command gets dropbear's minimal PATH,
+so the remote command sets PATH itself.
+
 ### Node (one per network segment under test)
 - Alpine Linux VM, ~128 MB RAM, DHCP on its interface
 - Installed to `/usr/local/bin/pervium/`, config at `/etc/pervium/config`
@@ -383,7 +390,7 @@ hub/
   static/
   agent/              — scripts served to nodes (created at build time)
   services/           — firstboot.initd, login-setup.sh
-  scripts/            — hub-setup.sh
+  scripts/            — hub-setup.sh, pervium-push-node-update.sh
 node/
   build-template.sh   — builds the node golden template
   scripts/            — register.sh, test-cycle.sh, setup.sh, node-setup.sh,

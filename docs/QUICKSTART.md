@@ -116,7 +116,9 @@ node's `/var/log/pervium/` before the network.
 follow, `-n N` for history).
 
 **Update to the latest code:** `pervium-update` on the hub first, then on
-each node. It keeps configs, the database and the root password.
+each node, or `pervium-push-node-update.sh` on the hub to update every
+recent node in turn (asks for the node root password once). It keeps
+configs, the database and the root password.
 `cat /etc/pervium-release` shows the commit a VM is on. Details:
 BUILD_GUIDE §6.3.
 

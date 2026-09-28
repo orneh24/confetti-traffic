@@ -81,6 +81,11 @@ before it existed, fetch it once:
 curl -fsSLo /tmp/pervium-update https://raw.githubusercontent.com/orneh24/pervium/main/update.sh && sh /tmp/pervium-update
 ```
 
+To update all nodes from the hub in one go, run
+`pervium-push-node-update.sh` on the hub after updating it. It lists the
+nodes seen in the last 10 minutes, asks for their root password once, and
+runs `pervium-update` on each in turn.
+
 Details, including why the hub goes first:
 [BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
 

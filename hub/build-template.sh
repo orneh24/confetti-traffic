@@ -149,8 +149,11 @@ cp -f "${SCRIPT_DIR}/requirements.txt" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/serve.py" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/run.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/hub-setup.sh" "$HUB_INSTALL_DIR/"
-chmod +x "$HUB_INSTALL_DIR/run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/hub-setup.sh"
+cp -f "${SCRIPT_DIR}/scripts/pervium-push-node-update.sh" "$HUB_INSTALL_DIR/"
+chmod +x "$HUB_INSTALL_DIR/run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/hub-setup.sh"     "$HUB_INSTALL_DIR/pervium-push-node-update.sh"
 ln -sf "$HUB_INSTALL_DIR/hub-setup.sh" /usr/local/bin/hub-setup.sh
+# Manual only (see the script's header): never scheduled.
+ln -sf "$HUB_INSTALL_DIR/pervium-push-node-update.sh" /usr/local/bin/pervium-push-node-update.sh
 
 # The code updater (repo-root update.sh). Copied, not linked: the repo copy
 # this build ran from is usually deleted afterwards. Via a temp name and mv,
