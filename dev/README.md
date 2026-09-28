@@ -89,6 +89,10 @@ by deleting `dev/run/` and starting over.
 the main README, "Running the hub locally". `hub/run.sh` does the same and
 also loads `hub/hub.env` if present.
 
+In the Claude desktop app, `.claude/launch.json` defines the same dev hub as
+`pervium-hub` (port 8099, same DB and syslog port as `dev/hub-start.sh`) for
+its preview pane, run in the foreground under Git Bash's `sh.exe`.
+
 Importing `app.app` runs `init_db()` at import time, so any script that
 imports it creates `hub.db` in the current directory unless `HUB_DB_PATH` is
 set. Set it.

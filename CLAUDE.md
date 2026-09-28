@@ -486,8 +486,8 @@ hub/
   app/                — Flask API (app.py, config.py, pathchange.py,
                         syslog_server.py, nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
-  templates/          — dashboard.html, syslog.html. Colour themes (Dark, Light, Catppuccin Mocha,
-                        Gruvbox, Terminal green) are inline in BOTH pages: a THEMES list in the
+  templates/          — dashboard.html, syslog.html. Colour themes (Dark, Light, Nord, Dracula,
+                        Solarized Dark, Monokai, High Contrast, Terminal green) are inline in BOTH pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
                         localStorage key pervium-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, pervium-theme-shuffle, so both pages stay in step. Adding or changing a theme means
                         editing both pages. syslog.html has its own variable set (--row-line,

@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pervium-hub",
+      "runtimeExecutable": "C:/Program Files/Git/bin/sh.exe",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p dev/run hub/agent && cp -f node/scripts/register.sh node/scripts/test-cycle.sh hub/agent/ && cd hub && HUB_PORT=8099 HUB_SYSLOG_PORT=5514 HUB_DB_PATH=../dev/run/hub.db exec python serve.py"
+      ],
+      "port": 8099
+    }
+  ]
+}

@@ -6,8 +6,8 @@ End-to-end connectivity testing between nodes on a network. It goes beyond
 ICMP: it makes real TCP connections (HTTP, SSH, SMB, SMTP, iperf3) and
 measures packet loss/jitter, path MTU, DNS and traceroute. Results show on a
 web dashboard, optionally next to syslog from the network devices on the path.
-The dashboard has five colour themes (Dark, Light, Catppuccin Mocha, Gruvbox,
-Terminal green), picked from the header, or Shuffle, which switches between them at random every 5-10 minutes.
+The dashboard has eight colour themes (Dark, Light, Nord, Dracula, Solarized Dark,
+Monokai, High Contrast, Terminal green), picked from the header, or Shuffle, which switches between them at random every 5-10 minutes.
 
 ![Dashboard with a synthetic 5-node mesh, one failing path selected, and its syslog correlation panel open](docs/img/dashboard-mock.jpg)
 

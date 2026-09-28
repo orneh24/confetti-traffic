@@ -13,8 +13,11 @@
 var THEMES = [
     ['dark', 'Dark'],
     ['light', 'Light'],
-    ['catppuccin', 'Catppuccin Mocha'],
-    ['gruvbox', 'Gruvbox'],
+    ['nord', 'Nord'],
+    ['dracula', 'Dracula'],
+    ['solarized', 'Solarized Dark'],
+    ['monokai', 'Monokai'],
+    ['contrast', 'High Contrast'],
     ['terminal', 'Terminal green'],
 ];
 // "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
@@ -131,53 +134,125 @@ function syncThemeSelect() {
     --blue:      #0969da;
     --cyan:      #0b7a75;
 }
-/* Catppuccin Mocha */
-:root[data-theme="catppuccin"] {
-    --bg:        #1e1e2e;
-    --bg-card:   #262637;
-    --bg-hover:  #313244;
-    --bg-muted:  #313244;
-    --bg-code:   #181825;
-    --stripe:    #222232;
-    --border:    #45475a;
-    --border-soft: #313244;
-    --badge-bg:  #2a2f45;
-    --badge-border: #3b4466;
-    --text:      #cdd6f4;
-    --text-dim:  #a6adc8;
-    --green:     #a6e3a1;
-    --green-bg:  #2b3b31;
-    --red:       #f38ba8;
-    --red-bg:    #4a2838;
-    --yellow:    #f9e2af;
-    --yellow-bg: #443d33;
-    --gray:      #585b70;
-    --blue:      #89b4fa;
-    --cyan:      #94e2d5;
+/* Nord */
+:root[data-theme="nord"] {
+    --bg:        #2e3440;
+    --bg-card:   #3b4252;
+    --bg-hover:  #434c5e;
+    --bg-muted:  #434c5e;
+    --bg-code:   #242933;
+    --stripe:    #353c4a;
+    --border:    #4c566a;
+    --border-soft: #434c5e;
+    --badge-bg:  #2f3b4d;
+    --badge-border: #4c6a8a;
+    --text:      #eceff4;
+    --text-dim:  #a3adbf;
+    --green:     #a3be8c;
+    --green-bg:  #34413a;
+    --red:       #bf616a;
+    --red-bg:    #43353b;
+    --yellow:    #ebcb8b;
+    --yellow-bg: #454135;
+    --gray:      #616e88;
+    --blue:      #81a1c1;
+    --cyan:      #88c0d0;
 }
-/* Gruvbox */
-:root[data-theme="gruvbox"] {
-    --bg:        #282828;
-    --bg-card:   #32302f;
-    --bg-hover:  #3c3836;
-    --bg-muted:  #3c3836;
-    --bg-code:   #1d2021;
-    --stripe:    #2c2b2a;
-    --border:    #504945;
-    --border-soft: #3c3836;
-    --badge-bg:  #2f3a36;
-    --badge-border: #45554e;
-    --text:      #ebdbb2;
-    --text-dim:  #bdae93;
-    --green:     #8ec07c;
-    --green-bg:  #2c3d2e;
-    --red:       #fb4934;
-    --red-bg:    #4a2320;
-    --yellow:    #fabd2f;
-    --yellow-bg: #4a3d1e;
-    --gray:      #665c54;
-    --blue:      #83a598;
-    --cyan:      #b8bb26;
+/* Dracula */
+:root[data-theme="dracula"] {
+    --bg:        #282a36;
+    --bg-card:   #2f3142;
+    --bg-hover:  #383a4d;
+    --bg-muted:  #383a4d;
+    --bg-code:   #1e1f29;
+    --stripe:    #2b2d3b;
+    --border:    #44475a;
+    --border-soft: #383a4d;
+    --badge-bg:  #2f2b45;
+    --badge-border: #5a4f86;
+    --text:      #f8f8f2;
+    --text-dim:  #a9acc6;
+    --green:     #50fa7b;
+    --green-bg:  #23402f;
+    --red:       #ff5555;
+    --red-bg:    #4a2530;
+    --yellow:    #f1fa8c;
+    --yellow-bg: #44452f;
+    --gray:      #6272a4;
+    --blue:      #bd93f9;
+    --cyan:      #8be9fd;
+}
+/* Solarized Dark */
+:root[data-theme="solarized"] {
+    --bg:        #002b36;
+    --bg-card:   #073642;
+    --bg-hover:  #0b404e;
+    --bg-muted:  #0b404e;
+    --bg-code:   #00212b;
+    --stripe:    #04303c;
+    --border:    #27505b;
+    --border-soft: #0b404e;
+    --badge-bg:  #0a3a52;
+    --badge-border: #1f5f7a;
+    --text:      #eee8d5;
+    --text-dim:  #93a1a1;
+    --green:     #859900;
+    --green-bg:  #1f3a1c;
+    --red:       #dc322f;
+    --red-bg:    #3b2227;
+    --yellow:    #b58900;
+    --yellow-bg: #33341a;
+    --gray:      #586e75;
+    --blue:      #268bd2;
+    --cyan:      #2aa198;
+}
+/* Monokai */
+:root[data-theme="monokai"] {
+    --bg:        #272822;
+    --bg-card:   #2e2f28;
+    --bg-hover:  #3a3b32;
+    --bg-muted:  #3a3b32;
+    --bg-code:   #1e1f1a;
+    --stripe:    #2b2c25;
+    --border:    #49483e;
+    --border-soft: #3a3b32;
+    --badge-bg:  #2c3a3e;
+    --badge-border: #46666e;
+    --text:      #f8f8f2;
+    --text-dim:  #b3b19f;
+    --green:     #a6e22e;
+    --green-bg:  #33401c;
+    --red:       #f92672;
+    --red-bg:    #4a1f33;
+    --yellow:    #e6db74;
+    --yellow-bg: #44402a;
+    --gray:      #75715e;
+    --blue:      #66d9ef;
+    --cyan:      #66d9ef;
+}
+/* High Contrast — pure black, full-strength colours, for legibility */
+:root[data-theme="contrast"] {
+    --bg:        #000000;
+    --bg-card:   #0a0a0a;
+    --bg-hover:  #1a1a1a;
+    --bg-muted:  #1a1a1a;
+    --bg-code:   #000000;
+    --stripe:    #0d0d0d;
+    --border:    #ffffff;
+    --border-soft: #555555;
+    --badge-bg:  #000000;
+    --badge-border: #ffffff;
+    --text:      #ffffff;
+    --text-dim:  #e0e0e0;
+    --green:     #00ff66;
+    --green-bg:  #003318;
+    --red:       #ff3b3b;
+    --red-bg:    #3a0000;
+    --yellow:    #ffdd00;
+    --yellow-bg: #332b00;
+    --gray:      #b0b0b0;
+    --blue:      #4db8ff;
+    --cyan:      #00ffff;
 }
 /* Terminal green — mostly one hue by design; red and amber stay distinct so failures still read */
 :root[data-theme="terminal"] {
