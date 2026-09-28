@@ -164,8 +164,8 @@ designed-but-unbuilt or unverified) · `.claude/agents/alpine-vm-builder.md`
 (package list, budget bullet — recompute the honest worst-case total, don't
 just append) · `.claude/agents/hub-api-developer.md` (test-types line, shim
 list) · `.claude/agents/drift-checker.md` (service-name set) ·
-`.claude/agents/regression-tester.md` (type count, R14 package check, shim
-list, a new numbered check if security review found a structural invariant
+`dev/regress.py` (`TEST_TYPES`, R14 package check, the simulated node's
+config flags, a new check if security review found a structural invariant
 worth guarding permanently) · `.claude/agents/test-result-analyst.md`
 (sample-rate section, coarse-timing note, a trap warning if success
 semantics are non-obvious) · `.claude/agents/pervium-diagnostician.md`

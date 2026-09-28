@@ -41,7 +41,7 @@ One workstation plays many nodes: identity comes from a `hostname` shim
 node scripts call — nothing about the scripts themselves changes.
 
 Two edits, and only two, are made to scratch copies before running (same
-precedent the `regression-tester` agent uses for its own live-hub runs):
+precedent `dev/regress.py` uses for its own live-hub runs):
 `CONFIG` in both scripts, and — `test-cycle.sh` only — `LOCK_DIR` and
 `TRACEROUTE_STAMP`. All three are OS-root paths (`/etc/pervium/...`,
 `/run/...`) that don't exist off a real Alpine node. `SNAPSHOT_FILE` needs no
@@ -100,7 +100,7 @@ set. Set it.
 - **Changed `register.sh` or `test-cycle.sh`?** `dev/run-node-cycle.sh` is
   the point — it's the real script, so a syntax slip or a wire-contract
   break shows up exactly as it would on a real node.
-- **Verifying a change before handing it off?** Still use the
-  `regression-tester` / `hub-api-developer` / `drift-checker` agents — this
-  toolkit is for driving things interactively while coding, not a
-  replacement for that gate.
+- **Verifying a change before handing it off?** Run `python3 dev/regress.py`
+  (the regression suite: every CLAUDE.md constraint plus a live hub and node
+  round trip, about 20 s; `--static` skips the live part). The
+  `regression-tester` agent runs the same script and explains failures.
