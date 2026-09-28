@@ -137,17 +137,30 @@ case "$CONFIRM" in
         ;;
 esac
 
+_was_running=""
+rc-service pervium-hub status >/dev/null 2>&1 && _was_running="1"
+
 set-static-ip "$IP_CIDR" "$GATEWAY" "$DNS" "$NEW_HOSTNAME"
 rc-service networking restart
 
 date -u '+%Y-%m-%dT%H:%M:%SZ configured' > "$STAMP"
 
-# The build only enables the hub at boot; start it now so the dashboard is up
-# without a reboot. restart, not start: it also covers a hub that is already
-# running. Not fatal -- the IP is set and stamped either way, and the fix is
-# the same command by hand.
+# A running hub is restarted by the networking restart itself (it depends on
+# net), and OpenRC finishes that in the background. Wait for it: starting it
+# here as well races that restart and fails on OpenRC's lock ("Call to flock
+# failed"). A hub that was not running (first setup: the build only enables
+# it at boot) is started here, so the dashboard is up without a reboot. Not
+# fatal either way -- the IP is set and stamped, and the fix is the same
+# command by hand.
 echo
-if rc-service pervium-hub restart; then
+if [ -n "$_was_running" ]; then
+    _i=0
+    while [ "$_i" -lt 30 ] && ! rc-service pervium-hub status >/dev/null 2>&1; do
+        sleep 1
+        _i=$((_i + 1))
+    done
+fi
+if rc-service pervium-hub status >/dev/null 2>&1 || rc-service pervium-hub start; then
     echo "Hub running. Dashboard: http://${IP_CIDR%/*}/"
 else
     echo "Static IP set, but pervium-hub failed to start."

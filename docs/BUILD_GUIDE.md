@@ -122,7 +122,9 @@ rc-service pervium-hub start
 
 Or set `guestinfo.hub.ip` (e.g. `10.0.0.100/24`) and `guestinfo.hub.gateway`
 on the VM, plus optionally `guestinfo.hub.dns` and `guestinfo.hub.hostname`,
-and reboot. The `pervium-hub-firstboot` service applies them.
+and reboot. The `pervium-hub-firstboot` service applies them. It uses the
+network keys only once, but re-reads `guestinfo.hub.hostname` on every boot:
+to rename the hub later, change that key and reboot.
 
 Open `http://<hub-ip>/` to check. Settings live in
 `/opt/pervium-hub/hub.env`; restart the hub after editing it.

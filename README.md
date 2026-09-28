@@ -106,7 +106,7 @@ two marked keys are required.
 | `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `hub-setup.sh` asks at login |
 | `guestinfo.hub.gateway` | hub | `10.0.0.1` | |
 | `guestinfo.hub.dns` | hub | `10.0.0.53` | optional; without it the hub can't resolve names, so `pervium-update` can't download |
-| `guestinfo.hub.hostname` | hub | `pervium-hub` | optional; unset keeps the template's hostname |
+| `guestinfo.hub.hostname` | hub | `pervium-hub` | optional; unset keeps the template's hostname. Re-read at every boot, so a change applies at the next reboot |
 
 More: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) (reference tables) and
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (checklist with verification).

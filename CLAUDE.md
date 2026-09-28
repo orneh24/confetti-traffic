@@ -349,10 +349,14 @@ set on the hub's own VM object, not the nodes':
 | `guestinfo.hub.ip` | `10.0.0.100/24` |
 | `guestinfo.hub.gateway` | `10.0.0.1` |
 | `guestinfo.hub.dns` | `10.0.0.53` (optional; without it the hub resolves nothing and `pervium-update` can't download) |
-| `guestinfo.hub.hostname` | `pervium-hub` (optional; unset keeps the current hostname) |
+| `guestinfo.hub.hostname` | `pervium-hub` (optional; unset keeps the current hostname; re-read every boot) |
 
-`dns` and `hostname` are applied only together with `ip` and `gateway` (all
-four go to `set-static-ip`). `hub-setup.sh` asks for the same four, with DNS
+On first boot, `dns` and `hostname` are applied only together with `ip` and
+`gateway` (all four go to `set-static-ip`). After that the network keys are
+never read again (a wrong IP applied at boot would cut the hub off), but
+`hostname` is re-read on every boot and applied if set and different, so a
+hub rename in vCenter takes effect at the next reboot, as it does for nodes.
+A set key also overrides a name typed into `hub-setup.sh` at the next boot. `hub-setup.sh` asks for the same four, with DNS
 and hostname optional. It re-asks for the IP until it has a `/prefix`, and
 offers the subnet's first address (network + 1) as the gateway default, which
 the user can override. `setup.sh`'s no-DHCP fallback does the same; both use

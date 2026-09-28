@@ -8,6 +8,9 @@
 # from, so it must never be the thing that blocks the boot. The interactive
 # path lives in hub-setup.sh instead, invited at first login by
 # login-setup.sh, where a real tty is guaranteed.
+#
+# After that, every boot re-reads guestinfo.hub.hostname (see
+# _apply_hostname); the network keys are used only once.
 
 name="pervium-hub-firstboot"
 description="Configure hub static IP from VMware guestinfo on first boot"
@@ -31,9 +34,36 @@ _guestinfo() {
     fi
 }
 
+# Later boots: apply guestinfo.hub.hostname if it is set and differs from
+# the current name, so a rename in vCenter takes effect at the next reboot
+# (as it does for nodes). Only the hostname: the network keys stay one-shot,
+# since a wrong IP applied at boot would cut the hub off. Same steps as
+# set-static-ip's hostname part.
+_apply_hostname() {
+    _hn=$(_guestinfo "hub.hostname")
+    case "$_hn" in *"No value found"*) _hn="" ;; esac
+    [ -n "$_hn" ] || return 0
+    case "$_hn" in
+        *[!A-Za-z0-9-]*|-*)
+            ewarn "guestinfo.hub.hostname '$_hn' is not a valid hostname; ignored"
+            return 0 ;;
+    esac
+    [ "$_hn" = "$(hostname)" ] && return 0
+
+    ebegin "Renaming hub from guestinfo: $(hostname) -> $_hn"
+    printf '%s\n' "$_hn" > /etc/hostname
+    hostname "$_hn"
+    if grep -q "127.0.1.1" /etc/hosts 2>/dev/null; then
+        sed -i "s/^127\.0\.1\.1.*/127.0.1.1\t${_hn}/" /etc/hosts
+    else
+        printf '127.0.1.1\t%s\n' "$_hn" >> /etc/hosts
+    fi
+    eend 0
+}
+
 start() {
     if [ -f "$STAMP" ]; then
-        einfo "hub already configured; nothing to do"
+        _apply_hostname
         return 0
     fi
 

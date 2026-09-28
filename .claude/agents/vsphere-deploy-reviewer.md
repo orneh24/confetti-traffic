@@ -36,9 +36,10 @@ powered on with the right keys set before it ever boots.
   `New-AdvancedSetting` call in a deploy script must land before
   `Start-VM`, so the first boot configures the VM. After that the roles
   differ:
-  - **Hub:** one-shot. Its firstboot stands down for good once
-    `/etc/pervium-hub/.setup-done` exists; a later key change is ignored
-    (re-run `hub-setup.sh --force` instead).
+  - **Hub:** network keys one-shot. Once `/etc/pervium-hub/.setup-done`
+    exists, a later change to ip/gateway/dns is ignored (re-run
+    `hub-setup.sh --force` instead). Only `guestinfo.hub.hostname` is
+    re-read on every boot: `Set-AdvancedSetting` then reboot renames it.
   - **Node:** re-read on every later boot. If a set
     `guestinfo.pervium.*` key differs from `/etc/pervium/config`
     (`_guestinfo_changed`), `setup.sh` re-runs, renames the node if its
@@ -46,8 +47,8 @@ powered on with the right keys set before it ever boots.
     running node, `Set-AdvancedSetting` then reboot it; no re-clone needed.
 - Hub keys: `guestinfo.hub.ip` (CIDR, e.g. `10.0.0.100/24`),
   `guestinfo.hub.gateway`, plus optional `guestinfo.hub.dns` and
-  `guestinfo.hub.hostname` (the script's `-HubDns` / `-HubHostname`; only
-  applied together with ip/gateway). With ip/gateway absent, the hub's
+  `guestinfo.hub.hostname` (the script's `-HubDns` / `-HubHostname`; on first
+  boot only applied together with ip/gateway). With ip/gateway absent, the hub's
   firstboot service stands down and `hub-setup.sh` prompts at first login
   instead.
 - Node keys: `guestinfo.pervium.hub_url`, `guestinfo.pervium.group`,
