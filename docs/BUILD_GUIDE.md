@@ -274,7 +274,7 @@ tail -f /var/log/pervium/test-cycle.log
 
 | Label | Test | Runs |
 |---|---|---|
-| H | HTTP fetch of the target's identity page | always |
+| H | HTTP fetch of the probe site (5 files, checked byte for byte); static targets: `/` answers | always |
 | S | SSH login with the mesh key from the hub (runs `echo ok` only) | always |
 | T | traceroute | every `TRACEROUTE_INTERVAL` (300 s), and right after H or S fails |
 | M | path MTU, DF bit set | always |
@@ -283,6 +283,20 @@ tail -f /var/log/pervium/test-cycle.log
 | B | SMB download of a probe file | when `ENABLE_SMB=true` |
 | L | packet loss and jitter (`fping`) | always |
 | E | SMTP conversation, never sends mail | mesh: when `ENABLE_SMTP=true`; static targets: always |
+
+**H (HTTP)** fetches a small fixed website every node serves at
+`http://<node>/probe/`, in the order a browser would: `index.html`,
+`style.css`, `app.js`, `about.html`, then the large `report.html` (about
+57 KB). Each file must answer 200 and match the node's own copy byte for
+byte. The output names the first file that failed:
+- `content changed (30000 of 57653 bytes)` means the page was cut short, or
+  something on the path rewrote it.
+- `HTTP 404` on `index.html` usually means the peer runs an older build
+  without the site. Push the current build to it.
+
+A node whose own build has no probe site yet falls back to checking that `/`
+answers. Don't edit the probe files on a single node: every peer would then
+fail against it.
 
 **M (path MTU)** sends a full-size packet (1472-byte payload, 1500 total)
 with DF set. Every other test uses small packets, so a tunnel that drops

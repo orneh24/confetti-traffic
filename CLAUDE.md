@@ -108,6 +108,21 @@ Every node runs `smbd` exporting one read-only share and pulls a fixed probe
 file from every peer with `smbclient`. Full mesh, like the other tests — not
 client-only against static targets.
 
+`http` against a mesh peer fetches the fixed **probe site** every node
+serves at `/probe/` (`node/web/probe/`, installed by the node build on
+`--update` too): `index.html`, `style.css`, `app.js`, `about.html`,
+`report.html` (~57 KB, many segments), in that browser-like order. Each must
+answer 200 and match the SHA-256 of the local copy; the first failure stops
+the test (so a dead peer costs one timeout) and is named in `output`
+(`report.html: content changed (30000 of 57653 bytes)`). This catches a
+device that passes web traffic but rewrites or truncates it, like `smtp`
+does for mail. The files are LF-pinned in `.gitattributes`: a CRLF copy
+would hash differently. A node without its own probe site (test-cycle.sh
+self-updated ahead of the bundle) falls back to the old status-only check
+of `/`, and static targets always use that check. Edit the probe files only
+as a mesh-wide change: until every node has the new copy, nodes on
+different builds report each other as "content changed".
+
 `pmtu` catches what nothing else here does: it sends with DF set at a real
 payload size, which is the only test here that catches a path where peering
 is up and small packets pass but large transfers hang. On failure it steps
@@ -450,6 +465,7 @@ hub/
   scripts/            — hub-setup.sh, node-install.sh (served as /install.sh)
 node/
   build-template.sh   — builds the node golden template
+  web/probe/          — fixed site the HTTP test fetches and hashes
   scripts/            — register.sh, test-cycle.sh, setup.sh, node-setup.sh,
                         test-status.sh (console/SSH results viewer),
                         trust-hub.sh (hub keys; pervium-trust-hub)

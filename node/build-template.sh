@@ -386,6 +386,23 @@ if grep -qE '^[[:space:]]*action[[:space:]]+.*[[:space:]]relay' /etc/smtpd/smtpd
 fi
 
 # -------------------------------------------------------------------
+# 6b. Probe site for the HTTP test (node/web/probe/ -> /probe/)
+#
+# Fixed files every node serves and every peer fetches and compares by
+# SHA-256 against its own copy (test-cycle.sh run_http_test). Installed on
+# --update too, since it is code-like content that must match across nodes.
+# Each file via a temp name and mv: a peer fetching mid-copy would otherwise
+# read a half-written file and report "content changed".
+# -------------------------------------------------------------------
+log "Installing HTTP probe site"
+mkdir -p "${WEB_ROOT}/probe"
+for _f in "${SCRIPT_DIR}"/web/probe/*; do
+    cp -f "$_f" "${WEB_ROOT}/probe/.$(basename "$_f").new"
+    chmod 0644 "${WEB_ROOT}/probe/.$(basename "$_f").new"
+    mv -f "${WEB_ROOT}/probe/.$(basename "$_f").new" "${WEB_ROOT}/probe/$(basename "$_f")"
+done
+
+# -------------------------------------------------------------------
 # 7. Create placeholder identity page
 # -------------------------------------------------------------------
 # Not on --update: a configured node already has its real page, which

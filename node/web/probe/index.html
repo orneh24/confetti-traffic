@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pervium probe site</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">Pervium</div>
+    <nav>
+      <a href="index.html" class="active">Home</a>
+      <a href="about.html">About</a>
+      <a href="report.html">Report</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>End-to-end probe site</h1>
+      <p>
+        This small site is served by every Pervium node. Other nodes fetch
+        it the way a browser would &mdash; the page, its stylesheet, its
+        script, then two more pages &mdash; and compare every byte with
+        their own copy. A page that arrives changed or cut short means
+        something on the path is rewriting or truncating web traffic.
+      </p>
+      <p class="note">
+        The content is fixed and identical on every node. Do not edit these
+        files on one node only: every peer would then report its HTTP test
+        as failed against it.
+      </p>
+    </section>
+
+    <section class="cards">
+      <article class="card">
+        <h2>Why fixed content</h2>
+        <p>
+          A status code only proves that something answered. Comparing the
+          body proves that what the server sent is what the client got:
+          no injected banner, no rewritten links, no transfer that died
+          half way through a large page.
+        </p>
+      </article>
+      <article class="card">
+        <h2>Why several files</h2>
+        <p>
+          Real browsing is several requests in a row over the same path,
+          of different sizes and content types. Inspection engines treat
+          HTML, CSS and JavaScript differently, and a large page crosses
+          many packets where a small one fits in one.
+        </p>
+      </article>
+      <article class="card">
+        <h2>What fails the test</h2>
+        <p>
+          Any file that does not answer 200, or whose SHA-256 differs from
+          the local copy. The test output names the first file that failed
+          and how many bytes arrived.
+        </p>
+      </article>
+    </section>
+
+    <section class="status">
+      <h2>Client-side check</h2>
+      <p id="script-status">The script has not run.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Pervium network end-to-end connectivity testing &middot; probe site v1</p>
+  </footer>
+</body>
+</html>

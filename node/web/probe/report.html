@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Report - Pervium probe site</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">Pervium</div>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="report.html" class="active">Report</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Sample weekly report</h1>
+      <p>
+        Example data only, not a real lab. This page is deliberately large
+        (tens of kilobytes, many TCP segments) so the HTTP test covers a
+        transfer that a small page would not: one that fails when large
+        segments are dropped or a transfer is cut off part way.
+      </p>
+    </section>
+
+    <table class="report">
+      <thead>
+        <tr><th>Date</th><th>Source</th><th>Target</th><th>Test</th><th>Latency ms</th><th>Loss</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+      <tr><td>2026-09-01</td><td>pv-site-a</td><td>pv-site-b</td><td>ssh</td><td class="num">4.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-a</td><td>pv-site-c</td><td>pmtu</td><td class="num">7.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-a</td><td>pv-branch-1</td><td>loss</td><td class="num">11.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-a</td><td>pv-branch-2</td><td>traceroute</td><td class="num">15.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-a</td><td>pv-dc-east</td><td>dns</td><td class="num">18.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-a</td><td>pv-dc-west</td><td>smb</td><td class="num">22.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-a</td><td>pv-lab</td><td>smtp</td><td class="num">26.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-b</td><td>pv-site-a</td><td>http</td><td class="num">30.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-b</td><td>pv-site-c</td><td>ssh</td><td class="num">33.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-b</td><td>pv-branch-1</td><td>pmtu</td><td class="num">37.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-b</td><td>pv-branch-2</td><td>loss</td><td class="num">41.1</td><td class="num">2%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-b</td><td>pv-dc-east</td><td>traceroute</td><td class="num">44.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-b</td><td>pv-dc-west</td><td>dns</td><td class="num">48.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-b</td><td>pv-lab</td><td>smb</td><td class="num">52.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-c</td><td>pv-site-a</td><td>smtp</td><td class="num">55.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-c</td><td>pv-site-b</td><td>http</td><td class="num">59.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-c</td><td>pv-branch-1</td><td>ssh</td><td class="num">63.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-c</td><td>pv-branch-2</td><td>pmtu</td><td class="num">67.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-c</td><td>pv-dc-east</td><td>loss</td><td class="num">70.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-c</td><td>pv-dc-west</td><td>traceroute</td><td class="num">74.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-site-c</td><td>pv-lab</td><td>dns</td><td class="num">78.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-01</td><td>pv-branch-1</td><td>pv-site-a</td><td>smb</td><td class="num">81.8</td><td class="num">4%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-1</td><td>pv-site-b</td><td>smtp</td><td class="num">85.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-1</td><td>pv-site-c</td><td>http</td><td class="num">89.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-1</td><td>pv-branch-2</td><td>ssh</td><td class="num">2.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-1</td><td>pv-dc-east</td><td>pmtu</td><td class="num">6.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-1</td><td>pv-dc-west</td><td>loss</td><td class="num">10.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-1</td><td>pv-lab</td><td>traceroute</td><td class="num">14.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-2</td><td>pv-site-a</td><td>dns</td><td class="num">17.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-2</td><td>pv-site-b</td><td>smb</td><td class="num">21.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-2</td><td>pv-site-c</td><td>smtp</td><td class="num">25.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-2</td><td>pv-branch-1</td><td>http</td><td class="num">28.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-2</td><td>pv-dc-east</td><td>ssh</td><td class="num">32.5</td><td class="num">1%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-2</td><td>pv-dc-west</td><td>pmtu</td><td class="num">36.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-branch-2</td><td>pv-lab</td><td>loss</td><td class="num">39.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-east</td><td>pv-site-a</td><td>traceroute</td><td class="num">43.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-east</td><td>pv-site-b</td><td>dns</td><td class="num">47.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-east</td><td>pv-site-c</td><td>smb</td><td class="num">51.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-east</td><td>pv-branch-1</td><td>smtp</td><td class="num">54.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-east</td><td>pv-branch-2</td><td>http</td><td class="num">58.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-east</td><td>pv-dc-west</td><td>ssh</td><td class="num">62.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-east</td><td>pv-lab</td><td>pmtu</td><td class="num">65.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-west</td><td>pv-site-a</td><td>loss</td><td class="num">69.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-01</td><td>pv-dc-west</td><td>pv-site-b</td><td>traceroute</td><td class="num">73.2</td><td class="num">3%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-west</td><td>pv-site-c</td><td>dns</td><td class="num">76.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-west</td><td>pv-branch-1</td><td>smb</td><td class="num">80.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-west</td><td>pv-branch-2</td><td>smtp</td><td class="num">84.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-west</td><td>pv-dc-east</td><td>http</td><td class="num">88.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-dc-west</td><td>pv-lab</td><td>ssh</td><td class="num">1.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-lab</td><td>pv-site-a</td><td>pmtu</td><td class="num">5.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-lab</td><td>pv-site-b</td><td>loss</td><td class="num">9.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-lab</td><td>pv-site-c</td><td>traceroute</td><td class="num">12.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-lab</td><td>pv-branch-1</td><td>dns</td><td class="num">16.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-lab</td><td>pv-branch-2</td><td>smb</td><td class="num">20.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-lab</td><td>pv-dc-east</td><td>smtp</td><td class="num">23.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-01</td><td>pv-lab</td><td>pv-dc-west</td><td>http</td><td class="num">27.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-a</td><td>pv-site-b</td><td>ssh</td><td class="num">31.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-a</td><td>pv-site-c</td><td>pmtu</td><td class="num">35.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-a</td><td>pv-branch-1</td><td>loss</td><td class="num">38.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-a</td><td>pv-branch-2</td><td>traceroute</td><td class="num">42.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-a</td><td>pv-dc-east</td><td>dns</td><td class="num">46.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-a</td><td>pv-dc-west</td><td>smb</td><td class="num">49.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-a</td><td>pv-lab</td><td>smtp</td><td class="num">53.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-b</td><td>pv-site-a</td><td>http</td><td class="num">57.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-b</td><td>pv-site-c</td><td>ssh</td><td class="num">60.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-b</td><td>pv-branch-1</td><td>pmtu</td><td class="num">64.6</td><td class="num">2%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-b</td><td>pv-branch-2</td><td>loss</td><td class="num">68.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-b</td><td>pv-dc-east</td><td>traceroute</td><td class="num">72.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-b</td><td>pv-dc-west</td><td>dns</td><td class="num">75.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-b</td><td>pv-lab</td><td>smb</td><td class="num">79.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-c</td><td>pv-site-a</td><td>smtp</td><td class="num">83.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-c</td><td>pv-site-b</td><td>http</td><td class="num">86.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-c</td><td>pv-branch-1</td><td>ssh</td><td class="num">0.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-c</td><td>pv-branch-2</td><td>pmtu</td><td class="num">4.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-c</td><td>pv-dc-east</td><td>loss</td><td class="num">7.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-site-c</td><td>pv-dc-west</td><td>traceroute</td><td class="num">11.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-02</td><td>pv-site-c</td><td>pv-lab</td><td>dns</td><td class="num">15.3</td><td class="num">4%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-1</td><td>pv-site-a</td><td>smb</td><td class="num">19.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-1</td><td>pv-site-b</td><td>smtp</td><td class="num">22.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-1</td><td>pv-site-c</td><td>http</td><td class="num">26.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-1</td><td>pv-branch-2</td><td>ssh</td><td class="num">30.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-1</td><td>pv-dc-east</td><td>pmtu</td><td class="num">33.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-1</td><td>pv-dc-west</td><td>loss</td><td class="num">37.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-1</td><td>pv-lab</td><td>traceroute</td><td class="num">41.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-2</td><td>pv-site-a</td><td>dns</td><td class="num">44.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-2</td><td>pv-site-b</td><td>smb</td><td class="num">48.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-2</td><td>pv-site-c</td><td>smtp</td><td class="num">52.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-2</td><td>pv-branch-1</td><td>http</td><td class="num">56.0</td><td class="num">1%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-2</td><td>pv-dc-east</td><td>ssh</td><td class="num">59.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-2</td><td>pv-dc-west</td><td>pmtu</td><td class="num">63.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-branch-2</td><td>pv-lab</td><td>loss</td><td class="num">67.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-east</td><td>pv-site-a</td><td>traceroute</td><td class="num">70.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-east</td><td>pv-site-b</td><td>dns</td><td class="num">74.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-east</td><td>pv-site-c</td><td>smb</td><td class="num">78.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-east</td><td>pv-branch-1</td><td>smtp</td><td class="num">81.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-east</td><td>pv-branch-2</td><td>http</td><td class="num">85.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-east</td><td>pv-dc-west</td><td>ssh</td><td class="num">89.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-east</td><td>pv-lab</td><td>pmtu</td><td class="num">3.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-02</td><td>pv-dc-west</td><td>pv-site-a</td><td>loss</td><td class="num">6.7</td><td class="num">3%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-west</td><td>pv-site-b</td><td>traceroute</td><td class="num">10.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-west</td><td>pv-site-c</td><td>dns</td><td class="num">14.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-west</td><td>pv-branch-1</td><td>smb</td><td class="num">17.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-west</td><td>pv-branch-2</td><td>smtp</td><td class="num">21.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-west</td><td>pv-dc-east</td><td>http</td><td class="num">25.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-dc-west</td><td>pv-lab</td><td>ssh</td><td class="num">28.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-lab</td><td>pv-site-a</td><td>pmtu</td><td class="num">32.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-lab</td><td>pv-site-b</td><td>loss</td><td class="num">36.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-lab</td><td>pv-site-c</td><td>traceroute</td><td class="num">40.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-lab</td><td>pv-branch-1</td><td>dns</td><td class="num">43.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-lab</td><td>pv-branch-2</td><td>smb</td><td class="num">47.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-lab</td><td>pv-dc-east</td><td>smtp</td><td class="num">51.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-02</td><td>pv-lab</td><td>pv-dc-west</td><td>http</td><td class="num">54.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-a</td><td>pv-site-b</td><td>ssh</td><td class="num">58.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-a</td><td>pv-site-c</td><td>pmtu</td><td class="num">62.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-a</td><td>pv-branch-1</td><td>loss</td><td class="num">65.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-a</td><td>pv-branch-2</td><td>traceroute</td><td class="num">69.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-a</td><td>pv-dc-east</td><td>dns</td><td class="num">73.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-a</td><td>pv-dc-west</td><td>smb</td><td class="num">77.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-a</td><td>pv-lab</td><td>smtp</td><td class="num">80.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-b</td><td>pv-site-a</td><td>http</td><td class="num">84.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-b</td><td>pv-site-c</td><td>ssh</td><td class="num">88.1</td><td class="num">2%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-b</td><td>pv-branch-1</td><td>pmtu</td><td class="num">1.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-b</td><td>pv-branch-2</td><td>loss</td><td class="num">5.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-b</td><td>pv-dc-east</td><td>traceroute</td><td class="num">9.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-b</td><td>pv-dc-west</td><td>dns</td><td class="num">12.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-b</td><td>pv-lab</td><td>smb</td><td class="num">16.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-c</td><td>pv-site-a</td><td>smtp</td><td class="num">20.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-c</td><td>pv-site-b</td><td>http</td><td class="num">24.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-c</td><td>pv-branch-1</td><td>ssh</td><td class="num">27.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-c</td><td>pv-branch-2</td><td>pmtu</td><td class="num">31.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-c</td><td>pv-dc-east</td><td>loss</td><td class="num">35.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-03</td><td>pv-site-c</td><td>pv-dc-west</td><td>traceroute</td><td class="num">38.8</td><td class="num">4%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-03</td><td>pv-site-c</td><td>pv-lab</td><td>dns</td><td class="num">42.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-1</td><td>pv-site-a</td><td>smb</td><td class="num">46.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-1</td><td>pv-site-b</td><td>smtp</td><td class="num">49.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-1</td><td>pv-site-c</td><td>http</td><td class="num">53.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-1</td><td>pv-branch-2</td><td>ssh</td><td class="num">57.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-1</td><td>pv-dc-east</td><td>pmtu</td><td class="num">61.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-1</td><td>pv-dc-west</td><td>loss</td><td class="num">64.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-1</td><td>pv-lab</td><td>traceroute</td><td class="num">68.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-2</td><td>pv-site-a</td><td>dns</td><td class="num">72.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-2</td><td>pv-site-b</td><td>smb</td><td class="num">75.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-2</td><td>pv-site-c</td><td>smtp</td><td class="num">79.5</td><td class="num">1%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-2</td><td>pv-branch-1</td><td>http</td><td class="num">83.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-2</td><td>pv-dc-east</td><td>ssh</td><td class="num">86.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-2</td><td>pv-dc-west</td><td>pmtu</td><td class="num">0.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-branch-2</td><td>pv-lab</td><td>loss</td><td class="num">4.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-east</td><td>pv-site-a</td><td>traceroute</td><td class="num">8.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-east</td><td>pv-site-b</td><td>dns</td><td class="num">11.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-east</td><td>pv-site-c</td><td>smb</td><td class="num">15.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-east</td><td>pv-branch-1</td><td>smtp</td><td class="num">19.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-east</td><td>pv-branch-2</td><td>http</td><td class="num">22.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-east</td><td>pv-dc-west</td><td>ssh</td><td class="num">26.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-03</td><td>pv-dc-east</td><td>pv-lab</td><td>pmtu</td><td class="num">30.2</td><td class="num">3%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-west</td><td>pv-site-a</td><td>loss</td><td class="num">33.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-west</td><td>pv-site-b</td><td>traceroute</td><td class="num">37.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-west</td><td>pv-site-c</td><td>dns</td><td class="num">41.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-west</td><td>pv-branch-1</td><td>smb</td><td class="num">45.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-west</td><td>pv-branch-2</td><td>smtp</td><td class="num">48.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-west</td><td>pv-dc-east</td><td>http</td><td class="num">52.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-dc-west</td><td>pv-lab</td><td>ssh</td><td class="num">56.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-lab</td><td>pv-site-a</td><td>pmtu</td><td class="num">59.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-lab</td><td>pv-site-b</td><td>loss</td><td class="num">63.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-lab</td><td>pv-site-c</td><td>traceroute</td><td class="num">67.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-lab</td><td>pv-branch-1</td><td>dns</td><td class="num">70.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-lab</td><td>pv-branch-2</td><td>smb</td><td class="num">74.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-lab</td><td>pv-dc-east</td><td>smtp</td><td class="num">78.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-03</td><td>pv-lab</td><td>pv-dc-west</td><td>http</td><td class="num">82.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-a</td><td>pv-site-b</td><td>ssh</td><td class="num">85.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-a</td><td>pv-site-c</td><td>pmtu</td><td class="num">89.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-a</td><td>pv-branch-1</td><td>loss</td><td class="num">3.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-a</td><td>pv-branch-2</td><td>traceroute</td><td class="num">6.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-a</td><td>pv-dc-east</td><td>dns</td><td class="num">10.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-a</td><td>pv-dc-west</td><td>smb</td><td class="num">14.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-a</td><td>pv-lab</td><td>smtp</td><td class="num">17.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-b</td><td>pv-site-a</td><td>http</td><td class="num">21.6</td><td class="num">2%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-b</td><td>pv-site-c</td><td>ssh</td><td class="num">25.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-b</td><td>pv-branch-1</td><td>pmtu</td><td class="num">29.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-b</td><td>pv-branch-2</td><td>loss</td><td class="num">32.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-b</td><td>pv-dc-east</td><td>traceroute</td><td class="num">36.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-b</td><td>pv-dc-west</td><td>dns</td><td class="num">40.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-b</td><td>pv-lab</td><td>smb</td><td class="num">43.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-c</td><td>pv-site-a</td><td>smtp</td><td class="num">47.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-c</td><td>pv-site-b</td><td>http</td><td class="num">51.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-c</td><td>pv-branch-1</td><td>ssh</td><td class="num">54.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-c</td><td>pv-branch-2</td><td>pmtu</td><td class="num">58.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-04</td><td>pv-site-c</td><td>pv-dc-east</td><td>loss</td><td class="num">62.3</td><td class="num">4%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-c</td><td>pv-dc-west</td><td>traceroute</td><td class="num">66.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-site-c</td><td>pv-lab</td><td>dns</td><td class="num">69.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-1</td><td>pv-site-a</td><td>smb</td><td class="num">73.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-1</td><td>pv-site-b</td><td>smtp</td><td class="num">77.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-1</td><td>pv-site-c</td><td>http</td><td class="num">80.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-1</td><td>pv-branch-2</td><td>ssh</td><td class="num">84.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-1</td><td>pv-dc-east</td><td>pmtu</td><td class="num">88.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-1</td><td>pv-dc-west</td><td>loss</td><td class="num">1.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-1</td><td>pv-lab</td><td>traceroute</td><td class="num">5.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-2</td><td>pv-site-a</td><td>dns</td><td class="num">9.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-2</td><td>pv-site-b</td><td>smb</td><td class="num">13.0</td><td class="num">1%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-2</td><td>pv-site-c</td><td>smtp</td><td class="num">16.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-2</td><td>pv-branch-1</td><td>http</td><td class="num">20.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-2</td><td>pv-dc-east</td><td>ssh</td><td class="num">24.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-2</td><td>pv-dc-west</td><td>pmtu</td><td class="num">27.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-branch-2</td><td>pv-lab</td><td>loss</td><td class="num">31.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-east</td><td>pv-site-a</td><td>traceroute</td><td class="num">35.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-east</td><td>pv-site-b</td><td>dns</td><td class="num">38.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-east</td><td>pv-site-c</td><td>smb</td><td class="num">42.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-east</td><td>pv-branch-1</td><td>smtp</td><td class="num">46.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-east</td><td>pv-branch-2</td><td>http</td><td class="num">50.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-04</td><td>pv-dc-east</td><td>pv-dc-west</td><td>ssh</td><td class="num">53.7</td><td class="num">3%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-east</td><td>pv-lab</td><td>pmtu</td><td class="num">57.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-west</td><td>pv-site-a</td><td>loss</td><td class="num">61.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-west</td><td>pv-site-b</td><td>traceroute</td><td class="num">64.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-west</td><td>pv-site-c</td><td>dns</td><td class="num">68.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-west</td><td>pv-branch-1</td><td>smb</td><td class="num">72.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-west</td><td>pv-branch-2</td><td>smtp</td><td class="num">75.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-west</td><td>pv-dc-east</td><td>http</td><td class="num">79.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-dc-west</td><td>pv-lab</td><td>ssh</td><td class="num">83.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-lab</td><td>pv-site-a</td><td>pmtu</td><td class="num">87.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-lab</td><td>pv-site-b</td><td>loss</td><td class="num">0.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-lab</td><td>pv-site-c</td><td>traceroute</td><td class="num">4.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-lab</td><td>pv-branch-1</td><td>dns</td><td class="num">8.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-lab</td><td>pv-branch-2</td><td>smb</td><td class="num">11.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-lab</td><td>pv-dc-east</td><td>smtp</td><td class="num">15.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-04</td><td>pv-lab</td><td>pv-dc-west</td><td>http</td><td class="num">19.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-a</td><td>pv-site-b</td><td>ssh</td><td class="num">22.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-a</td><td>pv-site-c</td><td>pmtu</td><td class="num">26.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-a</td><td>pv-branch-1</td><td>loss</td><td class="num">30.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-a</td><td>pv-branch-2</td><td>traceroute</td><td class="num">34.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-a</td><td>pv-dc-east</td><td>dns</td><td class="num">37.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-a</td><td>pv-dc-west</td><td>smb</td><td class="num">41.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-a</td><td>pv-lab</td><td>smtp</td><td class="num">45.1</td><td class="num">2%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-b</td><td>pv-site-a</td><td>http</td><td class="num">48.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-b</td><td>pv-site-c</td><td>ssh</td><td class="num">52.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-b</td><td>pv-branch-1</td><td>pmtu</td><td class="num">56.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-b</td><td>pv-branch-2</td><td>loss</td><td class="num">59.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-b</td><td>pv-dc-east</td><td>traceroute</td><td class="num">63.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-b</td><td>pv-dc-west</td><td>dns</td><td class="num">67.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-b</td><td>pv-lab</td><td>smb</td><td class="num">71.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-c</td><td>pv-site-a</td><td>smtp</td><td class="num">74.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-c</td><td>pv-site-b</td><td>http</td><td class="num">78.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-c</td><td>pv-branch-1</td><td>ssh</td><td class="num">82.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-05</td><td>pv-site-c</td><td>pv-branch-2</td><td>pmtu</td><td class="num">85.8</td><td class="num">4%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-c</td><td>pv-dc-east</td><td>loss</td><td class="num">89.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-c</td><td>pv-dc-west</td><td>traceroute</td><td class="num">3.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-site-c</td><td>pv-lab</td><td>dns</td><td class="num">6.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-1</td><td>pv-site-a</td><td>smb</td><td class="num">10.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-1</td><td>pv-site-b</td><td>smtp</td><td class="num">14.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-1</td><td>pv-site-c</td><td>http</td><td class="num">18.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-1</td><td>pv-branch-2</td><td>ssh</td><td class="num">21.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-1</td><td>pv-dc-east</td><td>pmtu</td><td class="num">25.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-1</td><td>pv-dc-west</td><td>loss</td><td class="num">29.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-1</td><td>pv-lab</td><td>traceroute</td><td class="num">32.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-2</td><td>pv-site-a</td><td>dns</td><td class="num">36.5</td><td class="num">1%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-2</td><td>pv-site-b</td><td>smb</td><td class="num">40.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-2</td><td>pv-site-c</td><td>smtp</td><td class="num">43.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-2</td><td>pv-branch-1</td><td>http</td><td class="num">47.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-2</td><td>pv-dc-east</td><td>ssh</td><td class="num">51.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-2</td><td>pv-dc-west</td><td>pmtu</td><td class="num">55.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-branch-2</td><td>pv-lab</td><td>loss</td><td class="num">58.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-east</td><td>pv-site-a</td><td>traceroute</td><td class="num">62.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-east</td><td>pv-site-b</td><td>dns</td><td class="num">66.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-east</td><td>pv-site-c</td><td>smb</td><td class="num">69.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-east</td><td>pv-branch-1</td><td>smtp</td><td class="num">73.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-05</td><td>pv-dc-east</td><td>pv-branch-2</td><td>http</td><td class="num">77.2</td><td class="num">3%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-east</td><td>pv-dc-west</td><td>ssh</td><td class="num">80.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-east</td><td>pv-lab</td><td>pmtu</td><td class="num">84.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-west</td><td>pv-site-a</td><td>loss</td><td class="num">88.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-west</td><td>pv-site-b</td><td>traceroute</td><td class="num">2.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-west</td><td>pv-site-c</td><td>dns</td><td class="num">5.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-west</td><td>pv-branch-1</td><td>smb</td><td class="num">9.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-west</td><td>pv-branch-2</td><td>smtp</td><td class="num">13.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-west</td><td>pv-dc-east</td><td>http</td><td class="num">16.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-dc-west</td><td>pv-lab</td><td>ssh</td><td class="num">20.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-lab</td><td>pv-site-a</td><td>pmtu</td><td class="num">24.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-lab</td><td>pv-site-b</td><td>loss</td><td class="num">27.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-lab</td><td>pv-site-c</td><td>traceroute</td><td class="num">31.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-lab</td><td>pv-branch-1</td><td>dns</td><td class="num">35.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-lab</td><td>pv-branch-2</td><td>smb</td><td class="num">39.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-lab</td><td>pv-dc-east</td><td>smtp</td><td class="num">42.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-05</td><td>pv-lab</td><td>pv-dc-west</td><td>http</td><td class="num">46.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-a</td><td>pv-site-b</td><td>ssh</td><td class="num">50.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-a</td><td>pv-site-c</td><td>pmtu</td><td class="num">53.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-a</td><td>pv-branch-1</td><td>loss</td><td class="num">57.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-a</td><td>pv-branch-2</td><td>traceroute</td><td class="num">61.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-a</td><td>pv-dc-east</td><td>dns</td><td class="num">64.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-a</td><td>pv-dc-west</td><td>smb</td><td class="num">68.6</td><td class="num">2%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-a</td><td>pv-lab</td><td>smtp</td><td class="num">72.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-b</td><td>pv-site-a</td><td>http</td><td class="num">76.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-b</td><td>pv-site-c</td><td>ssh</td><td class="num">79.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-b</td><td>pv-branch-1</td><td>pmtu</td><td class="num">83.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-b</td><td>pv-branch-2</td><td>loss</td><td class="num">87.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-b</td><td>pv-dc-east</td><td>traceroute</td><td class="num">0.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-b</td><td>pv-dc-west</td><td>dns</td><td class="num">4.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-b</td><td>pv-lab</td><td>smb</td><td class="num">8.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-c</td><td>pv-site-a</td><td>smtp</td><td class="num">11.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-c</td><td>pv-site-b</td><td>http</td><td class="num">15.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-06</td><td>pv-site-c</td><td>pv-branch-1</td><td>ssh</td><td class="num">19.3</td><td class="num">4%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-c</td><td>pv-branch-2</td><td>pmtu</td><td class="num">23.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-c</td><td>pv-dc-east</td><td>loss</td><td class="num">26.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-c</td><td>pv-dc-west</td><td>traceroute</td><td class="num">30.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-site-c</td><td>pv-lab</td><td>dns</td><td class="num">34.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-1</td><td>pv-site-a</td><td>smb</td><td class="num">37.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-1</td><td>pv-site-b</td><td>smtp</td><td class="num">41.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-1</td><td>pv-site-c</td><td>http</td><td class="num">45.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-1</td><td>pv-branch-2</td><td>ssh</td><td class="num">48.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-1</td><td>pv-dc-east</td><td>pmtu</td><td class="num">52.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-1</td><td>pv-dc-west</td><td>loss</td><td class="num">56.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-1</td><td>pv-lab</td><td>traceroute</td><td class="num">60.0</td><td class="num">1%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-2</td><td>pv-site-a</td><td>dns</td><td class="num">63.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-2</td><td>pv-site-b</td><td>smb</td><td class="num">67.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-2</td><td>pv-site-c</td><td>smtp</td><td class="num">71.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-2</td><td>pv-branch-1</td><td>http</td><td class="num">74.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-2</td><td>pv-dc-east</td><td>ssh</td><td class="num">78.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-2</td><td>pv-dc-west</td><td>pmtu</td><td class="num">82.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-branch-2</td><td>pv-lab</td><td>loss</td><td class="num">85.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-east</td><td>pv-site-a</td><td>traceroute</td><td class="num">89.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-east</td><td>pv-site-b</td><td>dns</td><td class="num">3.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-east</td><td>pv-site-c</td><td>smb</td><td class="num">7.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-06</td><td>pv-dc-east</td><td>pv-branch-1</td><td>smtp</td><td class="num">10.7</td><td class="num">3%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-east</td><td>pv-branch-2</td><td>http</td><td class="num">14.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-east</td><td>pv-dc-west</td><td>ssh</td><td class="num">18.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-east</td><td>pv-lab</td><td>pmtu</td><td class="num">21.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-west</td><td>pv-site-a</td><td>loss</td><td class="num">25.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-west</td><td>pv-site-b</td><td>traceroute</td><td class="num">29.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-west</td><td>pv-site-c</td><td>dns</td><td class="num">32.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-west</td><td>pv-branch-1</td><td>smb</td><td class="num">36.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-west</td><td>pv-branch-2</td><td>smtp</td><td class="num">40.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-west</td><td>pv-dc-east</td><td>http</td><td class="num">44.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-dc-west</td><td>pv-lab</td><td>ssh</td><td class="num">47.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-lab</td><td>pv-site-a</td><td>pmtu</td><td class="num">51.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-lab</td><td>pv-site-b</td><td>loss</td><td class="num">55.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-lab</td><td>pv-site-c</td><td>traceroute</td><td class="num">58.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-lab</td><td>pv-branch-1</td><td>dns</td><td class="num">62.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-lab</td><td>pv-branch-2</td><td>smb</td><td class="num">66.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-lab</td><td>pv-dc-east</td><td>smtp</td><td class="num">69.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-06</td><td>pv-lab</td><td>pv-dc-west</td><td>http</td><td class="num">73.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-a</td><td>pv-site-b</td><td>ssh</td><td class="num">77.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-a</td><td>pv-site-c</td><td>pmtu</td><td class="num">81.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-a</td><td>pv-branch-1</td><td>loss</td><td class="num">84.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-a</td><td>pv-branch-2</td><td>traceroute</td><td class="num">88.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-a</td><td>pv-dc-east</td><td>dns</td><td class="num">2.1</td><td class="num">2%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-a</td><td>pv-dc-west</td><td>smb</td><td class="num">5.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-a</td><td>pv-lab</td><td>smtp</td><td class="num">9.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-b</td><td>pv-site-a</td><td>http</td><td class="num">13.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-b</td><td>pv-site-c</td><td>ssh</td><td class="num">16.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-b</td><td>pv-branch-1</td><td>pmtu</td><td class="num">20.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-b</td><td>pv-branch-2</td><td>loss</td><td class="num">24.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-b</td><td>pv-dc-east</td><td>traceroute</td><td class="num">28.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-b</td><td>pv-dc-west</td><td>dns</td><td class="num">31.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-b</td><td>pv-lab</td><td>smb</td><td class="num">35.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-c</td><td>pv-site-a</td><td>smtp</td><td class="num">39.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-07</td><td>pv-site-c</td><td>pv-site-b</td><td>http</td><td class="num">42.8</td><td class="num">4%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-c</td><td>pv-branch-1</td><td>ssh</td><td class="num">46.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-c</td><td>pv-branch-2</td><td>pmtu</td><td class="num">50.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-c</td><td>pv-dc-east</td><td>loss</td><td class="num">53.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-c</td><td>pv-dc-west</td><td>traceroute</td><td class="num">57.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-site-c</td><td>pv-lab</td><td>dns</td><td class="num">61.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-1</td><td>pv-site-a</td><td>smb</td><td class="num">65.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-1</td><td>pv-site-b</td><td>smtp</td><td class="num">68.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-1</td><td>pv-site-c</td><td>http</td><td class="num">72.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-1</td><td>pv-branch-2</td><td>ssh</td><td class="num">76.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-1</td><td>pv-dc-east</td><td>pmtu</td><td class="num">79.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-1</td><td>pv-dc-west</td><td>loss</td><td class="num">83.5</td><td class="num">1%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-1</td><td>pv-lab</td><td>traceroute</td><td class="num">87.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-2</td><td>pv-site-a</td><td>dns</td><td class="num">0.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-2</td><td>pv-site-b</td><td>smb</td><td class="num">4.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-2</td><td>pv-site-c</td><td>smtp</td><td class="num">8.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-2</td><td>pv-branch-1</td><td>http</td><td class="num">12.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-2</td><td>pv-dc-east</td><td>ssh</td><td class="num">15.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-2</td><td>pv-dc-west</td><td>pmtu</td><td class="num">19.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-branch-2</td><td>pv-lab</td><td>loss</td><td class="num">23.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-east</td><td>pv-site-a</td><td>traceroute</td><td class="num">26.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-east</td><td>pv-site-b</td><td>dns</td><td class="num">30.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr class="fail"><td>2026-09-07</td><td>pv-dc-east</td><td>pv-site-c</td><td>smb</td><td class="num">34.2</td><td class="num">3%</td><td>FAIL</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-east</td><td>pv-branch-1</td><td>smtp</td><td class="num">37.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-east</td><td>pv-branch-2</td><td>http</td><td class="num">41.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-east</td><td>pv-dc-west</td><td>ssh</td><td class="num">45.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-east</td><td>pv-lab</td><td>pmtu</td><td class="num">49.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-west</td><td>pv-site-a</td><td>loss</td><td class="num">52.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-west</td><td>pv-site-b</td><td>traceroute</td><td class="num">56.4</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-west</td><td>pv-site-c</td><td>dns</td><td class="num">60.1</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-west</td><td>pv-branch-1</td><td>smb</td><td class="num">63.8</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-west</td><td>pv-branch-2</td><td>smtp</td><td class="num">67.5</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-west</td><td>pv-dc-east</td><td>http</td><td class="num">71.2</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-dc-west</td><td>pv-lab</td><td>ssh</td><td class="num">74.9</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-lab</td><td>pv-site-a</td><td>pmtu</td><td class="num">78.6</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-lab</td><td>pv-site-b</td><td>loss</td><td class="num">82.3</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-lab</td><td>pv-site-c</td><td>traceroute</td><td class="num">86.0</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-lab</td><td>pv-branch-1</td><td>dns</td><td class="num">89.7</td><td class="num">0%</td><td>OK</td></tr>
+      <tr><td>2026-09-07</td><td>pv-lab</td><td>pv-branch-2</td><td>smb</td><td class="num">3.4</td><td class="num">0%</td><td>OK</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <footer class="site-footer">
+    <p>Pervium network end-to-end connectivity testing &middot; probe site v1</p>
+  </footer>
+</body>
+</html>
