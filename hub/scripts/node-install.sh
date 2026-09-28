@@ -22,7 +22,11 @@ die() { printf '[node-install] FATAL: %s\n' "$1" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "Must run as root"
 [ -f /etc/alpine-release ] || die "This is not Alpine Linux"
-[ -f /usr/local/bin/pervium/setup.sh ] && die "Already a pervium node. Update it from the hub dashboard or with pervium-update."
+# A configured node, not just installed files: an install that failed
+# halfway (package mirror down, say) leaves setup.sh behind, and must be
+# re-runnable. Re-running the install steps is harmless -- they are the
+# same --update steps pervium-update uses.
+[ -f /etc/pervium/config ] && die "Already a configured pervium node. Update it from the hub dashboard or with pervium-update."
 [ -d /opt/pervium-hub ] && die "This VM is a pervium hub"
 case "$HUB_URL" in
     http://*|https://*) ;;

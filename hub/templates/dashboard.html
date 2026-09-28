@@ -569,6 +569,10 @@ a:hover { text-decoration: underline; }
 .ep-table .btn-push:hover { opacity: 1; }
 .ep-table .btn-push:disabled { color: var(--text-dim); opacity: 0.3; cursor: default; }
 .ep-table .ep-build { font-size: 10px; color: var(--text-dim); }
+/* The sidebar is a fixed ~380px; with the update button and pv-<group>-<id>
+   names the endpoints table needs tighter cells to fit without scrolling. */
+#ep-table th, #ep-table td { padding-left: 5px; padding-right: 5px; }
+#ep-table td:last-child { padding-left: 0; padding-right: 2px; }
 /* Build differs from what this hub serves: the node needs a push. */
 .ep-table .build-old { color: var(--yellow); }
 .ep-table .push-ok { color: var(--green); }
@@ -1719,7 +1723,7 @@ a:hover { text-decoration: underline; }
             html += "<td>" + esc(ep.hostname) + "<div class='ep-build'>" + buildCell(ep) + "</div></td>";
             html += "<td>" + esc(ep.ip) + "</td>";
             html += "<td><span class='group-badge'>" + esc(ep.group_name) + "</span></td>";
-            html += "<td>" + agoStr + " ago" + (stale ? " !" : "") + "</td>";
+            html += "<td>" + agoStr + (stale ? " !" : "") + "</td>";
             html += "<td>";
             html += "<button class='btn-push' data-host='" + esc(ep.hostname) + "'" +
                 (ep.managed === true ? " title='Push update'" :
