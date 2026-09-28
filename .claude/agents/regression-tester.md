@@ -34,6 +34,12 @@ It fails its own `clean` check if it leaves files in the tree.
 If `python3` prints a Microsoft Store message, the shim in `~/bin` is gone:
 report every check as NOT RUN, never as passed.
 
+## When everything passes
+
+Report the verdict line and stop. Do not add your own checks, read the
+changed files, or verify features the script does not cover, even if the
+caller names them. Extra checking is a separate request.
+
 ## When a check fails
 
 For each FAIL:
