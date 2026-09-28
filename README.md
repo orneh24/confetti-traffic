@@ -49,54 +49,66 @@ Details for each test: [BUILD_GUIDE §6.1](docs/BUILD_GUIDE.md#61-test-types).
 
 ## Quick start
 
-Each step runs on a different VM. To build it yourself step by step instead,
-see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
+Two parts: install the hub first, then add nodes. To build it yourself step
+by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
 
-**1. Base VM.** Install Alpine (`setup-alpine`), then clone it in vCenter
-into two VMs: one for the hub, one for the node template. On each clone, run
-this as root. It downloads the repo and starts `install.sh`, which asks
-whether the VM becomes the hub or a node:
+### 1. Install the hub
 
-```sh
-wget -O- https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/pervium-main /root/pervium && sh /root/pervium/install.sh
-```
+1. **Base VM.** Install Alpine on a new VM (`setup-alpine`). Put it on a
+   segment that every node subnet and your workstation can reach.
+2. **Run the installer** as root. It downloads the repo and starts
+   `install.sh`, which asks whether the VM becomes a hub or a node. Pick
+   *hub*:
 
-**2. Hub** (the clone where you picked *hub*). Log out and back in:
-`hub-setup.sh` asks for the static IP (with prefix, e.g. `/24`) and the
-gateway, which defaults to the subnet's `.1`. It also asks for an optional
-DNS server and hostname. Then it restarts networking and starts the hub. Or run
-the same steps by hand:
+   ```sh
+   wget -O- https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/pervium-main /root/pervium && sh /root/pervium/install.sh
+   ```
 
-```sh
-set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
-rc-service networking restart
-rc-service pervium-hub start
-```
+3. **Set the network.** Log out and back in: `hub-setup.sh` asks for the
+   static IP (with prefix, e.g. `/24`) and the gateway, which defaults to the
+   subnet's `.1`. It also asks for an optional DNS server and hostname, then
+   restarts networking and starts the hub. Or do the same by hand:
 
-Check that `http://<hub-ip>/` loads.
+   ```sh
+   set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
+   rc-service networking restart
+   rc-service pervium-hub start
+   ```
 
-**3. Node template** (the clone where you picked *node*). The build already
-cleaned it for cloning. Shut it down and convert it to a vCenter template.
-Don't configure or test it first: that undoes the cleanup. Test on the first
-clone instead.
+   Or set `guestinfo.hub.ip`, `guestinfo.hub.gateway` (and optionally
+   `guestinfo.hub.dns`, `guestinfo.hub.hostname`) on the VM in vCenter
+   before first boot, and the hub configures itself.
+4. **Check** that `http://<hub-ip>/` loads.
 
-**4. Nodes.** Clone the template once per network segment and put each clone
-on its segment's port group. Then either:
+### 2. Add nodes
 
-- set `guestinfo.pervium.hub_url` and `guestinfo.pervium.group` on the
-  clone before first boot, and it configures itself, or
-- boot it, log in, and answer the `node-setup.sh` prompt.
+There are two ways. Both give the same result: a node that registers with the
+hub and shows up at `http://<hub-ip>/endpoints`. The hostname is set
+automatically (`pv-<group>-<ab1234>`, e.g. `pv-site-a-xd2311`).
 
-The hostname is set automatically (`pv-<group>-<ab1234>`, e.g.
-`pv-site-a-xd2311`). Check that the node appears at
-`http://<hub-ip>/endpoints`.
-
-**Or install a node straight from the hub**, with no template and no GitHub
-access. On a plain Alpine VM, as root:
+**Option A: straight from the hub (one line).** On a plain Alpine VM with
+network access to the hub, as root. No template, no GitHub access needed:
 
 ```sh
 wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
 ```
+
+It downloads the node bundle from the hub, installs it, and asks for the
+group if you did not pass one. Good for a few nodes, or where a VM can't be
+cloned.
+
+**Option B: vCenter template and guestinfo.** Best for many nodes.
+
+1. On a second Alpine VM, run the same installer as in part 1 and pick
+   *node*. The build cleans the VM for cloning when it finishes.
+2. Shut it down and convert it to a vCenter template. Don't configure or test
+   it first: that undoes the cleanup. Test on the first clone instead.
+3. Clone the template once per network segment and put each clone on its
+   segment's port group.
+4. Before first boot, set `guestinfo.pervium.hub_url` and
+   `guestinfo.pervium.group` on each clone (all keys are listed under
+   [VMware guestinfo keys](#vmware-guestinfo-keys)). It then configures
+   itself. Without them, log in and answer the `node-setup.sh` prompt.
 
 Every node fetches its SSH keys from the hub at setup. The hub's management
 key is trusted on first use and lets the hub push updates from the dashboard.
@@ -106,8 +118,8 @@ Set `HUB_MANAGED=false` in a node's config to opt it out.
 re-running a build wipes its config or the hub's database. Pass `hub` or
 `node` to skip the menu, and `-y` to skip the confirmation.
 
-**Single VM, no cloning.** Run the step 1 command on a fresh Alpine VM,
-then finish in place: for a hub, step 2; for a node, log out and back in and
+**Single VM, no cloning.** Run the installer on a fresh Alpine VM, then
+finish in place: for a hub, step 3 above; for a node, log out and back in and
 answer the `node-setup.sh` prompt (or run `/usr/local/bin/pervium/setup.sh`).
 Ignore the node build's "convert to template" message. Fresh VM only: an
 existing `/root/pervium` makes the `mv` put the new copy inside it.
