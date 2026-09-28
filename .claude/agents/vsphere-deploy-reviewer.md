@@ -54,8 +54,8 @@ powered on with the right keys set before it ever boots.
 - Node keys: `guestinfo.pervium.hub_url`, `guestinfo.pervium.group`,
   `guestinfo.pervium.subnet` (optional — falls back to the DHCP lease),
   `guestinfo.pervium.hostname` (optional — derived as
-  `<HOSTNAME_PREFIX>-<group-slug>-<NODE_ID>` when unset, NODE_ID six random
-  `a-z0-9` chars, e.g. `pv-site-a-k3x9q2`), `guestinfo.pervium.dns_server`
+  `<HOSTNAME_PREFIX>-<group-slug>-<NODE_ID>` when unset, NODE_ID two random
+  letters + four random digits, e.g. `pv-site-a-xd2311`), `guestinfo.pervium.dns_server`
   / `guestinfo.pervium.dns_query` (optional pair — DNS test only runs when
   `dns_server` is set). Precedence in-guest is guestinfo → environment →
   prompt.

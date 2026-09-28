@@ -35,7 +35,7 @@ SUBNET=
 # ---------------------------------------------------------------------
 
 # Explicit hostname for this node. Leave empty to derive it as
-# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. pv-site-a-k3x9q2.
+# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. pv-site-a-xd2311.
 #
 # It must be unique across the lab: the hub keys its endpoint table by
 # hostname, so two nodes sharing a name overwrite each other and the mesh
@@ -44,7 +44,7 @@ NODE_HOSTNAME=
 
 HOSTNAME_PREFIX=pv
 
-# Six random a-z0-9 characters. setup.sh generates it once if empty; keep it
+# Two random letters and four random digits, e.g. xd2311. setup.sh generates it once if empty; keep it
 # and the derived hostname never changes.
 NODE_ID=
 

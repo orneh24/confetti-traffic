@@ -180,7 +180,7 @@ $vm | New-AdvancedSetting -Name guestinfo.pervium.group   -Value "site-a"       
 To change a key later, use `Get-AdvancedSetting | Set-AdvancedSetting`;
 `New-AdvancedSetting` fails if the key exists. Then reboot the node: at boot,
 `pervium-firstboot` compares the keys with `/etc/pervium/config` and, if any
-differ, re-runs `setup.sh`. A new `group` renames the node (`pv-<group>-<random6>`),
+differ, re-runs `setup.sh`. A new `group` renames the node (`pv-<group>-<ab1234>`),
 and the old name is removed from the hub. To deploy a whole lab at once,
 use `deploy/Deploy-Pervium.ps1` (see `deploy/README.md`).
 
@@ -216,7 +216,7 @@ again; `node-setup.sh --force` asks again later.
 
 Each value comes from guestinfo first, then an environment variable, then a
 prompt. `SUBNET` is taken from the DHCP lease before prompting. The hostname
-is `pv-<group>-<random6>` (e.g. `pv-site-a-k3x9q2`) unless you set one. The
+is `pv-<group>-<ab1234>` (e.g. `pv-site-a-xd2311`) unless you set one. The
 random part is generated once and kept in the config as `NODE_ID`, so the
 name never changes on reboot or a new DHCP lease.
 
@@ -261,7 +261,7 @@ The node appears on the dashboard within seconds, and results within a
 minute. On the node:
 
 ```sh
-hostname                                   # e.g. pv-site-a-k3x9q2
+hostname                                   # e.g. pv-site-a-xd2311
 test-status                                # last cycle's results (-f to follow)
 tail -f /var/log/pervium/test-cycle.log
 ```

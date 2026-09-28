@@ -108,12 +108,15 @@ first_host() {
 }
 
 # -------------------------------------------------------------------
-# Six random lowercase letters/digits: the unique part of a derived
-# hostname. Random rather than the IP so a lease change never renames the
-# node, and generated once (stored as NODE_ID) so a reboot never does either.
+# Two random lowercase letters then four random digits (e.g. xd2311): the
+# unique part of a derived hostname. Random rather than the IP so a lease
+# change never renames the node, and generated once (stored as NODE_ID) so a
+# reboot never does either. An existing NODE_ID in another shape is kept.
 # -------------------------------------------------------------------
 new_node_id() {
-    tr -dc 'a-z0-9' < /dev/urandom 2>/dev/null | head -c 6
+    _l=$(tr -dc 'a-z' < /dev/urandom 2>/dev/null | head -c 2)
+    _d=$(tr -dc '0-9' < /dev/urandom 2>/dev/null | head -c 4)
+    printf '%s%s' "$_l" "$_d"
 }
 
 # -------------------------------------------------------------------
@@ -213,7 +216,7 @@ GROUP_NAME=${_group_name}
 SUBNET=${_subnet}
 
 # Explicit hostname. If empty, the hostname is derived as
-# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. pv-site-a-k3x9q2.
+# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. pv-site-a-xd2311.
 # NODE_ID is random, generated once; keep it and the name stays put.
 NODE_HOSTNAME=${_hostname}
 HOSTNAME_PREFIX=pv
@@ -327,9 +330,9 @@ fi
 # node then skips it as "self", testing nothing.
 #
 # Prefer an explicit name (guestinfo.pervium.hostname, captured into the config
-# above). Otherwise derive <prefix>-<group>-<NODE_ID>, e.g. pv-site-a-k3x9q2.
+# above). Otherwise derive <prefix>-<group>-<NODE_ID>, e.g. pv-site-a-xd2311.
 # The group alone is not unique (two nodes in one group would collide);
-# NODE_ID is random (36^6 values) and stored in the config, so the name is
+# NODE_ID is random (26^2 * 10^4 = 6.76M values) and stored in the config, so the name is
 # stable across reboots and IP changes. Template cleanup deletes the config,
 # so every clone draws its own.
 # -------------------------------------------------------------------

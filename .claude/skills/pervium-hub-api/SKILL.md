@@ -20,7 +20,7 @@ The hub (`hub/app/app.py`) is the single source of truth for endpoints and resul
 `POST /register` — body must contain the first four; `build` and `managed` are optional (older nodes omit them):
 
 ```json
-{"hostname": "pv-site-a-k3x9q2", "ip": "10.1.1.50", "subnet": "10.1.1.0/24", "group_name": "site-a",
+{"hostname": "pv-site-a-xd2311", "ip": "10.1.1.50", "subnet": "10.1.1.0/24", "group_name": "site-a",
  "build": "9ecdcbe...", "managed": true}
 ```
 

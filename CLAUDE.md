@@ -372,8 +372,8 @@ Precedence in `setup.sh`: **guestinfo → environment → prompt**, except
 `subnet`, which has one extra fallback before the prompt: derived from the
 interface's own DHCP lease (address + prefix already give you the network).
 If hostname is omitted it is derived as `<HOSTNAME_PREFIX>-<group-slug>-<NODE_ID>`
-(e.g. `pv-site-a-k3x9q2`), where `NODE_ID` is six random `a-z0-9`
-characters generated once and stored in the config — so two nodes in one
+(e.g. `pv-site-a-xd2311`), where `NODE_ID` is two random letters and
+four random digits, generated once and stored in the config — so two nodes in one
 group never collide (constraint 1), and an IP change never renames a node.
 Template cleanup deletes the config, so every clone draws its own.
 `group` is an arbitrary operator-chosen label — it clusters nodes on the

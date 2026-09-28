@@ -71,7 +71,7 @@ The root password (`lab123`) is set at build time. Override it with
 | `SUBNET` | yes | filled in from the DHCP lease by `setup.sh` |
 | `NODE_HOSTNAME` | no | if empty: `<HOSTNAME_PREFIX>-<group>-<NODE_ID>` |
 | `HOSTNAME_PREFIX` | no | default `pv` |
-| `NODE_ID` | no | six random `a-z0-9`, generated once by `setup.sh` |
+| `NODE_ID` | no | two random letters + four random digits (e.g. `xd2311`), generated once by `setup.sh` |
 | `HUB_MANAGED` | no | default true; false removes the hub's management key (no push-update) |
 | `DNS_SERVER` | no | empty skips the DNS test |
 | `DNS_QUERY` | no | default `example.com` |

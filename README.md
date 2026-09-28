@@ -54,8 +54,8 @@ on its segment's port group. Then either:
   clone before first boot, and it configures itself, or
 - boot it, log in, and answer the `node-setup.sh` prompt.
 
-The hostname is set automatically (`pv-<group>-<random6>`, e.g.
-`pv-site-a-k3x9q2`). Check that the node appears at
+The hostname is set automatically (`pv-<group>-<ab1234>`, e.g.
+`pv-site-a-xd2311`). Check that the node appears at
 `http://<hub-ip>/endpoints`.
 
 **Or install a node straight from the hub**, with no template and no GitHub
@@ -106,7 +106,7 @@ two marked keys are required.
 | `guestinfo.pervium.hub_url` | node | `http://10.0.0.100` | **required** |
 | `guestinfo.pervium.group` | node | `site-a` | **required**; groups nodes on the dashboard |
 | `guestinfo.pervium.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
-| `guestinfo.pervium.hostname` | node | `pv-site-a` | `pv-<group>-<random6>` if unset; must be unique |
+| `guestinfo.pervium.hostname` | node | `pv-site-a` | `pv-<group>-<ab1234>` if unset; must be unique |
 | `guestinfo.pervium.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
 | `guestinfo.pervium.dns_query` | node | `example.com` | name the DNS test looks up |
 | `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `hub-setup.sh` asks at login |

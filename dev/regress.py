@@ -230,7 +230,9 @@ def _():
     p = []
     need(grep(r'DESIRED_HOSTNAME="\$\{HOSTNAME_PREFIX\}-\$\{_slug\}-\$\{NODE_ID\}"', SETUP),
          "setup.sh no longer derives <prefix>-<group>-<NODE_ID>", p)
-    need(grep(r"tr -dc 'a-z0-9' < /dev/urandom", SETUP), "NODE_ID is no longer random a-z0-9", p)
+    need(grep(r"tr -dc 'a-z' < /dev/urandom.*head -c 2", SETUP)
+         and grep(r"tr -dc '0-9' < /dev/urandom.*head -c 4", SETUP),
+         "NODE_ID is no longer 2 random letters + 4 random digits", p)
     p += at(SETUP, [h for h in grep(r"DESIRED_HOSTNAME=.*MY_IP", SETUP) if not is_comment(h[1])])
     return p
 
