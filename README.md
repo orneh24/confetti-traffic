@@ -14,6 +14,38 @@ Monokai, High Contrast, Terminal green), picked from the header, or Shuffle, whi
 *Mock data from a synthetic 5-node mesh, not a real lab. See
 [Running the hub locally](#running-the-hub-locally).*
 
+## Tests
+
+Every node tests every other node once a minute and sends the results to the
+hub. Each cell in the dashboard's matrix shows one letter per test: green
+passed, yellow slow, red failed, grey no data.
+
+| Letter | Test | What it checks | Runs |
+|---|---|---|---|
+| H | HTTP | Fetches a small fixed website from the peer (5 files, one of them ~57 KB) and checks every byte. Catches devices that rewrite or cut short web traffic, not just blocked ports. | always |
+| S | SSH | Logs in with a shared key and runs `echo ok`. The key can do nothing else. | always |
+| M | Path MTU | Sends a full 1500-byte packet with "don't fragment" set. On failure it steps down to find the largest size that gets through. Catches paths where small packets work but large transfers hang. | always |
+| L | Loss | Packet loss and jitter with `fping`. Some loss is shown as data, not a failure; only 100% loss fails. | always |
+| T | Traceroute | The hop-by-hop path. The hub flags when a path changes between runs. | every 5 min, and right after H or S fails |
+| D | DNS | Looks up a name on a given DNS server. | when `DNS_SERVER` is set |
+| I | iperf3 | TCP throughput. | when enabled |
+| B | SMB | Downloads an 8 MB file from the peer's file share. Catches problems that only show in sustained transfers. | when enabled |
+| E | SMTP | Holds a mail conversation up to the recipient, then stops. It never sends mail. Shows when a firewall rewrites mail commands. | when enabled |
+
+"When enabled" tests are switched on per node in its config, or for the
+whole mesh from the dashboard's Mesh Settings panel.
+
+**Static targets** are addresses that run no Pervium software, such as a
+gateway, a switch loopback or an outside server. You add them once on the
+hub, choose which of the tests above apply to each, and every node tests
+them too.
+
+**Bandwidth on demand.** The dashboard's Bandwidth Test panel measures
+throughput when you ask, in both directions. It can test between two nodes,
+using `iperf3` with 1–8 streams, or between a node and your own browser.
+
+Details for each test: [BUILD_GUIDE §6.1](docs/BUILD_GUIDE.md#61-test-types).
+
 ## Quick start
 
 Each step runs on a different VM. To build it yourself step by step instead,
