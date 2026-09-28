@@ -32,6 +32,7 @@ You develop the Pervium hub: `hub/app/app.py` (Flask), SQLite storage, and `hub/
 - `GET /api/syslog` — stored messages. `minutes=N` (default 60) *or* `from=&to=` for a pinned window, plus `host=` (one value, matched against parsed hostname or source IP), `severity=N` (at or worse than N), `q=`, `limit=N` (default and cap 2000).
 - `GET /api/syslog/sources` — distinct senders with counts, for the filter dropdown.
 - `GET /syslog` — the viewer page. A `from`/`to` pair pins it and disables auto-refresh.
+- `GET /timeline` — the timeline page; built client-side from the endpoints above, no API of its own.
 - `GET /api/time` — hub clock plus chrony tracking state. **Always 200**: every failure (no chronyc, daemon down, timeout, unparseable output) returns `chrony: null` with a `reason`, because the syslog header renders a failure as `clock: unavailable` and a 500 would blank it.
 - `GET /api/health` — hub self-health for the dashboard's "Hub Health" panel: OpenRC service status (`HUB_HEALTH_SERVICES`), syslog listener state, load average, memory, disk, uptime. Same never-500 discipline as `/api/time` — each check degrades independently rather than failing the endpoint.
 

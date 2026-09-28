@@ -8,6 +8,7 @@ measures packet loss/jitter, path MTU, DNS and traceroute. Results show on a
 web dashboard, optionally next to syslog from the network devices on the path.
 The dashboard has eight colour themes (Dark, Light, Nord, Dracula, Solarized Dark,
 Monokai, High Contrast, Terminal green), picked from the header, or Shuffle, which switches between them at random every 5-10 minutes.
+A Timeline page groups failures, route changes, syslog and bandwidth tests into incidents, and a slider replays the mesh at any earlier moment (1 hour, 6 hours or 24 hours back).
 
 ![Dashboard with a synthetic 5-node mesh, one failing path selected, and its syslog correlation panel open](docs/img/dashboard-mock.jpg)
 

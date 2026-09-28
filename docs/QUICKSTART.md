@@ -95,7 +95,7 @@ curl 'http://<hub-ip>/api/results?minutes=5'
 curl 'http://<hub-ip>/api/syslog?minutes=5'   # [] is fine; an error means the listener is down
 ```
 
-Dashboard: `http://<hub-ip>/`. Syslog viewer: `http://<hub-ip>/syslog`.
+Dashboard: `http://<hub-ip>/`. Syslog viewer: `http://<hub-ip>/syslog`. Timeline: `http://<hub-ip>/timeline`.
 
 ## Routine admin
 

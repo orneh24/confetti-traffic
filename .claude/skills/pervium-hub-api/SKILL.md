@@ -59,6 +59,7 @@ The hub also receives syslog on UDP/514 (`hub/app/syslog_server.py`, started by 
 - `GET /api/syslog` — newest first. Params: `minutes` (default 60), `from`/`to` (UTC ISO-8601, used by the dashboard drill-down links and mutually exclusive with `minutes`), `severity` (maximum, 0–7), `host` (a single value, matched against parsed hostname OR source IP — not a list), `q` (substring of message/mnemonic/raw), `limit` (default and cap both 2000).
 - `GET /api/syslog/sources` — distinct senders with counts, for the filter dropdown.
 - `GET /syslog` — the page. A `from`/`to` pair pins the view and disables auto-refresh.
+- `GET /timeline` — the timeline page. No API of its own: it reads `/endpoints`, `/api/results`, `/api/path-changes`, `/api/syslog`, `/api/bw` and `/api/health`.
 
 Storage rules that differ from `results`:
 

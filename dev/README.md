@@ -79,7 +79,7 @@ DEV_FAIL_HOSTS=10.99.1.13 dev/run-node-cycle.sh dev-node-a 10.99.1.11 site-a
 ## 3. Look at it
 
 `http://127.0.0.1:8099/` — dashboard. `http://127.0.0.1:8099/syslog` — syslog
-viewer. To send it a test message, use the Python one-liner in
+viewer. `http://127.0.0.1:8099/timeline` — incident timeline. To send it a test message, use the Python one-liner in
 `docs/BUILD_GUIDE.md` §6.4 with the port changed to `HUB_SYSLOG_PORT`. Reset
 by deleting `dev/run/` and starting over.
 

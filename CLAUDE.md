@@ -62,6 +62,8 @@ Diagram: `docs/TOPOLOGY.md`.
     `limit=N` (capped at 2000)
   - `GET /api/syslog/sources` — distinct senders with counts, for the filter
   - `GET /syslog` — syslog viewer page
+  - `GET /timeline` — timeline page: incidents and a replay slider, built in
+    the browser from the endpoints above (no API of its own)
   - `GET /api/time` — hub clock plus chrony tracking state, for the syslog
     header. Always 200: every failure (no chronyc, daemon down, timeout,
     unparseable output) returns `chrony: null` with a `reason`
@@ -486,12 +488,12 @@ hub/
   app/                — Flask API (app.py, config.py, pathchange.py,
                         syslog_server.py, nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
-  templates/          — dashboard.html, syslog.html. Colour themes (Dark, Light, Nord, Dracula,
-                        Solarized Dark, Monokai, High Contrast, Terminal green) are inline in BOTH pages: a THEMES list in the
+  templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light, Nord, Dracula,
+                        Solarized Dark, Monokai, High Contrast, Terminal green) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
-                        localStorage key pervium-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, pervium-theme-shuffle, so both pages stay in step. Adding or changing a theme means
-                        editing both pages. syslog.html has its own variable set (--row-line,
-                        and --gray is a text grey there, not a fill).
+                        localStorage key pervium-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, pervium-theme-shuffle, so all pages stay in step. Adding or changing a theme means
+                        editing all three pages. syslog.html and timeline.html use the smaller
+                        variable set (--row-line, and --gray is a text grey there, not a fill).
   static/
   agent/              — scripts served to nodes (created at build time)
   bundle/             — node bundle + RELEASE (created at build time)

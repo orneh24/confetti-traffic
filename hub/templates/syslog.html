@@ -7,7 +7,7 @@
 <script>
 // Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
 // below; dark is the default and has no attribute. Same localStorage key on
-// both hub pages, so one choice covers both. Applied before first paint so a
+// every hub page, so one choice covers all. Applied before first paint so a
 // saved choice doesn't flash dark on load.
 var THEMES = [
     ['dark', 'Dark'],
@@ -22,7 +22,7 @@ var THEMES = [
 // "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
 // and moves to a different one every 5-10 minutes. The saved choice is
 // 'shuffle'; the palette on screen and when it next changes live under
-// pervium-theme-shuffle, so both pages show the same one and a reload does
+// pervium-theme-shuffle, so all pages show the same one and a reload does
 // not reshuffle early.
 var SHUFFLE_MIN_MS = 5 * 60 * 1000;
 var SHUFFLE_MAX_MS = 10 * 60 * 1000;
@@ -261,9 +261,9 @@ header h1 {
     color: var(--cyan); letter-spacing: 0.5px; white-space: nowrap;
 }
 
-/* Same nav pair as the dashboard's header: a link to the other page, and a
-   non-clickable marker for the page you're already on. Kept identical
-   between the two templates so the pair reads as one component. */
+/* Same nav set as the other hub pages' headers: links to the other pages, and
+   a non-clickable marker for the page you're already on. Kept identical
+   between the three templates so it reads as one component. */
 .btn-nav {
     background: var(--bg-hover);
     border: 1px solid var(--cyan);
@@ -347,6 +347,7 @@ td.sevcol { white-space: nowrap; }
     <h1>SYSLOG MESSAGES</h1>
     <a href="/" class="btn-nav">Dashboard</a>
     <span class="btn-nav-current">Syslog</span>
+    <a href="/timeline" class="btn-nav">Timeline</a>
     <div class="status">
         <span id="clock" class="clock" title="Hub clock — every correlation on this page depends on it">clock: --</span>
         &nbsp;|&nbsp;

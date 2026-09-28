@@ -823,6 +823,13 @@ def syslog_page():
     return render_template("syslog.html")
 
 
+@app.route("/timeline")
+def timeline_page():
+    """Serve the timeline page (incidents and replay, built client-side
+    from the existing /api endpoints)."""
+    return render_template("timeline.html")
+
+
 # ---------------------------------------------------------------------------
 # Hub clock
 #

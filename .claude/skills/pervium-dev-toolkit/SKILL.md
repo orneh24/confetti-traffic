@@ -63,6 +63,7 @@ genuinely exercised through the real script logic and reads correctly.
 
 - `http://127.0.0.1:8099/` — dashboard
 - `http://127.0.0.1:8099/syslog` — syslog viewer
+- `http://127.0.0.1:8099/timeline` — incident timeline
 
 ## Which command for which change
 

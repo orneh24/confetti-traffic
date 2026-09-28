@@ -729,7 +729,8 @@ LIVE = [("T2-live", "real node cycle posts to a live hub"),
         ("R18-live", "syslog window and filter input"),
         ("R19-live", "null row keeps the batch; bad bodies get 400"),
         ("R21", "/api/time answers 200 on every chrony failure"),
-        ("R22-live", "correlation window round trip")]
+        ("R22-live", "correlation window round trip"),
+        ("R29-live", "every hub page answers 200 and links to the others")]
 
 
 def live_checks(base, db, tmp):
@@ -853,6 +854,20 @@ def live_checks(base, db, tmp):
                n("from=%s&to=%s&host=SW2" % (frm, to)), n("from=%s&to=%s" % (z(shifted), to)),
                n("from=%s&to=%s" % (offset, to))]
         return [] if got == [1, 1, 0, 0, 1] else ["counts %s, want [1, 1, 0, 0, 1]" % got]
+
+    @check("R29-live", "every hub page answers 200 and links to the others")
+    def _():
+        pages = {"/": ("/syslog", "/timeline"), "/syslog": ("/", "/timeline"), "/timeline": ("/", "/syslog")}
+        p = []
+        for path, links in pages.items():
+            code, body = http("GET", base + path)
+            if code != 200:
+                p.append("%s answered %s" % (path, code))
+                continue
+            for link in links:
+                if 'href="%s"' % link not in body:
+                    p.append("%s has no nav link to %s" % (path, link))
+        return p
 
     @check("R21", "/api/time answers 200 on every chrony failure")
     def _():

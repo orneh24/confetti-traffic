@@ -8,7 +8,7 @@
 <script>
 // Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
 // below; dark is the default and has no attribute. Same localStorage key on
-// both hub pages, so one choice covers both. Applied before first paint so a
+// every hub page, so one choice covers all. Applied before first paint so a
 // saved choice doesn't flash dark on load.
 var THEMES = [
     ['dark', 'Dark'],
@@ -23,7 +23,7 @@ var THEMES = [
 // "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
 // and moves to a different one every 5-10 minutes. The saved choice is
 // 'shuffle'; the palette on screen and when it next changes live under
-// pervium-theme-shuffle, so both pages show the same one and a reload does
+// pervium-theme-shuffle, so all pages show the same one and a reload does
 // not reshuffle early.
 var SHUFFLE_MIN_MS = 5 * 60 * 1000;
 var SHUFFLE_MAX_MS = 10 * 60 * 1000;
@@ -483,6 +483,10 @@ a:hover { text-decoration: underline; }
     opacity: 0.7;
     margin-left: 4px;
 }
+.matrix thead th .ip {
+    display: block;
+    margin-left: 0;
+}
 .matrix thead th {
     top: 0;
     text-align: center;
@@ -824,6 +828,7 @@ a:hover { text-decoration: underline; }
         <h1>NETWORK CONNECTIVITY TESTER</h1>
         <span class="btn-nav-current">Dashboard</span>
         <a href="/syslog" class="btn-nav">Syslog</a>
+        <a href="/timeline" class="btn-nav">Timeline</a>
     </div>
     <div class="status">
         <span class="dot"></span>
