@@ -49,3 +49,18 @@ HEALTH_SERVICE_TIMEOUT_S = int(os.environ.get("HUB_HEALTH_SERVICE_TIMEOUT_S", "3
 # Off-switch for an operator who wants /syslog to contain device messages
 # only. Default on, same precedent as SYSLOG_ENABLED above.
 PATH_CHANGE_ENABLED = os.environ.get("HUB_PATH_CHANGE_ENABLED", "true").lower() in ("true", "1", "yes")
+
+# ---------------------------------------------------------------------------
+# Node management
+# ---------------------------------------------------------------------------
+# The hub's SSH keypairs, made by the pervium-hub service's start_pre:
+# id_hub (management, pinned by nodes) and id_pervium (mesh SSH test).
+KEY_DIR = os.environ.get("HUB_KEY_DIR", "/etc/pervium-hub/keys")
+# Node bundle (pervium-node.tar.gz + RELEASE), built by build-template.sh.
+BUNDLE_DIR = os.environ.get(
+    "HUB_BUNDLE_DIR", os.path.join(os.path.dirname(__file__), "..", "bundle"))
+# A push-update runs pervium-update on the node over SSH; it re-runs
+# setup.sh and may install packages, so it gets a generous limit.
+PUSH_TIMEOUT_S = int(os.environ.get("HUB_PUSH_TIMEOUT_S", "600"))
+# Push only to nodes seen within this many minutes (registration is every 5).
+PUSH_SEEN_MINUTES = int(os.environ.get("HUB_PUSH_SEEN_MINUTES", "10"))

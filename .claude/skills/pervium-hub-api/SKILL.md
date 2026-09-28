@@ -17,15 +17,18 @@ The hub (`hub/app/app.py`) is the single source of truth for endpoints and resul
 
 ## Contract (do not break without reflashing nodes)
 
-`POST /register` — body must contain all four:
+`POST /register` — body must contain the first four; `build` and `managed` are optional (older nodes omit them):
 
 ```json
-{"hostname": "node-1", "ip": "10.1.1.50", "subnet": "10.1.1.0/24", "group_name": "site-a"}
+{"hostname": "pv-site-a-k3x9q2", "ip": "10.1.1.50", "subnet": "10.1.1.0/24", "group_name": "site-a",
+ "build": "9ecdcbe...", "managed": true}
 ```
 
-Upsert keyed on `hostname`; `last_seen` is set server-side to UTC ISO-8601. Missing any field → 400.
+Upsert keyed on `hostname`; `last_seen` is set server-side to UTC ISO-8601. Missing any required field → 400.
 
-`GET /endpoints` — array of `{hostname, ip, subnet, group_name, last_seen}`, ordered by group then hostname. Nodes skip their own hostname when iterating.
+`GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, last_seen, build, managed, update_state, update_msg, update_at}`, ordered by group then hostname. The management fields are extra keys only; never change the array shape. Nodes skip their own hostname when iterating.
+
+Node management (see CLAUDE.md "Hub-managed nodes"): `GET /node/bundle.tar.gz`, `GET /node/release` → `{"commit": ...}`, `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub`, `GET /install.sh`; `POST /api/nodes/<hostname>/update` (202 / 404 / 409 + reason) and `POST /api/nodes/update` → `{"queued": [...], "skipped": [{"hostname", "reason"}]}`.
 
 `POST /results`:
 

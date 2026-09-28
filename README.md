@@ -54,8 +54,20 @@ on its segment's port group. Then either:
   clone before first boot, and it configures itself, or
 - boot it, log in, and answer the `node-setup.sh` prompt.
 
-The hostname is set automatically (`pv-<group>-<ip>`). Check that the node
-appears at `http://<hub-ip>/endpoints`.
+The hostname is set automatically (`pv-<group>-<random6>`, e.g.
+`pv-site-a-k3x9q2`). Check that the node appears at
+`http://<hub-ip>/endpoints`.
+
+**Or install a node straight from the hub**, with no template and no GitHub
+access. On a plain Alpine VM, as root:
+
+```sh
+wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
+```
+
+Every node fetches its SSH keys from the hub at setup. The hub's management
+key is trusted on first use and lets the hub push updates from the dashboard.
+Set `HUB_MANAGED=false` in a node's config to opt it out.
 
 `install.sh` refuses to run on a VM that is already a hub or node, because
 re-running a build wipes its config or the hub's database. Pass `hub` or
@@ -69,22 +81,19 @@ existing `/root/pervium` makes the `mv` put the new copy inside it.
 
 ### Updating
 
-To get the latest code onto an installed VM, run `pervium-update` as root,
-on the hub first and then on each node. It asks before changing anything,
-and keeps configs, the hub database and the root password. On VMs built
-before it existed, fetch it once:
+Update the hub first: run `pervium-update` on it as root. It downloads the
+latest code from GitHub, asks before changing anything, and keeps hub.env,
+the database and the root password. It also rebuilds the node bundle the hub
+serves.
 
-```sh
-curl -fsSLo /tmp/pervium-update https://raw.githubusercontent.com/orneh24/pervium/main/update.sh && sh /tmp/pervium-update
-```
+Then update the nodes from the dashboard: the update button on a node's
+row, or **update all**. The hub runs `pervium-update` on each node over SSH,
+one at a time, and the node downloads the new code from the hub. Each node's
+build shows under its name, in yellow when it differs from what the hub
+serves.
+`pervium-update` run on a node by hand does the same thing.
 
-To update all nodes from the hub in one go, run
-`pervium-push-node-update.sh` on the hub after updating it. It lists the
-nodes seen in the last 10 minutes, asks for their root password once, and
-runs `pervium-update` on each in turn.
-
-Details, including why the hub goes first:
-[BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
+Details: [BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
 
 ### VMware guestinfo keys
 
@@ -97,7 +106,7 @@ two marked keys are required.
 | `guestinfo.pervium.hub_url` | node | `http://10.0.0.100` | **required** |
 | `guestinfo.pervium.group` | node | `site-a` | **required**; groups nodes on the dashboard |
 | `guestinfo.pervium.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
-| `guestinfo.pervium.hostname` | node | `pv-site-a` | `pv-<group>-<ip>` if unset; must be unique |
+| `guestinfo.pervium.hostname` | node | `pv-site-a` | `pv-<group>-<random6>` if unset; must be unique |
 | `guestinfo.pervium.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
 | `guestinfo.pervium.dns_query` | node | `example.com` | name the DNS test looks up |
 | `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `hub-setup.sh` asks at login |

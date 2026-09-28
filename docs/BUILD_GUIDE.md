@@ -180,7 +180,7 @@ $vm | New-AdvancedSetting -Name guestinfo.pervium.group   -Value "site-a"       
 To change a key later, use `Get-AdvancedSetting | Set-AdvancedSetting`;
 `New-AdvancedSetting` fails if the key exists. Then reboot the node: at boot,
 `pervium-firstboot` compares the keys with `/etc/pervium/config` and, if any
-differ, re-runs `setup.sh`. A new `group` renames the node (`pv-<group>-<ip>`),
+differ, re-runs `setup.sh`. A new `group` renames the node (`pv-<group>-<random6>`),
 and the old name is removed from the hub. To deploy a whole lab at once,
 use `deploy/Deploy-Pervium.ps1` (see `deploy/README.md`).
 
@@ -216,21 +216,52 @@ again; `node-setup.sh --force` asks again later.
 
 Each value comes from guestinfo first, then an environment variable, then a
 prompt. `SUBNET` is taken from the DHCP lease before prompting. The hostname
-is `pv-<group>-<ip>` unless you set one.
+is `pv-<group>-<random6>` (e.g. `pv-site-a-k3x9q2`) unless you set one. The
+random part is generated once and kept in the config as `NODE_ID`, so the
+name never changes on reboot or a new DHCP lease.
 
 ### 5.4 What `setup.sh` does
 
 It writes `/etc/pervium/config`, sets the hostname, starts the services,
-adds the cron jobs (every 60 s for tests, every 5 min for registration) and
-registers with the hub. It is safe to re-run: it keeps an existing config.
+adds the cron jobs (every 60 s for tests, every 5 min for registration),
+fetches the SSH keys from the hub and registers with the hub. It is safe to
+re-run: it keeps an existing config.
 
-### 5.5 Check
+**SSH keys from the hub** (`trust-hub.sh`):
+
+- The mesh test key is used by every node's SSH test. The node trusts it only
+  to run `echo ok`, so it's harmless even though it travels over plain HTTP.
+- The hub's management key lets the hub log in as root to push updates. It
+  is pinned the first time, and never replaced automatically after that. If
+  the hub is rebuilt, `register.log` warns that the key changed. Run
+  `pervium-trust-hub` on the node to trust the new one, after checking the
+  fingerprint it shows against the hub's
+  (`ssh-keygen -lf /etc/pervium-hub/keys/id_hub.pub` on the hub).
+
+`HUB_MANAGED=false` in the config removes the management key, and the hub
+then won't push to that node.
+
+### 5.5 Alternative: install a node straight from the hub
+
+No template and no GitHub needed. On a plain Alpine VM (after
+`setup-alpine`), as root:
+
+```sh
+wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
+```
+
+It downloads the node bundle from the hub, installs the packages and scripts,
+and runs `setup.sh` with the hub URL already filled in. It asks only for what
+is still missing, such as the group if you didn't pass it. Don't pipe it into
+`sh`, because the prompts need the terminal.
+
+### 5.6 Check
 
 The node appears on the dashboard within seconds, and results within a
 minute. On the node:
 
 ```sh
-hostname                                   # e.g. pv-site-a-10-1-1-10
+hostname                                   # e.g. pv-site-a-k3x9q2
 test-status                                # last cycle's results (-f to follow)
 tail -f /var/log/pervium/test-cycle.log
 ```
@@ -244,7 +275,7 @@ tail -f /var/log/pervium/test-cycle.log
 | Label | Test | Runs |
 |---|---|---|
 | H | HTTP fetch of the target's identity page | always |
-| S | SSH login with the shared mesh key | always |
+| S | SSH login with the mesh key from the hub (runs `echo ok` only) | always |
 | T | traceroute | every `TRACEROUTE_INTERVAL` (300 s), and right after H or S fails |
 | M | path MTU, DF bit set | always |
 | D | DNS lookup of `DNS_QUERY` | when `DNS_SERVER` is set |
@@ -289,8 +320,7 @@ name gets a 400.
 
 ### 6.3 Updating
 
-**To the latest code from GitHub.** Run as root, on the hub first, then on
-each node:
+**1. The hub, from GitHub.** Run as root on the hub:
 
 ```sh
 pervium-update          # asks before changing anything; -y skips that
@@ -298,40 +328,34 @@ pervium-update          # asks before changing anything; -y skips that
 
 It downloads the repo, shows the installed and new commit, and runs the
 build again in `--update` mode: new packages, new code and service files,
-with none of the build's cleanup. It keeps the node's config, hostname and
-SSH keys, the hub's `hub.env` and database, and the root password. Then the
-hub restarts; a node re-runs `setup.sh`, which registers with the hub, so
-you see straight away whether the new `register.sh` works.
+with none of the build's cleanup. It keeps `hub.env`, the database, the
+hub's SSH keys and the root password, then restarts the hub. It also
+rebuilds the node bundle the hub serves at `/node/bundle.tar.gz`.
+A hub update overwrites any hand edits in `/opt/pervium-hub/agent/`.
+
+**2. The nodes, from the hub.** On the dashboard, use the update button on a
+node's row, or **update all** in the endpoints header. The hub logs in to
+each node with its management key, one at a time, and runs
+`pervium-update -y`. The node downloads the bundle from the hub, never from
+GitHub, and then re-runs `setup.sh`. That registers with the hub, so you see
+straight away whether the new `register.sh` works.
+
+- **Build:** the small line under each node's name shows the commit it runs.
+  It is yellow when the node differs from what the hub serves.
+- **Status mark:** after a push, a mark shows the result. Hover over it for
+  the output.
+- **Skipped nodes:** a node is skipped if it has `HUB_MANAGED=false`, hasn't
+  registered in the last 10 minutes, or is already updating.
+- **Never automate it:** push by hand only, never on a schedule
+  (constraint 13 in CLAUDE.md).
+
+`pervium-update` run by hand on a node does the same download from its hub.
 `cat /etc/pervium-release` shows the commit a VM is on.
 
-Update the hub first. It serves `test-cycle.sh` to every node (below), so a
-node updated ahead of its hub gets its `test-cycle.sh` swapped back to the
-hub's copy within 5 minutes. `pervium-update` warns when that will happen.
-A hub update also overwrites any hand edits in `/opt/pervium-hub/agent/`.
+The dashboard's push buttons have no password yet: anyone who can reach the
+dashboard can push. Keep the hub on a management segment.
 
-**All nodes at once, from the hub.** After updating the hub:
-
-```sh
-pervium-push-node-update.sh              # nodes seen in the last 10 minutes
-pervium-push-node-update.sh 10.1.1.10    # only these IPs; -y skips the confirmation
-pervium-push-node-update.sh -m 30        # nodes seen in the last 30 minutes
-```
-
-It lists the nodes and asks before starting, then asks once for the nodes'
-root password and logs in to each with `sshpass`, one at a time, running
-`pervium-update -y`. Each node still downloads from GitHub itself. It prints
-which nodes updated and which failed (wrong password, unreachable, or a
-rebuilt node whose host key changed: `ssh-keygen -R <ip>` on the hub).
-Run it by hand only; never schedule it (constraint 13 in CLAUDE.md).
-Hubs built before it existed get it, and `sshpass`, from `pervium-update`.
-
-VMs built before `pervium-update` existed don't have it yet. Fetch it once:
-
-```sh
-curl -fsSLo /tmp/pervium-update https://raw.githubusercontent.com/orneh24/pervium/main/update.sh && sh /tmp/pervium-update
-```
-
-The download needs DNS and a route to GitHub. A hub set up without a DNS
+The hub's download needs DNS and a route to GitHub. A hub set up without a DNS
 server has an empty `/etc/resolv.conf` (the build clears it). This includes
 hubs set up before `hub-setup.sh` asked for one. Add one first:
 `echo 'nameserver <dns-ip>' > /etc/resolv.conf`. No GitHub access at all:
@@ -445,7 +469,20 @@ traceroute <peer-ip>
 
 Usual causes: the service isn't running on the peer (dropbear,
 `pervium-httpd`, `iperf3`, `pervium-smbd`, `pervium-smtpd`), or a
-firewall on the path blocks the port.
+firewall on the path blocks the port. If only SSH fails everywhere, check
+that the node has the mesh key (`ls /etc/pervium/id_pervium`). It comes
+from the hub at setup, and `register.sh` retries every 5 minutes if the hub
+was down.
+
+### Push-update fails
+
+Hover over the red mark next to the node's build (under its name on the
+dashboard) to see the output.
+"SSH ... failed" usually means the node hasn't pinned this hub's key:
+
+- On the node: `ls /etc/pervium/hub_key.pub`, and look for key warnings in
+  `/var/log/pervium/register.log`.
+- To trust the hub's current key: `pervium-trust-hub` on the node.
 
 ### Dashboard doesn't load
 

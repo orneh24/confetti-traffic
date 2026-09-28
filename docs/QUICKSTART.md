@@ -52,6 +52,12 @@ Restart the hub after editing: `rc-service pervium-hub restart`.
 | `HUB_PATH_CHANGE_ENABLED` | true | log traceroute path changes to syslog |
 | `HUB_HEALTH_SERVICES` | `pervium-hub,chronyd,dropbear,open-vm-tools,lldpd` | shown in Hub Health |
 | `HUB_HEALTH_SERVICE_TIMEOUT_S` | 3 | time limit for each service check in Hub Health |
+| `HUB_PUSH_TIMEOUT_S` | 600 | time limit for one node's push-update |
+| `HUB_PUSH_SEEN_MINUTES` | 10 | push only to nodes seen this recently |
+
+`HUB_KEY_DIR` and `HUB_BUNDLE_DIR` exist for local test runs only. The
+service and the build use the fixed paths `/etc/pervium-hub/keys` and
+`/opt/pervium-hub/bundle`.
 
 The root password (`lab123`) is set at build time. Override it with
 `PERVIUM_ROOT_PASSWORD` when running either `build-template.sh`.
@@ -63,8 +69,10 @@ The root password (`lab123`) is set at build time. Override it with
 | `HUB_URL` | yes | no trailing slash |
 | `GROUP_NAME` | yes | label that groups nodes on the dashboard |
 | `SUBNET` | yes | filled in from the DHCP lease by `setup.sh` |
-| `NODE_HOSTNAME` | no | if empty: `<HOSTNAME_PREFIX>-<group>-<ip>` |
+| `NODE_HOSTNAME` | no | if empty: `<HOSTNAME_PREFIX>-<group>-<NODE_ID>` |
 | `HOSTNAME_PREFIX` | no | default `pv` |
+| `NODE_ID` | no | six random `a-z0-9`, generated once by `setup.sh` |
+| `HUB_MANAGED` | no | default true; false removes the hub's management key (no push-update) |
 | `DNS_SERVER` | no | empty skips the DNS test |
 | `DNS_QUERY` | no | default `example.com` |
 | `ENABLE_IPERF` / `ENABLE_SMB` / `ENABLE_SMTP` | no | default false; overridden by the dashboard's Mesh Settings when set there |
@@ -115,12 +123,15 @@ node's `/var/log/pervium/` before the network.
 **See one node's results from the node itself:** `test-status` (`-f` to
 follow, `-n N` for history).
 
-**Update to the latest code:** `pervium-update` on the hub first, then on
-each node, or `pervium-push-node-update.sh` on the hub to update every
-recent node in turn (asks for the node root password once). It keeps
-configs, the database and the root password.
-`cat /etc/pervium-release` shows the commit a VM is on. Details:
-BUILD_GUIDE §6.3.
+**Update to the latest code:** first run `pervium-update` on the hub, which
+downloads from GitHub. Then use the dashboard's update button per node, or
+**update all**: the hub pushes its own build to each node over SSH. It keeps
+configs, the database and the root password. The dashboard shows the
+commit each node runs under its name, and `cat /etc/pervium-release` shows it on a VM.
+Details: BUILD_GUIDE §6.3.
+
+**Add a node without a template:** on a plain Alpine VM,
+`wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]`.
 
 ## Traps
 

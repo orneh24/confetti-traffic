@@ -557,6 +557,23 @@ a:hover { text-decoration: underline; }
     opacity: 0.5;
 }
 .ep-table .btn-delete:hover { opacity: 1; }
+.ep-table .btn-push {
+    background: none;
+    border: none;
+    color: var(--blue);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 4px;
+    opacity: 0.6;
+}
+.ep-table .btn-push:hover { opacity: 1; }
+.ep-table .btn-push:disabled { color: var(--text-dim); opacity: 0.3; cursor: default; }
+.ep-table .ep-build { font-size: 10px; color: var(--text-dim); }
+/* Build differs from what this hub serves: the node needs a push. */
+.ep-table .build-old { color: var(--yellow); }
+.ep-table .push-ok { color: var(--green); }
+.ep-table .push-failed { color: var(--red); }
+.ep-table .push-busy { color: var(--blue); }
 
 /* Detail panel */
 .detail-empty {
@@ -926,6 +943,7 @@ a:hover { text-decoration: underline; }
                 <span>Registered Endpoints</span>
                 <span class="hdr-actions">
                     <span id="stale-warning" style="color:var(--yellow);display:none">stale detected</span>
+                    <button class="btn-small" id="btn-update-all-endpoints" title="Push this hub's node build to every managed node, one at a time">update all</button>
                     <button class="btn-small" id="btn-remove-all-endpoints">remove all</button>
                 </span>
             </div>
@@ -1010,6 +1028,8 @@ a:hover { text-decoration: underline; }
     var changeHistoryResults = [];
     var changeHistoryPathChanges = [];
     var recentSyslog = [];
+    // Commit of the node bundle this hub serves (/node/release).
+    var hubRelease = null;
 
     // ---------------------------------------------------------------
     // Fetching
@@ -1034,8 +1054,10 @@ a:hover { text-decoration: underline; }
             // fewer than 15 rather than reaching further back to pad the count.
             fetchJSON("/api/results?minutes=60"),
             fetchJSON("/api/path-changes?minutes=60"),
-            fetchJSON("/api/syslog?" + syslogQuery)
+            fetchJSON("/api/syslog?" + syslogQuery),
+            fetchJSON("/node/release")
         ]).then(function(arr) {
+            hubRelease = arr[7] ? arr[7].commit : null;
             endpoints = arr[0];
             resultsData = arr[1];
             targets = arr[2];
@@ -1692,14 +1714,36 @@ a:hover { text-decoration: underline; }
             if (stale) staleCount++;
             var agoStr = ago < 60 ? ago + "s" : Math.round(ago / 60) + "m";
             html += "<tr" + (stale ? " class='stale'" : "") + ">";
-            html += "<td>" + esc(ep.hostname) + "</td>";
+            // Build on a second line under the name: the sidebar has no room
+            // for another column.
+            html += "<td>" + esc(ep.hostname) + "<div class='ep-build'>" + buildCell(ep) + "</div></td>";
             html += "<td>" + esc(ep.ip) + "</td>";
             html += "<td><span class='group-badge'>" + esc(ep.group_name) + "</span></td>";
             html += "<td>" + agoStr + " ago" + (stale ? " !" : "") + "</td>";
-            html += "<td><button class='btn-delete' data-host='" + esc(ep.hostname) + "' title='Remove'>&times;</button></td>";
+            html += "<td>";
+            html += "<button class='btn-push' data-host='" + esc(ep.hostname) + "'" +
+                (ep.managed === true ? " title='Push update'" :
+                    " disabled title='Not managed by the hub (HUB_MANAGED=false, or an older node)'") +
+                ">&#8635;</button>";
+            html += "<button class='btn-delete' data-host='" + esc(ep.hostname) + "' title='Remove'>&times;</button>";
+            html += "</td>";
             html += "</tr>";
         }
         tbody.innerHTML = html;
+
+        var pushBtns = tbody.querySelectorAll(".btn-push");
+        for (var p = 0; p < pushBtns.length; p++) {
+            pushBtns[p].addEventListener("click", function(e) {
+                var host = e.currentTarget.getAttribute("data-host");
+                if (!confirm("Push this hub's node build to " + host + "? It runs pervium-update there and re-runs setup.sh.")) return;
+                fetch("/api/nodes/" + encodeURIComponent(host) + "/update", {method: "POST"})
+                    .then(function(r) { return r.json().then(function(body) { return {ok: r.ok, body: body}; }); })
+                    .then(function(res) {
+                        if (!res.ok) alert("Not queued: " + (res.body.error || "error"));
+                        refresh();
+                    });
+            });
+        }
 
         var warn = document.getElementById("stale-warning");
         warn.style.display = staleCount > 0 ? "" : "none";
@@ -1714,6 +1758,24 @@ a:hover { text-decoration: underline; }
                 }
             });
         }
+    }
+
+    // Build (short commit, yellow when it differs from what this hub serves)
+    // plus the last push-update's state; the full message is the tooltip.
+    function buildCell(ep) {
+        var b = ep.build || "unknown";
+        var old = hubRelease && hubRelease !== "unknown" && b !== hubRelease;
+        var html = "<span" + (old ? " class='build-old'" : "") + " title='" +
+            escAttr(b + (old ? " (hub serves " + hubRelease + ")" : "")) + "'>" + esc(b.substring(0, 7)) + "</span>";
+        var marks = {queued: ["push-busy", "&hellip;"], running: ["push-busy", "&#8635;"],
+                     ok: ["push-ok", "&#10003;"], failed: ["push-failed", "&#10007;"]};
+        var m = marks[ep.update_state];
+        if (m) {
+            var when = ep.update_at ? new Date(ep.update_at).toLocaleString() + ": " : "";
+            html += " <span class='" + m[0] + "' title='" + escAttr("update " + ep.update_state + " - " + when +
+                (ep.update_msg || "")) + "'>" + m[1] + "</span>";
+        }
+        return html;
     }
 
     // ---------------------------------------------------------------
@@ -1891,6 +1953,12 @@ a:hover { text-decoration: underline; }
         return d.innerHTML;
     }
 
+    // esc() for text inside a quoted attribute: innerHTML leaves quotes alone,
+    // and push-update output (node-controlled) routinely contains them.
+    function escAttr(s) {
+        return esc(s).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    }
+
     function parseTs(ts) {
         if (!ts) return null;
         // The hub emits ISO-8601 with a Z; anything space-separated would be
@@ -1941,6 +2009,31 @@ a:hover { text-decoration: underline; }
         Promise.all(endpoints.map(function(ep) {
             return fetch("/endpoints/" + encodeURIComponent(ep.hostname), {method: "DELETE"});
         })).then(function() { refresh(); });
+    });
+
+    // ---------------------------------------------------------------
+    // Push this hub's node build to every managed node. The hub runs them
+    // one at a time; progress shows in the Build column on each refresh.
+    // ---------------------------------------------------------------
+    document.getElementById("btn-update-all-endpoints").addEventListener("click", function() {
+        if (endpoints.length === 0) return;
+        if (!confirm("Push this hub's node build to every managed node? They are updated one at a " +
+                     "time; each runs pervium-update and re-runs setup.sh.")) {
+            return;
+        }
+        fetch("/api/nodes/update", {method: "POST"})
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                var msg = "Queued " + (res.queued || []).length + " node(s).";
+                var skipped = res.skipped || [];
+                if (skipped.length) {
+                    msg += "\nSkipped:\n" + skipped.map(function(s) {
+                        return "  " + s.hostname + ": " + s.reason;
+                    }).join("\n");
+                }
+                alert(msg);
+                refresh();
+            });
     });
 
     // ---------------------------------------------------------------

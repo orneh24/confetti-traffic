@@ -65,9 +65,9 @@
 .PARAMETER NodeNamePrefix
     Prefix for each node's vCenter VM name (<prefix>-<group>). guestinfo.pervium.
     hostname is deliberately never set by this script — each node derives its
-    in-guest hostname as <prefix>-<group>-<ip> (see CLAUDE.md), i.e. the VM
-    name plus its IP with dots as hyphens, which -WaitForRegistration relies
-    on to match nodes to VMs. Keep this equal to HOSTNAME_PREFIX in the node
+    in-guest hostname as <prefix>-<group>-<NODE_ID> (see CLAUDE.md), i.e. the
+    VM name plus six random a-z0-9 characters, which -WaitForRegistration
+    relies on to match nodes to VMs. Keep this equal to HOSTNAME_PREFIX in the node
     template's config (default in node/config.sample: pv) or that
     matching breaks.
 
@@ -281,10 +281,10 @@ if ($WaitForRegistration -and $PowerOn -and $nodeVMs.Count -gt 0) {
         try {
             $endpoints = Invoke-RestMethod -Uri "$hubUrl/endpoints" -TimeoutSec 10
             # A node left to derive its own hostname registers as
-            # <VM name>-<ip with dots as hyphens>; an explicit one as the VM name.
+            # <VM name>-<6 random a-z0-9>; an explicit one as the VM name.
             foreach ($ep in $endpoints) {
                 foreach ($name in @($pending)) {
-                    $derived = '^' + [regex]::Escape($name) + '-\d{1,3}-\d{1,3}-\d{1,3}-\d{1,3}$'
+                    $derived = '^' + [regex]::Escape($name) + '-[a-z0-9]{6}$'
                     if ($ep.hostname -eq $name -or $ep.hostname -match $derived) {
                         Write-Host "  registered: $($ep.hostname) ($($ep.ip))"
                         [void]$pending.Remove($name)

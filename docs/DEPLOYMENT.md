@@ -100,7 +100,7 @@ On the first clone, also check:
 - [ ] With `ENABLE_SMTP=true`: `grep -n relay /etc/smtpd/smtpd.conf` shows
       only comments
 
-The hostname is set automatically (`pv-<group>-<ip>`), so clones don't
+The hostname is set automatically (`pv-<group>-<random6>`), so clones don't
 collide. If you set `guestinfo.pervium.hostname` yourself, make it unique:
 two nodes with one name overwrite each other on the hub.
 

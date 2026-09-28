@@ -6,13 +6,15 @@ import hashlib
 import shutil
 import subprocess
 import sys
+import re
 from datetime import datetime, timezone
 
-from flask import Flask, request, jsonify, render_template, g, Response
+from flask import Flask, request, jsonify, render_template, g, Response, send_file
 
 from . import config
 from . import syslog_server
 from . import pathchange
+from . import nodemgmt
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"),
             static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
@@ -115,6 +117,20 @@ def init_db():
         db.commit()
     db.execute("DROP TABLE IF EXISTS snmp_metrics")
     db.execute("DROP TABLE IF EXISTS snmp_targets")
+    db.commit()
+
+    # Node management columns: what build a node runs, whether the hub may
+    # SSH in, and the state of the last push-update. All nullable, so a node
+    # that doesn't send them still registers.
+    ep_cols = {r[1] for r in db.execute("PRAGMA table_info(endpoints)").fetchall()}
+    for col in ("build", "managed", "update_state", "update_msg", "update_at"):
+        if col not in ep_cols:
+            db.execute("ALTER TABLE endpoints ADD COLUMN {} TEXT".format(col))
+    # The push queue lives in memory; anything it held died with the last
+    # process, so don't leave those nodes showing "queued" forever.
+    db.execute("""UPDATE endpoints SET update_state = 'failed',
+                  update_msg = 'interrupted by a hub restart'
+                  WHERE update_state IN ('queued', 'running')""")
     db.commit()
 
     db.close()
@@ -223,15 +239,23 @@ def register():
     if not all(k in data for k in required):
         return jsonify({"error": "Missing required fields", "required": list(required)}), 400
 
+    # Optional: older nodes don't send these. Stored as text, "true"/"false"
+    # for managed; None when absent.
+    build = data.get("build")
+    build = str(build)[:64] if build is not None else None
+    managed = data.get("managed")
+    managed = ("true" if managed else "false") if managed is not None else None
+
     now = sqlite_now()
     db = get_db()
     db.execute(
-        """INSERT INTO endpoints (hostname, ip, subnet, group_name, last_seen)
-           VALUES (?, ?, ?, ?, ?)
+        """INSERT INTO endpoints (hostname, ip, subnet, group_name, last_seen, build, managed)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(hostname) DO UPDATE SET
                ip=excluded.ip, subnet=excluded.subnet,
-               group_name=excluded.group_name, last_seen=excluded.last_seen""",
-        (data["hostname"], data["ip"], data["subnet"], data["group_name"], now),
+               group_name=excluded.group_name, last_seen=excluded.last_seen,
+               build=excluded.build, managed=excluded.managed""",
+        (data["hostname"], data["ip"], data["subnet"], data["group_name"], now, build, managed),
     )
     db.commit()
     return jsonify({"status": "ok", "hostname": data["hostname"], "last_seen": iso(now)})
@@ -268,13 +292,19 @@ def list_endpoints():
     db = get_db()
     prune_stale_endpoints(db)
     db.commit()
+    # Still a bare array (deployed nodes parse it); the management fields are
+    # extra keys per element, which older nodes ignore.
     rows = db.execute(
-        "SELECT hostname, ip, subnet, group_name, last_seen FROM endpoints ORDER BY group_name, hostname"
+        """SELECT hostname, ip, subnet, group_name, last_seen,
+                  build, managed, update_state, update_msg, update_at
+           FROM endpoints ORDER BY group_name, hostname"""
     ).fetchall()
     out = []
     for r in rows:
         d = dict(r)
         d["last_seen"] = iso(d["last_seen"])
+        d["update_at"] = iso(d["update_at"])
+        d["managed"] = None if d["managed"] is None else d["managed"] == "true"
         out.append(d)
     return jsonify(out)
 
@@ -1076,6 +1106,131 @@ def agent_script(name):
         return jsonify({"error": "not found"}), 404
     with open(path, "r") as fh:
         return Response(fh.read(), mimetype="text/plain")
+
+
+# ---------------------------------------------------------------------------
+# Node management
+#
+# Everything a node needs from its hub: the node bundle (install and
+# update), the build it carries, and the two SSH public keys plus the mesh
+# private key. Served over plain HTTP like everything else here; see
+# node/scripts/trust-hub.sh for why each key is safe to fetch that way.
+# ---------------------------------------------------------------------------
+
+def _hub_file(directory, name):
+    path = os.path.join(directory, name)
+    return path if os.path.isfile(path) else None
+
+
+def _text_file(path):
+    if not path:
+        return jsonify({"error": "not found"}), 404
+    with open(path, "r") as fh:
+        return Response(fh.read(), mimetype="text/plain")
+
+
+def bundle_commit():
+    path = _hub_file(config.BUNDLE_DIR, "RELEASE")
+    if not path:
+        return None
+    with open(path, "r") as fh:
+        for line in fh:
+            if line.startswith("commit="):
+                return line.strip()[len("commit="):] or None
+    return None
+
+
+@app.route("/node/bundle.tar.gz", methods=["GET"])
+def node_bundle():
+    path = _hub_file(config.BUNDLE_DIR, "pervium-node.tar.gz")
+    if not path:
+        return jsonify({"error": "no node bundle on this hub"}), 404
+    return send_file(os.path.abspath(path), mimetype="application/gzip")
+
+
+@app.route("/node/release", methods=["GET"])
+def node_release():
+    """The build nodes get from this hub; the dashboard flags nodes that differ."""
+    return jsonify({"commit": bundle_commit()})
+
+
+@app.route("/node/hub-key.pub", methods=["GET"])
+def node_hub_key():
+    return _text_file(_hub_file(config.KEY_DIR, "id_hub.pub"))
+
+
+@app.route("/node/mesh-key.pub", methods=["GET"])
+def node_mesh_key_pub():
+    return _text_file(_hub_file(config.KEY_DIR, "id_pervium.pub"))
+
+
+@app.route("/node/mesh-key", methods=["GET"])
+def node_mesh_key():
+    # A private key over HTTP, on purpose: nodes only accept it with a forced
+    # `echo ok` command (trust-hub.sh), so it proves reachability and nothing
+    # else. Never serve id_hub this way.
+    return _text_file(_hub_file(config.KEY_DIR, "id_pervium"))
+
+
+@app.route("/install.sh", methods=["GET"])
+def node_install_script():
+    """node-install.sh with this hub's URL filled in.
+
+    The URL comes from the request's Host header -- the address the operator
+    just used to reach the hub, which is the one the node should use too.
+    Restricted to host[:port] characters, since it lands in a shell script.
+    """
+    here = os.path.dirname(__file__)
+    path = (_hub_file(os.path.join(here, ".."), "node-install.sh")
+            or _hub_file(os.path.join(here, "..", "scripts"), "node-install.sh"))
+    if not path:
+        return jsonify({"error": "not found"}), 404
+    host = request.host
+    if not re.fullmatch(r"[A-Za-z0-9.\-:\[\]]+", host or ""):
+        return jsonify({"error": "unusable Host header"}), 400
+    with open(path, "r") as fh:
+        body = fh.read().replace("@HUB_URL@", "{}://{}".format(request.scheme, host))
+    return Response(body, mimetype="text/plain")
+
+
+def _push_candidates(db, hostname=None):
+    sql = """SELECT hostname, managed, update_state,
+                    last_seen >= datetime('now', ? || ' minutes') AS recent
+             FROM endpoints"""
+    args = [f"-{config.PUSH_SEEN_MINUTES}"]
+    if hostname is not None:
+        sql += " WHERE hostname = ?"
+        args.append(hostname)
+    return db.execute(sql + " ORDER BY group_name, hostname", args).fetchall()
+
+
+@app.route("/api/nodes/<hostname>/update", methods=["POST"])
+def push_update_one(hostname):
+    """Queue a push-update for one node (runs pervium-update on it over SSH)."""
+    db = get_db()
+    rows = _push_candidates(db, hostname)
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    reason = nodemgmt.eligible(rows[0])
+    if reason:
+        return jsonify({"error": reason, "hostname": hostname}), 409
+    nodemgmt.enqueue(db, hostname)
+    return jsonify({"status": "queued", "hostname": hostname}), 202
+
+
+@app.route("/api/nodes/update", methods=["POST"])
+def push_update_all():
+    """Queue a push-update for every eligible node; report the rest."""
+    db = get_db()
+    queued, skipped = [], []
+    for row in _push_candidates(db):
+        reason = nodemgmt.eligible(row)
+        if reason:
+            skipped.append({"hostname": row["hostname"], "reason": reason})
+        else:
+            nodemgmt.enqueue(db, row["hostname"])
+            queued.append(row["hostname"])
+    return jsonify({"queued": queued, "skipped": skipped}), 202
 
 
 @app.route("/favicon.ico")

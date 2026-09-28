@@ -267,9 +267,10 @@ run_ssh_test() {
     _target_ip="$1"
     _start_s=$(date +%s)
 
-    # BatchMode=yes disables password prompts, so this needs the shared lab
-    # keypair that build-template.sh bakes into the image; without a key the
-    # test could never pass. UserKnownHostsFile=/dev/null keeps a rebuilt
+    # BatchMode=yes disables password prompts, so this needs the mesh keypair
+    # every node fetches from the hub (trust-hub.sh); without a key the test
+    # could never pass. Peers accept that key only with a forced `echo ok`,
+    # which is exactly what is run here. UserKnownHostsFile=/dev/null keeps a rebuilt
     # clone (new host key, recycled DHCP address) from tripping host-key
     # mismatches and reporting a routing failure that isn't one.
     _output=$(ssh -o StrictHostKeyChecking=no \
