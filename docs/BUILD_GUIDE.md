@@ -316,6 +316,21 @@ constraint 21 for why this can never send mail.
 uses one probe per hop and at most 10 hops, so it can't overrun the
 60-second cycle when the network breaks.
 
+**Bandwidth on demand.** The dashboard's **Bandwidth Test** panel measures
+throughput when you ask. It isn't part of the minute-by-minute tests.
+
+- **Two nodes:** pick From and To, a duration (5–30 s) and 1–8 TCP streams.
+  The hub runs `iperf3` on both nodes over SSH: From sends, then To sends.
+  Both nodes must be managed by the hub.
+- **A node and this browser:** pick a node. Your browser downloads from it,
+  then uploads to it, directly rather than through the hub. Your PC must be
+  able to reach the node's IP address.
+- **Limits:** one test at a time across the whole mesh, and a second request
+  is refused until the first finishes. A test saturates the path for its
+  duration in each direction, so avoid running it on a busy production link.
+- **Results:** every run is listed under the panel (the last 200), with
+  Mbit/s for each direction. Hover over a failed run to see why it failed.
+
 ### 6.2 Static targets
 
 Addresses with no agent (a gateway, a loopback, an outside host). Add them

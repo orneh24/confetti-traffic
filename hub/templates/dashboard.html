@@ -918,6 +918,48 @@ a:hover { text-decoration: underline; }
             </div>
         </div>
 
+        <!-- On-demand bandwidth test (hub/app/bandwidth.py). Node to node: the
+             hub runs iperf3 on both over SSH. Node to browser: this page
+             talks to the node's /cgi-bin/pv-bw directly. One at a time. -->
+        <div class="section" id="bw-section">
+            <div class="section-header">
+                <span>Bandwidth Test</span>
+                <span id="bw-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
+            </div>
+            <div class="section-body scroll-x">
+                <div class="filter-row">
+                    <label for="bw-mode">Between</label>
+                    <select id="bw-mode">
+                        <option value="node">two nodes</option>
+                        <option value="browser">a node and this browser</option>
+                    </select>
+                    <label for="bw-src" id="bw-src-label">From</label>
+                    <select id="bw-src"></select>
+                    <label for="bw-dst" id="bw-dst-label">To</label>
+                    <select id="bw-dst"></select>
+                    <label for="bw-dur">Seconds</label>
+                    <select id="bw-dur">
+                        <option>5</option><option selected>10</option><option>20</option><option>30</option>
+                    </select>
+                    <label for="bw-streams" id="bw-streams-label">Streams</label>
+                    <select id="bw-streams">
+                        <option selected>1</option><option>2</option><option>3</option><option>4</option>
+                        <option>5</option><option>6</option><option>7</option><option>8</option>
+                    </select>
+                    <button type="button" class="btn-small" id="bw-run">run</button>
+                </div>
+                <div class="empty-hint" id="bw-hint" style="padding:0 2px 8px"></div>
+                <table class="ep-table" id="bw-table">
+                    <thead>
+                        <tr><th>Time</th><th>From</th><th>To</th><th>Setup</th>
+                            <th title="From -> To">&rarr; Mbit/s</th><th title="To -> From">&larr; Mbit/s</th><th>Result</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="empty-hint" id="bw-empty">No bandwidth tests yet.</div>
+            </div>
+        </div>
+
         <!-- Hub self-health: the hub is infrastructure, not a test participant,
              but it can still fail quietly (full disk, dead chronyd, a syslog
              listener that never bound). Separate from the mesh matrix above. -->
@@ -1074,6 +1116,8 @@ a:hover { text-decoration: underline; }
             renderTargets();
             renderDNS();
             renderEndpoints();
+            renderBwSelects();
+            loadBw();
             renderHealth();
             renderRecentChanges();
             applyRecentSyslog(syslogQuery, arr[6]);
@@ -2013,6 +2057,183 @@ a:hover { text-decoration: underline; }
         Promise.all(endpoints.map(function(ep) {
             return fetch("/endpoints/" + encodeURIComponent(ep.hostname), {method: "DELETE"});
         })).then(function() { refresh(); });
+    });
+
+    // ---------------------------------------------------------------
+    // Bandwidth test
+    //
+    // "fwd" is From -> To, "rev" To -> From. In browser mode From is the node
+    // and To is this browser, so fwd is the download and rev the upload.
+    // ---------------------------------------------------------------
+    var bwRows = [];
+    var bwPollTimer = null;
+
+    function bwOptions(sel, hosts) {
+        var keep = sel.value;
+        sel.innerHTML = hosts.map(function(h) {
+            return "<option value='" + escAttr(h) + "'>" + esc(h) + "</option>";
+        }).join("");
+        if (hosts.indexOf(keep) >= 0) sel.value = keep;
+    }
+
+    function renderBwSelects() {
+        var mode = document.getElementById("bw-mode").value;
+        // Node mode needs the hub's key on both ends to start iperf3.
+        var hosts = endpoints.filter(function(ep) {
+            return mode === "browser" || ep.managed === true;
+        }).map(function(ep) { return ep.hostname; });
+        var src = document.getElementById("bw-src");
+        var dst = document.getElementById("bw-dst");
+        bwOptions(src, hosts);
+        bwOptions(dst, hosts);
+        if (mode === "node" && dst.value === src.value && hosts.length > 1) {
+            dst.value = hosts[hosts.indexOf(src.value) === 0 ? 1 : 0];
+        }
+        var browser = mode === "browser";
+        document.getElementById("bw-src-label").textContent = browser ? "Node" : "From";
+        ["bw-dst", "bw-dst-label", "bw-streams", "bw-streams-label"].forEach(function(id) {
+            document.getElementById(id).style.display = browser ? "none" : "";
+        });
+        document.getElementById("bw-hint").textContent = browser
+            ? "Download then upload between this browser and the node, directly (not through the hub). " +
+              "This browser must be able to reach the node's address."
+            : "iperf3 over TCP, From sends then To sends. Only nodes the hub manages are listed.";
+    }
+
+    function fmtMbps(v) {
+        if (v === null || v === undefined) return "&ndash;";
+        return v >= 100 ? String(Math.round(v)) : v.toFixed(1);
+    }
+
+    function renderBw() {
+        var tbody = document.querySelector("#bw-table tbody");
+        var running = null;
+        var html = "";
+        for (var i = 0; i < bwRows.length; i++) {
+            var r = bwRows[i];
+            if (r.state === "running") running = r;
+            var when = r.started_at ? new Date(r.started_at).toLocaleString() : "";
+            var setup = r.duration + " s" + (r.kind === "node" ? " ×" + r.streams : "");
+            var result = r.state === "ok" ? "<span class='push-ok'>ok</span>"
+                : r.state === "running" ? "<span class='push-busy'>running&hellip;</span>"
+                : "<span class='push-failed' title='" + escAttr(r.msg || "") + "'>failed</span>";
+            html += "<tr" + (r.state === "failed" ? " title='" + escAttr(r.msg || "") + "'" : "") + ">";
+            html += "<td>" + esc(when) + "</td><td>" + esc(r.src) + "</td><td>" + esc(r.dst) + "</td>";
+            html += "<td>" + esc(setup) + "</td>";
+            html += "<td>" + fmtMbps(r.fwd_mbps) + "</td>";
+            html += "<td>" + fmtMbps(r.rev_mbps) + "</td>";
+            html += "<td>" + result + "</td></tr>";
+        }
+        tbody.innerHTML = html;
+        document.getElementById("bw-empty").style.display = bwRows.length ? "none" : "";
+        document.getElementById("bw-status").textContent = running
+            ? "running: " + running.src + " ↔ " + running.dst : "";
+        document.getElementById("bw-run").disabled = !!running;
+        // Poll fast while a test runs, so its result appears when it ends.
+        if (running && !bwPollTimer) {
+            bwPollTimer = setInterval(loadBw, 2000);
+        } else if (!running && bwPollTimer) {
+            clearInterval(bwPollTimer);
+            bwPollTimer = null;
+        }
+    }
+
+    function loadBw() {
+        return fetchJSON("/api/bw").then(function(rows) { bwRows = rows; renderBw(); });
+    }
+
+    // Download: stream from the node and count bytes until time is up.
+    function bwDownload(url, secs) {
+        var ctrl = new AbortController();
+        var t0 = performance.now();
+        var bytes = 0;
+        return fetch(url + "?t=" + Date.now(), {signal: ctrl.signal, cache: "no-store"}).then(function(resp) {
+            if (!resp.ok) throw new Error("download: HTTP " + resp.status);
+            var reader = resp.body.getReader();
+            function pump() {
+                return reader.read().then(function(chunk) {
+                    if (chunk.done) return;
+                    bytes += chunk.value.length;
+                    if (performance.now() - t0 >= secs * 1000) { ctrl.abort(); return; }
+                    return pump();
+                });
+            }
+            return pump();
+        }).catch(function(e) {
+            if (e.name !== "AbortError") throw e;
+        }).then(function() {
+            return bytes * 8 / ((performance.now() - t0) / 1000) / 1e6;
+        });
+    }
+
+    // Upload: four parallel loops of 4 MB POSTs until time is up. text/plain
+    // keeps each a "simple" CORS request (no preflight busybox can't answer).
+    // An occasional POST drops (seen at ~1-3% against busybox httpd under
+    // this load); that chunk just isn't counted. Three failures in a row on
+    // one loop, or nothing getting through at all, fails the test.
+    function bwUpload(url, secs) {
+        var chunk = new Blob([new Uint8Array(4 * 1024 * 1024)], {type: "text/plain"});
+        var t0 = performance.now();
+        var bytes = 0;
+        function loop(misses) {
+            if (performance.now() - t0 >= secs * 1000) return Promise.resolve();
+            return fetch(url, {method: "POST", body: chunk, cache: "no-store"}).then(function(resp) {
+                if (!resp.ok) throw new Error("upload: HTTP " + resp.status);
+                bytes += chunk.size;
+                return loop(0);
+            }, function(e) {
+                if (misses >= 2) throw e;
+                return loop(misses + 1);
+            });
+        }
+        return Promise.all([loop(0), loop(0), loop(0), loop(0)]).then(function() {
+            if (!bytes) throw new Error("upload: nothing got through");
+            return bytes * 8 / ((performance.now() - t0) / 1000) / 1e6;
+        });
+    }
+
+    function postJSON(url, body) {
+        return fetch(url, {method: "POST", headers: {"Content-Type": "application/json"},
+                           body: JSON.stringify(body)})
+            .then(function(r) { return r.json().then(function(b) { return {ok: r.ok, body: b}; }); });
+    }
+
+    function runBrowserBw(node, secs) {
+        return postJSON("/api/bw/browser", {node: node, duration: secs}).then(function(res) {
+            if (!res.ok) throw new Error(res.body.error || "could not start");
+            var id = res.body.id, url = res.body.url, down = null, up = null;
+            loadBw();
+            return bwDownload(url, res.body.duration).then(function(v) {
+                down = v;
+                return bwUpload(url, res.body.duration);
+            }).then(function(v) {
+                up = v;
+                return postJSON("/api/bw/browser/" + id, {fwd_mbps: down, rev_mbps: up});
+            }).catch(function(e) {
+                var msg = e.message === "Failed to fetch"
+                    ? "this browser could not reach " + url + " (path blocked, or the node has no bandwidth endpoint yet)"
+                    : e.message;
+                return postJSON("/api/bw/browser/" + id, {fwd_mbps: down, rev_mbps: up, error: msg});
+            });
+        });
+    }
+
+    document.getElementById("bw-mode").addEventListener("change", renderBwSelects);
+    document.getElementById("bw-src").addEventListener("change", renderBwSelects);
+    document.getElementById("bw-run").addEventListener("click", function() {
+        var mode = document.getElementById("bw-mode").value;
+        var src = document.getElementById("bw-src").value;
+        var dst = document.getElementById("bw-dst").value;
+        var secs = parseInt(document.getElementById("bw-dur").value, 10);
+        var streams = parseInt(document.getElementById("bw-streams").value, 10);
+        if (!src) { alert("No node to test."); return; }
+        var started = mode === "browser"
+            ? runBrowserBw(src, secs)
+            : postJSON("/api/bw/node", {source: src, target: dst, duration: secs, streams: streams})
+                .then(function(res) { if (!res.ok) throw new Error(res.body.error || "could not start"); });
+        document.getElementById("bw-run").disabled = true;
+        started.catch(function(e) { alert("Bandwidth test: " + e.message); })
+               .then(loadBw);
     });
 
     // ---------------------------------------------------------------

@@ -52,6 +52,11 @@ Diagram: `docs/TOPOLOGY.md`.
   - `GET /install.sh` — `node-install.sh` with this hub's URL filled in
   - `POST /api/nodes/<hostname>/update`, `POST /api/nodes/update` — queue a
     push-update for one node / every eligible node
+  - `GET /api/bw` — bandwidth test history (newest first, last 200);
+    `POST /api/bw/node` `{source, target, duration, streams}`;
+    `POST /api/bw/browser` `{node, duration}` → `{id, url}`, then
+    `POST /api/bw/browser/<id>` `{fwd_mbps, rev_mbps, error}` (see
+    On-demand bandwidth test below)
   - `GET /api/syslog` — stored messages; `minutes=N` (default 60) *or*
     `from=&to=` for a pinned window, plus `host=`, `severity=N`, `q=`,
     `limit=N` (capped at 2000)
@@ -308,6 +313,34 @@ can push updates to them over SSH.
   **No authentication yet** — anyone who can reach the dashboard can push;
   an admin password is planned. Pushing is manual, so constraint 13 holds.
 
+### On-demand bandwidth test
+A "Bandwidth Test" panel on the dashboard, not part of the cycle and not in
+the matrix. One test at a time mesh-wide (`hub/app/bandwidth.py` holds an
+in-memory slot with an expiry, so a browser that closes mid-test frees it);
+each runs both directions for 5–30 s (default 10). History in the `bwtests`
+table, last 200 rows; `fwd` is From→To, `rev` To→From.
+
+- **Node ↔ node:** the hub SSHes in with `id_hub` (both nodes must be
+  managed), starts a one-off `iperf3 -s -p 5202` on the target under
+  `timeout` (5202, not 5201, so it never collides with the scheduled `iperf3`
+  test), runs `iperf3 -c ... -P <1-8> -J` on the source, then again with
+  `-R`, and kills the server. Mbit/s is `end.sum_received`. The kill uses
+  `pkill -f 'iperf3 -s -p [5]202'` and is sent as its **own** SSH command:
+  `pkill -f` matches the remote shell's own command line, so a command
+  holding both the kill and the start kills itself.
+- **Node ↔ browser:** the dashboard's JS talks to the node's
+  `/cgi-bin/pv-bw` (`node/web/cgi-bin/pv-bw`, installed by the node build)
+  **directly**, so the path measured is the viewer's; the browser must be able
+  to reach the node's IP. Download = a streamed GET of zeros (nothing on
+  disk) read for the duration; upload = four parallel loops of 4 MB POSTs
+  sent as `text/plain` (a CORS "simple" request: busybox httpd can't answer
+  a preflight). One upload tops out ~300 Mbit/s through busybox httpd, four
+  measured ~1.8 Gbit/s. An occasional dropped POST (~1–3 % seen) is skipped;
+  three in a row fails the test. The hub only hands out the slot and stores
+  what the browser reports.
+- **No authentication yet**, same as push-update: anyone who can reach the
+  dashboard can saturate a path for up to 30 s per direction.
+
 ### Code update (`pervium-update`)
 Everything else reaches an installed VM through `update.sh` (repo root),
 which both builds install as `/usr/local/bin/pervium-update`. Manual only
@@ -451,7 +484,8 @@ hub/
   serve.py            — production entrypoint (reads HUB_PORT at runtime)
   run.sh              — foreground launcher for debugging
   app/                — Flask API (app.py, config.py, pathchange.py,
-                        syslog_server.py, nodemgmt.py = push-update worker)
+                        syslog_server.py, nodemgmt.py = push-update worker,
+                        bandwidth.py = on-demand bandwidth test)
   templates/          — dashboard.html, syslog.html. Colour themes (Dark, Light, Catppuccin Mocha,
                         Gruvbox, Terminal green) are inline in BOTH pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
@@ -466,6 +500,7 @@ hub/
 node/
   build-template.sh   — builds the node golden template
   web/probe/          — fixed site the HTTP test fetches and hashes
+  web/cgi-bin/pv-bw   — node end of the browser bandwidth test
   scripts/            — register.sh, test-cycle.sh, setup.sh, node-setup.sh,
                         test-status.sh (console/SSH results viewer),
                         trust-hub.sh (hub keys; pervium-trust-hub)

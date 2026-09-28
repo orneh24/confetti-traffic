@@ -402,6 +402,12 @@ for _f in "${SCRIPT_DIR}"/web/probe/*; do
     mv -f "${WEB_ROOT}/probe/.$(basename "$_f").new" "${WEB_ROOT}/probe/$(basename "$_f")"
 done
 
+# The browser end of the dashboard's on-demand bandwidth test: busybox httpd
+# runs anything executable in /cgi-bin/. See node/web/cgi-bin/pv-bw.
+log "Installing bandwidth test endpoint"
+mkdir -p "${WEB_ROOT}/cgi-bin"
+install_script "${SCRIPT_DIR}/web/cgi-bin/pv-bw" "${WEB_ROOT}/cgi-bin/pv-bw"
+
 # -------------------------------------------------------------------
 # 7. Create placeholder identity page
 # -------------------------------------------------------------------

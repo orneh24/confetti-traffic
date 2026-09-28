@@ -28,6 +28,7 @@ You develop the Pervium hub: `hub/app/app.py` (Flask), SQLite storage, and `hub/
 - `GET /agent/manifest`, `GET /agent/<script>` — agent distribution; checksums computed on demand.
 - `GET /node/bundle.tar.gz`, `GET /node/release` (`{commit}`) — node bundle nodes install/update from; `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub` — hub keys (never serve `id_hub` privately); `GET /install.sh` — `node-install.sh` with the hub URL filled in from `Host`.
 - `POST /api/nodes/<hostname>/update` (202 queued / 404 / 409 with reason), `POST /api/nodes/update` (`{queued, skipped:[{hostname, reason}]}`) — push-update, run one at a time by `hub/app/nodemgmt.py`.
+- `GET /api/bw` (history, newest first), `POST /api/bw/node` `{source, target, duration, streams}` (202 `{id}` / 409 busy or unmanaged), `POST /api/bw/browser` `{node, duration}` → `{id, url, duration}`, `POST /api/bw/browser/<id>` `{fwd_mbps, rev_mbps, error}` — on-demand bandwidth test, one at a time, `hub/app/bandwidth.py`; `bwtests` table.
 - `GET /api/syslog` — stored messages. `minutes=N` (default 60) *or* `from=&to=` for a pinned window, plus `host=` (one value, matched against parsed hostname or source IP), `severity=N` (at or worse than N), `q=`, `limit=N` (default and cap 2000).
 - `GET /api/syslog/sources` — distinct senders with counts, for the filter dropdown.
 - `GET /syslog` — the viewer page. A `from`/`to` pair pins it and disables auto-refresh.

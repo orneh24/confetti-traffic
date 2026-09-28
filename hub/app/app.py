@@ -15,6 +15,7 @@ from . import config
 from . import syslog_server
 from . import pathchange
 from . import nodemgmt
+from . import bandwidth
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"),
             static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
@@ -94,6 +95,20 @@ def init_db():
             value   TEXT NOT NULL,
             updated TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS bwtests (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            started_at  TEXT NOT NULL,
+            finished_at TEXT,
+            kind        TEXT NOT NULL,
+            src         TEXT NOT NULL,
+            dst         TEXT NOT NULL,
+            duration    INTEGER NOT NULL,
+            streams     INTEGER NOT NULL,
+            state       TEXT NOT NULL,
+            fwd_mbps    REAL,
+            rev_mbps    REAL,
+            msg         TEXT
+        );
         CREATE INDEX IF NOT EXISTS idx_results_received ON results(received_at);
         CREATE INDEX IF NOT EXISTS idx_results_source_target ON results(source, target_hostname);
         CREATE INDEX IF NOT EXISTS idx_results_trace ON results(source, target_hostname, test_type, received_at);
@@ -131,6 +146,9 @@ def init_db():
     db.execute("""UPDATE endpoints SET update_state = 'failed',
                   update_msg = 'interrupted by a hub restart'
                   WHERE update_state IN ('queued', 'running')""")
+    # Same for a bandwidth test the last process was running.
+    db.execute("""UPDATE bwtests SET state = 'failed', msg = 'interrupted by a hub restart'
+                  WHERE state = 'running'""")
     db.commit()
 
     db.close()
@@ -1216,6 +1234,113 @@ def push_update_one(hostname):
         return jsonify({"error": reason, "hostname": hostname}), 409
     nodemgmt.enqueue(db, hostname)
     return jsonify({"status": "queued", "hostname": hostname}), 202
+
+
+# ---------------------------------------------------------------------------
+# On-demand bandwidth tests (see bandwidth.py). One at a time mesh-wide.
+# ---------------------------------------------------------------------------
+
+def _bw_params(data):
+    """(duration, streams) clamped to the allowed range, or None if not ints."""
+    try:
+        duration = int(data.get("duration", 10))
+        streams = int(data.get("streams", 1))
+    except (TypeError, ValueError):
+        return None
+    return (max(1, min(duration, bandwidth.MAX_DURATION)),
+            max(1, min(streams, bandwidth.MAX_STREAMS)))
+
+
+def _bw_row(r):
+    d = dict(r)
+    d["started_at"] = iso(d["started_at"])
+    d["finished_at"] = iso(d["finished_at"])
+    return d
+
+
+@app.route("/api/bw", methods=["GET"])
+def bw_list():
+    """Recent bandwidth tests, newest first; the dashboard polls this."""
+    rows = get_db().execute(
+        "SELECT * FROM bwtests ORDER BY id DESC LIMIT ?", (bandwidth.HISTORY_ROWS,)).fetchall()
+    return jsonify([_bw_row(r) for r in rows])
+
+
+@app.route("/api/bw/node", methods=["POST"])
+def bw_node():
+    """Start a node-to-node test: {source, target, duration, streams}."""
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON object required"}), 400
+    params = _bw_params(data)
+    if params is None:
+        return jsonify({"error": "duration and streams must be integers"}), 400
+    duration, streams = params
+    src, dst = data.get("source"), data.get("target")
+    if not src or not dst or src == dst:
+        return jsonify({"error": "pick two different nodes"}), 400
+    db = get_db()
+    ips = {}
+    for host in (src, dst):
+        row = db.execute("SELECT ip, managed FROM endpoints WHERE hostname = ?", (host,)).fetchone()
+        if row is None:
+            return jsonify({"error": "unknown node: " + host}), 404
+        if row["managed"] != "true":
+            return jsonify({"error": host + " is not managed by the hub (needed to start iperf3 on it)"}), 409
+        ips[host] = row["ip"]
+    test_id = bandwidth.claim(db, "node", src, dst, duration, streams)
+    if test_id is None:
+        return jsonify({"error": "another bandwidth test is running"}), 409
+    bandwidth.start_node_test(test_id, ips[src], ips[dst], duration, streams)
+    return jsonify({"id": test_id}), 202
+
+
+@app.route("/api/bw/browser", methods=["POST"])
+def bw_browser_start():
+    """Claim the slot for a browser test: {node, duration}.
+
+    Returns the node URL the browser measures against. The browser does the
+    transfer itself and reports back to /api/bw/browser/<id>.
+    """
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON object required"}), 400
+    params = _bw_params(data)
+    if params is None:
+        return jsonify({"error": "duration must be an integer"}), 400
+    duration = params[0]
+    db = get_db()
+    row = db.execute("SELECT ip FROM endpoints WHERE hostname = ?", (data.get("node") or "",)).fetchone()
+    if row is None:
+        return jsonify({"error": "unknown node"}), 404
+    client = "browser " + (request.remote_addr or "?")
+    test_id = bandwidth.claim(db, "browser", data["node"], client, duration, 1)
+    if test_id is None:
+        return jsonify({"error": "another bandwidth test is running"}), 409
+    return jsonify({"id": test_id, "url": "http://{}/cgi-bin/pv-bw".format(row["ip"]),
+                    "duration": duration})
+
+
+@app.route("/api/bw/browser/<int:test_id>", methods=["POST"])
+def bw_browser_result(test_id):
+    """The browser's result: {fwd_mbps, rev_mbps, error}."""
+    if not bandwidth.is_active(test_id):
+        return jsonify({"error": "no such running test (it may have timed out)"}), 409
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON object required"}), 400
+
+    def mbps(key):
+        try:
+            v = float(data.get(key))
+        except (TypeError, ValueError):
+            return None
+        return round(v, 1) if 0 <= v < 1e6 else None
+
+    fwd, rev = mbps("fwd_mbps"), mbps("rev_mbps")
+    err = str(data.get("error") or "")
+    bandwidth.finish(get_db(), test_id, "failed" if err or fwd is None else "ok", fwd, rev, err)
+    return jsonify({"status": "ok"})
 
 
 @app.route("/api/nodes/update", methods=["POST"])

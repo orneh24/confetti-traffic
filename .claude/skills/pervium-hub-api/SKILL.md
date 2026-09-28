@@ -30,6 +30,8 @@ Upsert keyed on `hostname`; `last_seen` is set server-side to UTC ISO-8601. Miss
 
 Node management (see CLAUDE.md "Hub-managed nodes"): `GET /node/bundle.tar.gz`, `GET /node/release` → `{"commit": ...}`, `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub`, `GET /install.sh`; `POST /api/nodes/<hostname>/update` (202 / 404 / 409 + reason) and `POST /api/nodes/update` → `{"queued": [...], "skipped": [{"hostname", "reason"}]}`.
 
+Bandwidth test (CLAUDE.md "On-demand bandwidth test"): `GET /api/bw`, `POST /api/bw/node`, `POST /api/bw/browser`, `POST /api/bw/browser/<id>`; one at a time; `bwtests` table (`fwd_mbps` From→To, `rev_mbps` To→From).
+
 `POST /results`:
 
 ```json
