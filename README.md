@@ -9,9 +9,6 @@ web dashboard, optionally next to syslog from the network devices on the path.
 The dashboard has five colour themes (Dark, Light, Catppuccin Mocha, Gruvbox,
 Terminal green), picked from the header, or Shuffle, which switches between them at random every 5-10 minutes.
 
-*Pervium* is Latin for "passable; a passage through", which is the question
-the tool keeps asking of every path. Formerly mesh-flux.
-
 ![Dashboard with a synthetic 5-node mesh, one failing path selected, and its syslog correlation panel open](docs/img/dashboard-mock.jpg)
 
 *Mock data from a synthetic 5-node mesh, not a real lab. See
@@ -147,15 +144,7 @@ Full design and the constraints that must not regress:
 ### Other hypervisors
 
 Built and tested on vSphere, but any hypervisor that runs Alpine should work
-(Proxmox/KVM, Hyper-V, VirtualBox, bare metal). None of the tests need
-VMware. Three extras do:
-
-- **Zero-touch setup** reads `guestinfo.*` keys, which only VMware has.
-  Elsewhere, the login prompt asks for the same values instead.
-- **The PowerCLI deploy script** (`deploy/`) is vSphere-only.
-- **`open-vm-tools`** won't start outside VMware, so Hub Health shows it as
-  down. Harmless; remove it from the build and `HUB_HEALTH_SERVICES` if you
-  like.
+(Proxmox/KVM, Hyper-V, VirtualBox, bare metal).
 
 ### Why not Docker?
 

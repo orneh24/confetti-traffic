@@ -91,7 +91,6 @@ Pass: the only hits are the deliberate ones, which each name an old
 install on purpose:
 - `install.sh` and `update.sh`: the loop over old install paths that
   refuses to build or update next to an old install;
-- the README's "Formerly mesh-flux." line;
 - this section of `drift-checker.md` itself.
 
 Anything else, including prose, examples and agent or skill text, is
