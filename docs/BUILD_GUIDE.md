@@ -312,6 +312,7 @@ A hub update also overwrites any hand edits in `/opt/pervium-hub/agent/`.
 ```sh
 pervium-push-node-update.sh              # nodes seen in the last 10 minutes
 pervium-push-node-update.sh 10.1.1.10    # only these IPs; -y skips the confirmation
+pervium-push-node-update.sh -m 30        # nodes seen in the last 30 minutes
 ```
 
 It lists the nodes and asks before starting, then asks once for the nodes'

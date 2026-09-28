@@ -93,7 +93,9 @@ apk_step apk add --no-cache --no-progress \
     curl \
     open-vm-tools \
     chrony \
-    lldpd
+    lldpd \
+    openssh-client \
+    sshpass
 
 log "Packages installed"
 
@@ -150,7 +152,8 @@ cp -f "${SCRIPT_DIR}/serve.py" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/run.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/hub-setup.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/pervium-push-node-update.sh" "$HUB_INSTALL_DIR/"
-chmod +x "$HUB_INSTALL_DIR/run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/hub-setup.sh"     "$HUB_INSTALL_DIR/pervium-push-node-update.sh"
+chmod +x "$HUB_INSTALL_DIR/run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/hub-setup.sh" \
+    "$HUB_INSTALL_DIR/pervium-push-node-update.sh"
 ln -sf "$HUB_INSTALL_DIR/hub-setup.sh" /usr/local/bin/hub-setup.sh
 # Manual only (see the script's header): never scheduled.
 ln -sf "$HUB_INSTALL_DIR/pervium-push-node-update.sh" /usr/local/bin/pervium-push-node-update.sh

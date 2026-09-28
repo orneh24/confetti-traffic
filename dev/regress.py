@@ -111,7 +111,7 @@ def is_comment(line):
 
 
 def git_files(*patterns):
-    out = subprocess.run(["git", "ls-files", "--"] + list(patterns),
+    out = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "--"] + list(patterns),
                          capture_output=True, text=True, check=True).stdout
     return out.split()
 
@@ -333,6 +333,11 @@ def _():
         need(want in pkgs, "package %s missing from apk add" % want, p)
     for bad in ("dropbear-ssh", "iputils", "samba", "opensmtpd-openrc"):
         need(bad not in pkgs, "package %s must not be installed" % bad, p)
+    # The hub needs an ssh client and sshpass for pervium-push-node-update.sh.
+    hm = re.search(r"apk add --no-cache[^\n]*\\\n((?:[^\n]*\\\n)*[^\n]*)", read(HUB_BUILD))
+    hub_pkgs = set(re.findall(r"[a-z0-9][a-z0-9._-]+", hm.group(0))) if hm else set()
+    for want in ("openssh-client", "sshpass"):
+        need(want in hub_pkgs, "hub: package %s missing from apk add" % want, p)
     p += at(NODE_BUILD, grep(r"^[^#]*dropbear-ssh", NODE_BUILD))
     p += at(NODE_BUILD, grep(r"^[^#]*opensmtpd-openrc", NODE_BUILD))
     return p
@@ -515,7 +520,8 @@ def _():
     p = []
     for f in git_files("*.sh"):
         for n, l in grep(r"\bapk (add|update|upgrade|del)\b", f):
-            if "--no-progress" not in l and not is_comment(l):
+            if "--no-progress" not in l and not is_comment(l) \
+                    and not re.match(r"\s*(echo|printf|log)\b", l):
                 p.append("%s:%d apk without --no-progress" % (f, n))
     out = re.compile(r"^\s*(log|echo|printf|einfo|ewarn|eerror|ebegin|eend|die|sys\.stderr\.write|print)\b"
                      r"|^\s*[|+].*[|+]\s*$")
