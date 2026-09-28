@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About - Pervium probe site</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">Pervium</div>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="about.html" class="active">About</a>
+      <a href="report.html">Report</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>About this test</h1>
+      <p>
+        Pervium tests end-to-end connectivity between nodes placed on the
+        network segments under test. Each node runs a small set of real
+        servers and, once a minute, connects to every other node as a
+        client. Results go to a central hub that draws them as a matrix.
+      </p>
+    </section>
+
+    <section class="prose">
+      <h2>The HTTP test</h2>
+      <p>
+        The H column of the matrix is this site. The testing node requests,
+        in order: <code>index.html</code>, <code>style.css</code>,
+        <code>app.js</code>, <code>about.html</code> and
+        <code>report.html</code>. Each response must be HTTP 200 and must
+        match the SHA-256 of the testing node's own copy of the same file.
+        The first file that does not stops the test and is named in the
+        result.
+      </p>
+
+      <h2>What a failure usually means</h2>
+      <ul>
+        <li>
+          <strong>Connection refused or timed out</strong> &mdash; the web
+          server on the target is down, or a filter on the path blocks
+          TCP port 80.
+        </li>
+        <li>
+          <strong>HTTP 404 on every file</strong> &mdash; the target runs an
+          older build without this site. Push the current build to it from
+          the hub dashboard.
+        </li>
+        <li>
+          <strong>Content changed</strong> &mdash; the file arrived but is
+          not what was sent. Transparent proxies, content filters and some
+          firewalls insert or rewrite HTML. A shorter byte count than the
+          original points to a transfer that was cut off.
+        </li>
+        <li>
+          <strong>Only report.html fails</strong> &mdash; small files pass
+          and the large one does not. Look at MTU and MSS on the path; the
+          M column tests path MTU directly.
+        </li>
+      </ul>
+
+      <h2>What it does not do</h2>
+      <p>
+        It does not test HTTPS. The node web server is BusyBox httpd, which
+        serves plain HTTP only. It does not load images or follow links
+        automatically; the order above is fixed so that every run makes
+        the same requests.
+      </p>
+
+      <h2>Timing</h2>
+      <p>
+        The reported latency is the total time of all five requests. Each
+        request has a five-second connect timeout and a ten-second overall
+        limit, and the test stops at the first failure, so a black-holed
+        target costs about as much as a single request did before.
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Pervium network end-to-end connectivity testing &middot; probe site v1</p>
+  </footer>
+</body>
+</html>

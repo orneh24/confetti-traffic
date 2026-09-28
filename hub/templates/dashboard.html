@@ -8,19 +8,22 @@
 <script>
 // Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
 // below; dark is the default and has no attribute. Same localStorage key on
-// both hub pages, so one choice covers both. Applied before first paint so a
+// every hub page, so one choice covers all. Applied before first paint so a
 // saved choice doesn't flash dark on load.
 var THEMES = [
     ['dark', 'Dark'],
     ['light', 'Light'],
-    ['catppuccin', 'Catppuccin Mocha'],
-    ['gruvbox', 'Gruvbox'],
+    ['nord', 'Nord'],
+    ['dracula', 'Dracula'],
+    ['solarized', 'Solarized Dark'],
+    ['monokai', 'Monokai'],
+    ['contrast', 'High Contrast'],
     ['terminal', 'Terminal green'],
 ];
 // "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
 // and moves to a different one every 5-10 minutes. The saved choice is
 // 'shuffle'; the palette on screen and when it next changes live under
-// pervium-theme-shuffle, so both pages show the same one and a reload does
+// pervium-theme-shuffle, so all pages show the same one and a reload does
 // not reshuffle early.
 var SHUFFLE_MIN_MS = 5 * 60 * 1000;
 var SHUFFLE_MAX_MS = 10 * 60 * 1000;
@@ -131,53 +134,125 @@ function syncThemeSelect() {
     --blue:      #0969da;
     --cyan:      #0b7a75;
 }
-/* Catppuccin Mocha */
-:root[data-theme="catppuccin"] {
-    --bg:        #1e1e2e;
-    --bg-card:   #262637;
-    --bg-hover:  #313244;
-    --bg-muted:  #313244;
-    --bg-code:   #181825;
-    --stripe:    #222232;
-    --border:    #45475a;
-    --border-soft: #313244;
-    --badge-bg:  #2a2f45;
-    --badge-border: #3b4466;
-    --text:      #cdd6f4;
-    --text-dim:  #a6adc8;
-    --green:     #a6e3a1;
-    --green-bg:  #2b3b31;
-    --red:       #f38ba8;
-    --red-bg:    #4a2838;
-    --yellow:    #f9e2af;
-    --yellow-bg: #443d33;
-    --gray:      #585b70;
-    --blue:      #89b4fa;
-    --cyan:      #94e2d5;
+/* Nord */
+:root[data-theme="nord"] {
+    --bg:        #2e3440;
+    --bg-card:   #3b4252;
+    --bg-hover:  #434c5e;
+    --bg-muted:  #434c5e;
+    --bg-code:   #242933;
+    --stripe:    #353c4a;
+    --border:    #4c566a;
+    --border-soft: #434c5e;
+    --badge-bg:  #2f3b4d;
+    --badge-border: #4c6a8a;
+    --text:      #eceff4;
+    --text-dim:  #a3adbf;
+    --green:     #a3be8c;
+    --green-bg:  #34413a;
+    --red:       #bf616a;
+    --red-bg:    #43353b;
+    --yellow:    #ebcb8b;
+    --yellow-bg: #454135;
+    --gray:      #616e88;
+    --blue:      #81a1c1;
+    --cyan:      #88c0d0;
 }
-/* Gruvbox */
-:root[data-theme="gruvbox"] {
-    --bg:        #282828;
-    --bg-card:   #32302f;
-    --bg-hover:  #3c3836;
-    --bg-muted:  #3c3836;
-    --bg-code:   #1d2021;
-    --stripe:    #2c2b2a;
-    --border:    #504945;
-    --border-soft: #3c3836;
-    --badge-bg:  #2f3a36;
-    --badge-border: #45554e;
-    --text:      #ebdbb2;
-    --text-dim:  #bdae93;
-    --green:     #8ec07c;
-    --green-bg:  #2c3d2e;
-    --red:       #fb4934;
-    --red-bg:    #4a2320;
-    --yellow:    #fabd2f;
-    --yellow-bg: #4a3d1e;
-    --gray:      #665c54;
-    --blue:      #83a598;
-    --cyan:      #b8bb26;
+/* Dracula */
+:root[data-theme="dracula"] {
+    --bg:        #282a36;
+    --bg-card:   #2f3142;
+    --bg-hover:  #383a4d;
+    --bg-muted:  #383a4d;
+    --bg-code:   #1e1f29;
+    --stripe:    #2b2d3b;
+    --border:    #44475a;
+    --border-soft: #383a4d;
+    --badge-bg:  #2f2b45;
+    --badge-border: #5a4f86;
+    --text:      #f8f8f2;
+    --text-dim:  #a9acc6;
+    --green:     #50fa7b;
+    --green-bg:  #23402f;
+    --red:       #ff5555;
+    --red-bg:    #4a2530;
+    --yellow:    #f1fa8c;
+    --yellow-bg: #44452f;
+    --gray:      #6272a4;
+    --blue:      #bd93f9;
+    --cyan:      #8be9fd;
+}
+/* Solarized Dark */
+:root[data-theme="solarized"] {
+    --bg:        #002b36;
+    --bg-card:   #073642;
+    --bg-hover:  #0b404e;
+    --bg-muted:  #0b404e;
+    --bg-code:   #00212b;
+    --stripe:    #04303c;
+    --border:    #27505b;
+    --border-soft: #0b404e;
+    --badge-bg:  #0a3a52;
+    --badge-border: #1f5f7a;
+    --text:      #eee8d5;
+    --text-dim:  #93a1a1;
+    --green:     #859900;
+    --green-bg:  #1f3a1c;
+    --red:       #dc322f;
+    --red-bg:    #3b2227;
+    --yellow:    #b58900;
+    --yellow-bg: #33341a;
+    --gray:      #586e75;
+    --blue:      #268bd2;
+    --cyan:      #2aa198;
+}
+/* Monokai */
+:root[data-theme="monokai"] {
+    --bg:        #272822;
+    --bg-card:   #2e2f28;
+    --bg-hover:  #3a3b32;
+    --bg-muted:  #3a3b32;
+    --bg-code:   #1e1f1a;
+    --stripe:    #2b2c25;
+    --border:    #49483e;
+    --border-soft: #3a3b32;
+    --badge-bg:  #2c3a3e;
+    --badge-border: #46666e;
+    --text:      #f8f8f2;
+    --text-dim:  #b3b19f;
+    --green:     #a6e22e;
+    --green-bg:  #33401c;
+    --red:       #f92672;
+    --red-bg:    #4a1f33;
+    --yellow:    #e6db74;
+    --yellow-bg: #44402a;
+    --gray:      #75715e;
+    --blue:      #66d9ef;
+    --cyan:      #66d9ef;
+}
+/* High Contrast — pure black, full-strength colours, for legibility */
+:root[data-theme="contrast"] {
+    --bg:        #000000;
+    --bg-card:   #0a0a0a;
+    --bg-hover:  #1a1a1a;
+    --bg-muted:  #1a1a1a;
+    --bg-code:   #000000;
+    --stripe:    #0d0d0d;
+    --border:    #ffffff;
+    --border-soft: #555555;
+    --badge-bg:  #000000;
+    --badge-border: #ffffff;
+    --text:      #ffffff;
+    --text-dim:  #e0e0e0;
+    --green:     #00ff66;
+    --green-bg:  #003318;
+    --red:       #ff3b3b;
+    --red-bg:    #3a0000;
+    --yellow:    #ffdd00;
+    --yellow-bg: #332b00;
+    --gray:      #b0b0b0;
+    --blue:      #4db8ff;
+    --cyan:      #00ffff;
 }
 /* Terminal green — mostly one hue by design; red and amber stay distinct so failures still read */
 :root[data-theme="terminal"] {
@@ -408,6 +483,10 @@ a:hover { text-decoration: underline; }
     opacity: 0.7;
     margin-left: 4px;
 }
+.matrix thead th .ip {
+    display: block;
+    margin-left: 0;
+}
 .matrix thead th {
     top: 0;
     text-align: center;
@@ -557,6 +636,27 @@ a:hover { text-decoration: underline; }
     opacity: 0.5;
 }
 .ep-table .btn-delete:hover { opacity: 1; }
+.ep-table .btn-push {
+    background: none;
+    border: none;
+    color: var(--blue);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 4px;
+    opacity: 0.6;
+}
+.ep-table .btn-push:hover { opacity: 1; }
+.ep-table .btn-push:disabled { color: var(--text-dim); opacity: 0.3; cursor: default; }
+.ep-table .ep-build { font-size: 10px; color: var(--text-dim); }
+/* The sidebar is a fixed ~380px; with the update button and pv-<group>-<id>
+   names the endpoints table needs tighter cells to fit without scrolling. */
+#ep-table th, #ep-table td { padding-left: 5px; padding-right: 5px; }
+#ep-table td:last-child { padding-left: 0; padding-right: 2px; }
+/* Build differs from what this hub serves: the node needs a push. */
+.ep-table .build-old { color: var(--yellow); }
+.ep-table .push-ok { color: var(--green); }
+.ep-table .push-failed { color: var(--red); }
+.ep-table .push-busy { color: var(--blue); }
 
 /* Detail panel */
 .detail-empty {
@@ -728,6 +828,7 @@ a:hover { text-decoration: underline; }
         <h1>NETWORK CONNECTIVITY TESTER</h1>
         <span class="btn-nav-current">Dashboard</span>
         <a href="/syslog" class="btn-nav">Syslog</a>
+        <a href="/timeline" class="btn-nav">Timeline</a>
     </div>
     <div class="status">
         <span class="dot"></span>
@@ -897,6 +998,48 @@ a:hover { text-decoration: underline; }
             </div>
         </div>
 
+        <!-- On-demand bandwidth test (hub/app/bandwidth.py). Node to node: the
+             hub runs iperf3 on both over SSH. Node to browser: this page
+             talks to the node's /cgi-bin/pv-bw directly. One at a time. -->
+        <div class="section" id="bw-section">
+            <div class="section-header">
+                <span>Bandwidth Test</span>
+                <span id="bw-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
+            </div>
+            <div class="section-body scroll-x">
+                <div class="filter-row">
+                    <label for="bw-mode">Between</label>
+                    <select id="bw-mode">
+                        <option value="node">two nodes</option>
+                        <option value="browser">a node and this browser</option>
+                    </select>
+                    <label for="bw-src" id="bw-src-label">From</label>
+                    <select id="bw-src"></select>
+                    <label for="bw-dst" id="bw-dst-label">To</label>
+                    <select id="bw-dst"></select>
+                    <label for="bw-dur">Seconds</label>
+                    <select id="bw-dur">
+                        <option>5</option><option selected>10</option><option>20</option><option>30</option>
+                    </select>
+                    <label for="bw-streams" id="bw-streams-label">Streams</label>
+                    <select id="bw-streams">
+                        <option selected>1</option><option>2</option><option>3</option><option>4</option>
+                        <option>5</option><option>6</option><option>7</option><option>8</option>
+                    </select>
+                    <button type="button" class="btn-small" id="bw-run">run</button>
+                </div>
+                <div class="empty-hint" id="bw-hint" style="padding:0 2px 8px"></div>
+                <table class="ep-table" id="bw-table">
+                    <thead>
+                        <tr><th>Time</th><th>From</th><th>To</th><th>Setup</th>
+                            <th title="From -> To">&rarr; Mbit/s</th><th title="To -> From">&larr; Mbit/s</th><th>Result</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="empty-hint" id="bw-empty">No bandwidth tests yet.</div>
+            </div>
+        </div>
+
         <!-- Hub self-health: the hub is infrastructure, not a test participant,
              but it can still fail quietly (full disk, dead chronyd, a syslog
              listener that never bound). Separate from the mesh matrix above. -->
@@ -926,6 +1069,7 @@ a:hover { text-decoration: underline; }
                 <span>Registered Endpoints</span>
                 <span class="hdr-actions">
                     <span id="stale-warning" style="color:var(--yellow);display:none">stale detected</span>
+                    <button class="btn-small" id="btn-update-all-endpoints" title="Push this hub's node build to every managed node, one at a time">update all</button>
                     <button class="btn-small" id="btn-remove-all-endpoints">remove all</button>
                 </span>
             </div>
@@ -1010,6 +1154,8 @@ a:hover { text-decoration: underline; }
     var changeHistoryResults = [];
     var changeHistoryPathChanges = [];
     var recentSyslog = [];
+    // Commit of the node bundle this hub serves (/node/release).
+    var hubRelease = null;
 
     // ---------------------------------------------------------------
     // Fetching
@@ -1034,8 +1180,10 @@ a:hover { text-decoration: underline; }
             // fewer than 15 rather than reaching further back to pad the count.
             fetchJSON("/api/results?minutes=60"),
             fetchJSON("/api/path-changes?minutes=60"),
-            fetchJSON("/api/syslog?" + syslogQuery)
+            fetchJSON("/api/syslog?" + syslogQuery),
+            fetchJSON("/node/release")
         ]).then(function(arr) {
+            hubRelease = arr[7] ? arr[7].commit : null;
             endpoints = arr[0];
             resultsData = arr[1];
             targets = arr[2];
@@ -1048,6 +1196,8 @@ a:hover { text-decoration: underline; }
             renderTargets();
             renderDNS();
             renderEndpoints();
+            renderBwSelects();
+            loadBw();
             renderHealth();
             renderRecentChanges();
             applyRecentSyslog(syslogQuery, arr[6]);
@@ -1692,14 +1842,36 @@ a:hover { text-decoration: underline; }
             if (stale) staleCount++;
             var agoStr = ago < 60 ? ago + "s" : Math.round(ago / 60) + "m";
             html += "<tr" + (stale ? " class='stale'" : "") + ">";
-            html += "<td>" + esc(ep.hostname) + "</td>";
+            // Build on a second line under the name: the sidebar has no room
+            // for another column.
+            html += "<td>" + esc(ep.hostname) + "<div class='ep-build'>" + buildCell(ep) + "</div></td>";
             html += "<td>" + esc(ep.ip) + "</td>";
             html += "<td><span class='group-badge'>" + esc(ep.group_name) + "</span></td>";
-            html += "<td>" + agoStr + " ago" + (stale ? " !" : "") + "</td>";
-            html += "<td><button class='btn-delete' data-host='" + esc(ep.hostname) + "' title='Remove'>&times;</button></td>";
+            html += "<td>" + agoStr + (stale ? " !" : "") + "</td>";
+            html += "<td>";
+            html += "<button class='btn-push' data-host='" + esc(ep.hostname) + "'" +
+                (ep.managed === true ? " title='Push update'" :
+                    " disabled title='Not managed by the hub (HUB_MANAGED=false, or an older node)'") +
+                ">&#8635;</button>";
+            html += "<button class='btn-delete' data-host='" + esc(ep.hostname) + "' title='Remove'>&times;</button>";
+            html += "</td>";
             html += "</tr>";
         }
         tbody.innerHTML = html;
+
+        var pushBtns = tbody.querySelectorAll(".btn-push");
+        for (var p = 0; p < pushBtns.length; p++) {
+            pushBtns[p].addEventListener("click", function(e) {
+                var host = e.currentTarget.getAttribute("data-host");
+                if (!confirm("Push this hub's node build to " + host + "? It runs pervium-update there and re-runs setup.sh.")) return;
+                fetch("/api/nodes/" + encodeURIComponent(host) + "/update", {method: "POST"})
+                    .then(function(r) { return r.json().then(function(body) { return {ok: r.ok, body: body}; }); })
+                    .then(function(res) {
+                        if (!res.ok) alert("Not queued: " + (res.body.error || "error"));
+                        refresh();
+                    });
+            });
+        }
 
         var warn = document.getElementById("stale-warning");
         warn.style.display = staleCount > 0 ? "" : "none";
@@ -1714,6 +1886,24 @@ a:hover { text-decoration: underline; }
                 }
             });
         }
+    }
+
+    // Build (short commit, yellow when it differs from what this hub serves)
+    // plus the last push-update's state; the full message is the tooltip.
+    function buildCell(ep) {
+        var b = ep.build || "unknown";
+        var old = hubRelease && hubRelease !== "unknown" && b !== hubRelease;
+        var html = "<span" + (old ? " class='build-old'" : "") + " title='" +
+            escAttr(b + (old ? " (hub serves " + hubRelease + ")" : "")) + "'>" + esc(b.substring(0, 7)) + "</span>";
+        var marks = {queued: ["push-busy", "&hellip;"], running: ["push-busy", "&#8635;"],
+                     ok: ["push-ok", "&#10003;"], failed: ["push-failed", "&#10007;"]};
+        var m = marks[ep.update_state];
+        if (m) {
+            var when = ep.update_at ? new Date(ep.update_at).toLocaleString() + ": " : "";
+            html += " <span class='" + m[0] + "' title='" + escAttr("update " + ep.update_state + " - " + when +
+                (ep.update_msg || "")) + "'>" + m[1] + "</span>";
+        }
+        return html;
     }
 
     // ---------------------------------------------------------------
@@ -1891,6 +2081,12 @@ a:hover { text-decoration: underline; }
         return d.innerHTML;
     }
 
+    // esc() for text inside a quoted attribute: innerHTML leaves quotes alone,
+    // and push-update output (node-controlled) routinely contains them.
+    function escAttr(s) {
+        return esc(s).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    }
+
     function parseTs(ts) {
         if (!ts) return null;
         // The hub emits ISO-8601 with a Z; anything space-separated would be
@@ -1941,6 +2137,208 @@ a:hover { text-decoration: underline; }
         Promise.all(endpoints.map(function(ep) {
             return fetch("/endpoints/" + encodeURIComponent(ep.hostname), {method: "DELETE"});
         })).then(function() { refresh(); });
+    });
+
+    // ---------------------------------------------------------------
+    // Bandwidth test
+    //
+    // "fwd" is From -> To, "rev" To -> From. In browser mode From is the node
+    // and To is this browser, so fwd is the download and rev the upload.
+    // ---------------------------------------------------------------
+    var bwRows = [];
+    var bwPollTimer = null;
+
+    function bwOptions(sel, hosts) {
+        var keep = sel.value;
+        sel.innerHTML = hosts.map(function(h) {
+            return "<option value='" + escAttr(h) + "'>" + esc(h) + "</option>";
+        }).join("");
+        if (hosts.indexOf(keep) >= 0) sel.value = keep;
+    }
+
+    function renderBwSelects() {
+        var mode = document.getElementById("bw-mode").value;
+        // Node mode needs the hub's key on both ends to start iperf3.
+        var hosts = endpoints.filter(function(ep) {
+            return mode === "browser" || ep.managed === true;
+        }).map(function(ep) { return ep.hostname; });
+        var src = document.getElementById("bw-src");
+        var dst = document.getElementById("bw-dst");
+        bwOptions(src, hosts);
+        bwOptions(dst, hosts);
+        if (mode === "node" && dst.value === src.value && hosts.length > 1) {
+            dst.value = hosts[hosts.indexOf(src.value) === 0 ? 1 : 0];
+        }
+        var browser = mode === "browser";
+        document.getElementById("bw-src-label").textContent = browser ? "Node" : "From";
+        ["bw-dst", "bw-dst-label", "bw-streams", "bw-streams-label"].forEach(function(id) {
+            document.getElementById(id).style.display = browser ? "none" : "";
+        });
+        document.getElementById("bw-hint").textContent = browser
+            ? "Download then upload between this browser and the node, directly (not through the hub). " +
+              "This browser must be able to reach the node's address."
+            : "iperf3 over TCP, From sends then To sends. Only nodes the hub manages are listed.";
+    }
+
+    function fmtMbps(v) {
+        if (v === null || v === undefined) return "&ndash;";
+        return v >= 100 ? String(Math.round(v)) : v.toFixed(1);
+    }
+
+    function renderBw() {
+        var tbody = document.querySelector("#bw-table tbody");
+        var running = null;
+        var html = "";
+        for (var i = 0; i < bwRows.length; i++) {
+            var r = bwRows[i];
+            if (r.state === "running") running = r;
+            var when = r.started_at ? new Date(r.started_at).toLocaleString() : "";
+            var setup = r.duration + " s" + (r.kind === "node" ? " ×" + r.streams : "");
+            var result = r.state === "ok" ? "<span class='push-ok'>ok</span>"
+                : r.state === "running" ? "<span class='push-busy'>running&hellip;</span>"
+                : "<span class='push-failed' title='" + escAttr(r.msg || "") + "'>failed</span>";
+            html += "<tr" + (r.state === "failed" ? " title='" + escAttr(r.msg || "") + "'" : "") + ">";
+            html += "<td>" + esc(when) + "</td><td>" + esc(r.src) + "</td><td>" + esc(r.dst) + "</td>";
+            html += "<td>" + esc(setup) + "</td>";
+            html += "<td>" + fmtMbps(r.fwd_mbps) + "</td>";
+            html += "<td>" + fmtMbps(r.rev_mbps) + "</td>";
+            html += "<td>" + result + "</td></tr>";
+        }
+        tbody.innerHTML = html;
+        document.getElementById("bw-empty").style.display = bwRows.length ? "none" : "";
+        document.getElementById("bw-status").textContent = running
+            ? "running: " + running.src + " ↔ " + running.dst : "";
+        document.getElementById("bw-run").disabled = !!running;
+        // Poll fast while a test runs, so its result appears when it ends.
+        if (running && !bwPollTimer) {
+            bwPollTimer = setInterval(loadBw, 2000);
+        } else if (!running && bwPollTimer) {
+            clearInterval(bwPollTimer);
+            bwPollTimer = null;
+        }
+    }
+
+    function loadBw() {
+        return fetchJSON("/api/bw").then(function(rows) { bwRows = rows; renderBw(); });
+    }
+
+    // Download: stream from the node and count bytes until time is up.
+    function bwDownload(url, secs) {
+        var ctrl = new AbortController();
+        var t0 = performance.now();
+        var bytes = 0;
+        return fetch(url + "?t=" + Date.now(), {signal: ctrl.signal, cache: "no-store"}).then(function(resp) {
+            if (!resp.ok) throw new Error("download: HTTP " + resp.status);
+            var reader = resp.body.getReader();
+            function pump() {
+                return reader.read().then(function(chunk) {
+                    if (chunk.done) return;
+                    bytes += chunk.value.length;
+                    if (performance.now() - t0 >= secs * 1000) { ctrl.abort(); return; }
+                    return pump();
+                });
+            }
+            return pump();
+        }).catch(function(e) {
+            if (e.name !== "AbortError") throw e;
+        }).then(function() {
+            return bytes * 8 / ((performance.now() - t0) / 1000) / 1e6;
+        });
+    }
+
+    // Upload: four parallel loops of 4 MB POSTs until time is up. text/plain
+    // keeps each a "simple" CORS request (no preflight busybox can't answer).
+    // An occasional POST drops (seen at ~1-3% against busybox httpd under
+    // this load); that chunk just isn't counted. Three failures in a row on
+    // one loop, or nothing getting through at all, fails the test.
+    function bwUpload(url, secs) {
+        var chunk = new Blob([new Uint8Array(4 * 1024 * 1024)], {type: "text/plain"});
+        var t0 = performance.now();
+        var bytes = 0;
+        function loop(misses) {
+            if (performance.now() - t0 >= secs * 1000) return Promise.resolve();
+            return fetch(url, {method: "POST", body: chunk, cache: "no-store"}).then(function(resp) {
+                if (!resp.ok) throw new Error("upload: HTTP " + resp.status);
+                bytes += chunk.size;
+                return loop(0);
+            }, function(e) {
+                if (misses >= 2) throw e;
+                return loop(misses + 1);
+            });
+        }
+        return Promise.all([loop(0), loop(0), loop(0), loop(0)]).then(function() {
+            if (!bytes) throw new Error("upload: nothing got through");
+            return bytes * 8 / ((performance.now() - t0) / 1000) / 1e6;
+        });
+    }
+
+    function postJSON(url, body) {
+        return fetch(url, {method: "POST", headers: {"Content-Type": "application/json"},
+                           body: JSON.stringify(body)})
+            .then(function(r) { return r.json().then(function(b) { return {ok: r.ok, body: b}; }); });
+    }
+
+    function runBrowserBw(node, secs) {
+        return postJSON("/api/bw/browser", {node: node, duration: secs}).then(function(res) {
+            if (!res.ok) throw new Error(res.body.error || "could not start");
+            var id = res.body.id, url = res.body.url, down = null, up = null;
+            loadBw();
+            return bwDownload(url, res.body.duration).then(function(v) {
+                down = v;
+                return bwUpload(url, res.body.duration);
+            }).then(function(v) {
+                up = v;
+                return postJSON("/api/bw/browser/" + id, {fwd_mbps: down, rev_mbps: up});
+            }).catch(function(e) {
+                var msg = e.message === "Failed to fetch"
+                    ? "this browser could not reach " + url + " (path blocked, or the node has no bandwidth endpoint yet)"
+                    : e.message;
+                return postJSON("/api/bw/browser/" + id, {fwd_mbps: down, rev_mbps: up, error: msg});
+            });
+        });
+    }
+
+    document.getElementById("bw-mode").addEventListener("change", renderBwSelects);
+    document.getElementById("bw-src").addEventListener("change", renderBwSelects);
+    document.getElementById("bw-run").addEventListener("click", function() {
+        var mode = document.getElementById("bw-mode").value;
+        var src = document.getElementById("bw-src").value;
+        var dst = document.getElementById("bw-dst").value;
+        var secs = parseInt(document.getElementById("bw-dur").value, 10);
+        var streams = parseInt(document.getElementById("bw-streams").value, 10);
+        if (!src) { alert("No node to test."); return; }
+        var started = mode === "browser"
+            ? runBrowserBw(src, secs)
+            : postJSON("/api/bw/node", {source: src, target: dst, duration: secs, streams: streams})
+                .then(function(res) { if (!res.ok) throw new Error(res.body.error || "could not start"); });
+        document.getElementById("bw-run").disabled = true;
+        started.catch(function(e) { alert("Bandwidth test: " + e.message); })
+               .then(loadBw);
+    });
+
+    // ---------------------------------------------------------------
+    // Push this hub's node build to every managed node. The hub runs them
+    // one at a time; progress shows in the Build column on each refresh.
+    // ---------------------------------------------------------------
+    document.getElementById("btn-update-all-endpoints").addEventListener("click", function() {
+        if (endpoints.length === 0) return;
+        if (!confirm("Push this hub's node build to every managed node? They are updated one at a " +
+                     "time; each runs pervium-update and re-runs setup.sh.")) {
+            return;
+        }
+        fetch("/api/nodes/update", {method: "POST"})
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                var msg = "Queued " + (res.queued || []).length + " node(s).";
+                var skipped = res.skipped || [];
+                if (skipped.length) {
+                    msg += "\nSkipped:\n" + skipped.map(function(s) {
+                        return "  " + s.hostname + ": " + s.reason;
+                    }).join("\n");
+                }
+                alert(msg);
+                refresh();
+            });
     });
 
     // ---------------------------------------------------------------

@@ -45,11 +45,25 @@ Diagram: `docs/TOPOLOGY.md`.
   - `GET|POST /settings` — mesh-wide switches for the opt-in tests (see
     Mesh settings below)
   - `GET /agent/manifest`, `GET /agent/<script>` — agent distribution
+  - `GET /node/bundle.tar.gz`, `GET /node/release` — node bundle and its
+    commit (see Hub-managed nodes below)
+  - `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub`
+    — the hub's management public key and the mesh SSH-test keypair
+  - `GET /install.sh` — `node-install.sh` with this hub's URL filled in
+  - `POST /api/nodes/<hostname>/update`, `POST /api/nodes/update` — queue a
+    push-update for one node / every eligible node
+  - `GET /api/bw` — bandwidth test history (newest first, last 200);
+    `POST /api/bw/node` `{source, target, duration, streams}`;
+    `POST /api/bw/browser` `{node, duration}` → `{id, url}`, then
+    `POST /api/bw/browser/<id>` `{fwd_mbps, rev_mbps, error}` (see
+    On-demand bandwidth test below)
   - `GET /api/syslog` — stored messages; `minutes=N` (default 60) *or*
     `from=&to=` for a pinned window, plus `host=`, `severity=N`, `q=`,
     `limit=N` (capped at 2000)
   - `GET /api/syslog/sources` — distinct senders with counts, for the filter
   - `GET /syslog` — syslog viewer page
+  - `GET /timeline` — timeline page: incidents and a replay slider, built in
+    the browser from the endpoints above (no API of its own)
   - `GET /api/time` — hub clock plus chrony tracking state, for the syslog
     header. Always 200: every failure (no chronyc, daemon down, timeout,
     unparseable output) returns `chrony: null` with a `reason`
@@ -100,6 +114,21 @@ mid-transfer, or a NAT path that passes short flows but not a sustained one.
 Every node runs `smbd` exporting one read-only share and pulls a fixed probe
 file from every peer with `smbclient`. Full mesh, like the other tests — not
 client-only against static targets.
+
+`http` against a mesh peer fetches the fixed **probe site** every node
+serves at `/probe/` (`node/web/probe/`, installed by the node build on
+`--update` too): `index.html`, `style.css`, `app.js`, `about.html`,
+`report.html` (~57 KB, many segments), in that browser-like order. Each must
+answer 200 and match the SHA-256 of the local copy; the first failure stops
+the test (so a dead peer costs one timeout) and is named in `output`
+(`report.html: content changed (30000 of 57653 bytes)`). This catches a
+device that passes web traffic but rewrites or truncates it, like `smtp`
+does for mail. The files are LF-pinned in `.gitattributes`: a CRLF copy
+would hash differently. A node without its own probe site (test-cycle.sh
+self-updated ahead of the bundle) falls back to the old status-only check
+of `/`, and static targets always use that check. Edit the probe files only
+as a mesh-wide change: until every node has the new copy, nodes on
+different builds report each other as "content changed".
 
 `pmtu` catches what nothing else here does: it sends with DF set at a real
 payload size, which is the only test here that catches a path where peering
@@ -234,17 +263,94 @@ with `AGENT_AUTOUPDATE=false`.
 `test-status.sh` and its login-banner hook are **not** in this manifest — the
 console-output table they render lives inside `test-cycle.sh` and self-updates
 with it, but the viewer command itself is a separate new file, same category
-as `register.sh` (constraint 13): push it deliberately (`pervium-update`)
-to nodes built before it existed. New clones get it from
-`build-template.sh`.
+as `register.sh` (constraint 13): push it deliberately (dashboard
+push-update or `pervium-update`) to nodes built before it existed. New
+clones get it from `build-template.sh`.
+
+### Hub-managed nodes
+By default the hub manages its nodes: it holds everything a node needs, and
+can push updates to them over SSH.
+
+- **Keys.** The hub owns two ed25519 keypairs in `/etc/pervium-hub/keys/`,
+  made by the `pervium-hub` service's `start_pre` if missing and deleted by
+  the hub template's cleanup (so every hub has its own):
+  - `id_hub` — management key, full root on nodes. A node pins it **on first
+    use** (`node/scripts/trust-hub.sh --auto`, run by `setup.sh`), and
+    re-pins only when `HUB_URL` changes. `register.sh` compares the served
+    key every 5 min and only **warns** on a mismatch. `pervium-trust-hub`
+    re-pins on purpose. Only the public half is ever served.
+  - `id_pervium` — the mesh SSH-test key (constraint 3). Served privately
+    over HTTP on purpose: nodes install it as
+    `command="echo ok",no-pty,no-port-forwarding,...`, so holding it proves
+    reachability and nothing else.
+  Both land in `authorized_keys` re-tagged with our own comment
+  (`pervium-hub`, `pervium-mesh`) so they can be found and replaced. If the
+  hub was down at setup, `register.sh` retries `trust-hub.sh --auto`.
+- **Opt-out:** `HUB_MANAGED=false` in the node config removes the pin; the
+  node reports `managed:false` and the dashboard won't push to it.
+- **Node bundle.** `hub/build-template.sh` packs `node/`, `update.sh`,
+  `install.sh` and a `RELEASE` file (`commit=`) into
+  `/opt/pervium-hub/bundle/pervium-node.tar.gz`, top directory `pervium/`,
+  on every build and every hub update. The commit comes from update.sh
+  (`PERVIUM_UPDATE_COMMIT`), else `git rev-parse`, else `unknown`.
+- **Install from the hub.** On a plain Alpine VM:
+  `wget -O /tmp/i.sh http://<hub>/install.sh && sh /tmp/i.sh [group]`.
+  `hub/scripts/node-install.sh` downloads the bundle, runs
+  `node/build-template.sh --update` (install steps, no template cleanup),
+  writes `/etc/pervium-release`, then `setup.sh` with `HUB_URL` preset. Not
+  piped into sh: setup.sh's prompts need stdin. Golden templates still come
+  from the repo's `install.sh`.
+- **Build reporting.** `register.sh` adds `build` (commit from
+  `/etc/pervium-release`, else `unknown`) and `managed` to its POST; both
+  optional hub-side, so older nodes still register. The dashboard shows it
+  under each hostname (a second line, not a column: the sidebar has no
+  room), yellow when it differs from `/node/release`.
+- **Push-update.** Per-row button and "update all" on the dashboard queue
+  jobs; one background thread (`hub/app/nodemgmt.py`) runs them one at a
+  time: `ssh -i id_hub root@<ip> 'PATH=...; pervium-update -y'`, host keys
+  unchecked like test-cycle.sh's SSH test, `HUB_PUSH_TIMEOUT_S` (600) limit.
+  Only nodes that report `managed:true` and were seen within
+  `HUB_PUSH_SEEN_MINUTES` (10). State goes in `endpoints.update_state` /
+  `update_msg` / `update_at`; a hub restart marks queued/running jobs failed.
+  **No authentication yet** — anyone who can reach the dashboard can push;
+  an admin password is planned. Pushing is manual, so constraint 13 holds.
+
+### On-demand bandwidth test
+A "Bandwidth Test" panel on the dashboard, not part of the cycle and not in
+the matrix. One test at a time mesh-wide (`hub/app/bandwidth.py` holds an
+in-memory slot with an expiry, so a browser that closes mid-test frees it);
+each runs both directions for 5–30 s (default 10). History in the `bwtests`
+table, last 200 rows; `fwd` is From→To, `rev` To→From.
+
+- **Node ↔ node:** the hub SSHes in with `id_hub` (both nodes must be
+  managed), starts a one-off `iperf3 -s -p 5202` on the target under
+  `timeout` (5202, not 5201, so it never collides with the scheduled `iperf3`
+  test), runs `iperf3 -c ... -P <1-8> -J` on the source, then again with
+  `-R`, and kills the server. Mbit/s is `end.sum_received`. The kill uses
+  `pkill -f 'iperf3 -s -p [5]202'` and is sent as its **own** SSH command:
+  `pkill -f` matches the remote shell's own command line, so a command
+  holding both the kill and the start kills itself.
+- **Node ↔ browser:** the dashboard's JS talks to the node's
+  `/cgi-bin/pv-bw` (`node/web/cgi-bin/pv-bw`, installed by the node build)
+  **directly**, so the path measured is the viewer's; the browser must be able
+  to reach the node's IP. Download = a streamed GET of zeros (nothing on
+  disk) read for the duration; upload = four parallel loops of 4 MB POSTs
+  sent as `text/plain` (a CORS "simple" request: busybox httpd can't answer
+  a preflight). One upload tops out ~300 Mbit/s through busybox httpd, four
+  measured ~1.8 Gbit/s. An occasional dropped POST (~1–3 % seen) is skipped;
+  three in a row fails the test. The hub only hands out the slot and stores
+  what the browser reports.
+- **No authentication yet**, same as push-update: anyone who can reach the
+  dashboard can saturate a path for up to 30 s per direction.
 
 ### Code update (`pervium-update`)
 Everything else reaches an installed VM through `update.sh` (repo root),
-which both builds install as `/usr/local/bin/pervium-update`. Manual only.
-The installed copy downloads the GitHub main tarball
-(`PERVIUM_UPDATE_URL` overrides it), then runs the downloaded `update.sh`,
-so the newest update logic always does the apply. Run from an unpacked repo,
-it uses that tree instead, which is the no-GitHub path.
+which both builds install as `/usr/local/bin/pervium-update`. Manual only
+(a dashboard push runs it too). The hub downloads the GitHub main tarball;
+a node downloads **its hub's** node bundle (`${HUB_URL}/node/bundle.tar.gz`)
+and never GitHub. `PERVIUM_UPDATE_URL` overrides both. It then runs the
+downloaded `update.sh`, so the newest update logic always does the apply.
+Run from an unpacked repo, it uses that tree instead.
 
 The apply is `<role>/build-template.sh --update`: the build's own install
 steps, so there is no second file list to drift. `--update` skips the root
@@ -256,19 +362,12 @@ below it if it only prepares a template. Scripts that cron may be running
 are installed via temp file + `mv`, never `cp` over the live file (sh reads
 a script as it runs).
 
-Afterwards the hub restarts; a configured node re-runs `setup.sh`. **Hub
-first:** a node updated ahead of its hub has `test-cycle.sh` reverted by
-self-update, and the updater warns about this by comparing the hub's
-`/agent/manifest` before `setup.sh` runs `register.sh`.
+Afterwards the hub restarts; a configured node re-runs `setup.sh`. Update
+the hub first, then push the nodes: they can only get what the hub's bundle
+holds, so a node can't get ahead of its hub.
 `/etc/pervium-release` records the commit, read from the tarball's pax
-header.
-
-`pervium-push-node-update.sh` (hub) runs `pervium-update -y` on every node
-seen in the last 10 minutes (or the IPs given), one at a time, over SSH with
-the nodes' root password asked once (`sshpass`; the hub build adds
-`openssh-client` and `sshpass`). Manual only, same as `pervium-update`:
-never on cron (constraint 13). An ssh command gets dropbear's minimal PATH,
-so the remote command sets PATH itself.
+header (GitHub) or the bundle's `RELEASE` file (hub). An ssh command gets
+dropbear's minimal PATH, so the push's remote command sets PATH itself.
 
 ### Node (one per network segment under test)
 - Alpine Linux VM, ~128 MB RAM, DHCP on its interface
@@ -278,7 +377,8 @@ so the remote command sets PATH itself.
   `smtpd` (OpenSMTPD) via OpenRC service **`pervium-smtpd`** (opt-in, `ENABLE_SMTP`)
 - Clients: curl, ssh, traceroute, iperf3, smbclient, fping, `nc` (hand-rolled
   SMTP conversation — see below) — driven by cron every 60s
-- Cloned from a single golden template
+- Cloned from a single golden template, or installed straight from the hub
+  (`/install.sh`, see Hub-managed nodes)
 - Each cycle's results also render as a compact table (one row per target,
   one column per always-on test — H/S/M/L/T) to `/dev/console`
   (`CONSOLE_OUTPUT`, on by default), the cycle log, a snapshot at
@@ -321,9 +421,11 @@ keys set on the VM are read in-guest via `vmware-rpctool "info-get <key>"`:
 Precedence in `setup.sh`: **guestinfo → environment → prompt**, except
 `subnet`, which has one extra fallback before the prompt: derived from the
 interface's own DHCP lease (address + prefix already give you the network).
-If hostname is omitted it is derived as `<HOSTNAME_PREFIX>-<group-slug>-<ip>`
-(dots as hyphens, e.g. `pv-site-a-10-1-1-10`), so two nodes in one
-group never collide (constraint 1).
+If hostname is omitted it is derived as `<HOSTNAME_PREFIX>-<group-slug>-<NODE_ID>`
+(e.g. `pv-site-a-xd2311`), where `NODE_ID` is two random letters and
+four random digits, generated once and stored in the config — so two nodes in one
+group never collide (constraint 1), and an IP change never renames a node.
+Template cleanup deletes the config, so every clone draws its own.
 `group` is an arbitrary operator-chosen label — it clusters nodes on the
 dashboard and filters syslog by sender; it carries no network-topology
 meaning to the hub.
@@ -377,28 +479,33 @@ VM becomes a hub or a node and runs the matching `build-template.sh`.
 ```
 install.sh             — repo-root entry point: asks hub or node, runs the
                           matching build-template.sh
-update.sh              — updates an installed hub or node from GitHub;
-                          installed as /usr/local/bin/pervium-update
+update.sh              — updates an installed hub (from GitHub) or node (from
+                          its hub); installed as /usr/local/bin/pervium-update
 hub/
   build-template.sh   — builds the hub golden template
   serve.py            — production entrypoint (reads HUB_PORT at runtime)
   run.sh              — foreground launcher for debugging
   app/                — Flask API (app.py, config.py, pathchange.py,
-                        syslog_server.py)
-  templates/          — dashboard.html, syslog.html. Colour themes (Dark, Light, Catppuccin Mocha,
-                        Gruvbox, Terminal green) are inline in BOTH pages: a THEMES list in the
+                        syslog_server.py, nodemgmt.py = push-update worker,
+                        bandwidth.py = on-demand bandwidth test)
+  templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light, Nord, Dracula,
+                        Solarized Dark, Monokai, High Contrast, Terminal green) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
-                        localStorage key pervium-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, pervium-theme-shuffle, so both pages stay in step. Adding or changing a theme means
-                        editing both pages. syslog.html has its own variable set (--row-line,
-                        and --gray is a text grey there, not a fill).
+                        localStorage key pervium-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, pervium-theme-shuffle, so all pages stay in step. Adding or changing a theme means
+                        editing all three pages. syslog.html and timeline.html use the smaller
+                        variable set (--row-line, and --gray is a text grey there, not a fill).
   static/
   agent/              — scripts served to nodes (created at build time)
+  bundle/             — node bundle + RELEASE (created at build time)
   services/           — firstboot.initd, login-setup.sh
-  scripts/            — hub-setup.sh, pervium-push-node-update.sh
+  scripts/            — hub-setup.sh, node-install.sh (served as /install.sh)
 node/
   build-template.sh   — builds the node golden template
+  web/probe/          — fixed site the HTTP test fetches and hashes
+  web/cgi-bin/pv-bw   — node end of the browser bandwidth test
   scripts/            — register.sh, test-cycle.sh, setup.sh, node-setup.sh,
-                        test-status.sh (console/SSH results viewer)
+                        test-status.sh (console/SSH results viewer),
+                        trust-hub.sh (hub keys; pervium-trust-hub)
   services/           — httpd.initd (pervium-httpd), iperf3.initd,
                         smbd.initd (pervium-smbd), smb.conf,
                         smtpd.initd (pervium-smtpd), smtpd.conf, crontab,
@@ -421,6 +528,8 @@ docs/BUILD_GUIDE.md
 
 ## Branches (redesign in progress)
 A major architecture redesign is under way and may be kept or dropped.
+- `redesign` so far: hub-managed nodes (see that section) — hub keys and
+  push-update, install from the hub, build reporting, random hostnames.
 - `main` is the current, deployed design. `pervium-update` downloads the
   `main` tarball (`update.sh`), so anything committed there reaches installed
   VMs. **No redesign commits on `main`.**
@@ -448,17 +557,23 @@ These were live bugs that a review caught; each has a comment at the site.
 1. **Hostnames must be unique per clone.** `endpoints.hostname` is the PRIMARY
    KEY, so duplicate names make clones overwrite each other and the mesh
    collapses to one entry — which every node then skips as "self". `setup.sh`
-   sets the hostname; the template ships as `pervium-template`.
+   sets the hostname (`pv-<group>-<NODE_ID>`, random, stored in the config);
+   the template ships as `pervium-template` and its cleanup deletes the config,
+   so no two clones share a `NODE_ID`.
 2. **Timestamps: the hub stamps `received_at` and filters on that.** Nodes
    send ISO-8601 (`2026-09-09T08:00:00Z`); SQLite's `datetime('now', ...)`
    yields `2026-09-09 18:04:04`. String-comparing them is wrong because `T`
    (0x54) sorts above space (0x20), so any same-day row passes any window.
    `received_at` is stored in SQLite's format; `iso()` converts on the way out
    so browsers parse it as UTC rather than local time.
-3. **The SSH test needs the shared keypair.** It runs `BatchMode=yes` (key auth
-   only). `/etc/pervium/id_pervium` is generated at build time and trusted in
-   root's `authorized_keys`, so it must survive cloning — the cleanup step
-   deletes dropbear *host* keys but deliberately keeps this one.
+3. **The SSH test needs one mesh keypair on every node, from the hub.** It runs
+   `BatchMode=yes` (key auth only). Nodes installed straight from the hub share
+   no template, so the key can't be generated at build time: the hub owns it
+   and every node fetches it (`trust-hub.sh`). That means a private key served
+   over plain HTTP, which is only safe because nodes trust it solely as
+   `command="echo ok",no-pty,no-port-forwarding,...` — exactly what the SSH
+   test runs. Never install it unrestricted, and never serve the hub's
+   management key (`id_hub`) privately.
 4. **`setup.sh` must not copy scripts onto themselves.** Source and destination
    both resolve to `/usr/local/bin/pervium/` when run in place; `cp` exits 1
    and `set -e` aborts the script. It compares the paths first.
@@ -495,9 +610,10 @@ These were live bugs that a review caught; each has a comment at the site.
    of it that parses but fails at runtime would stop registration *and*
    disable the mechanism that would repair it, bricking every node at once.
    There is also no non-circular way to verify it. Push register.sh changes
-   deliberately — `pervium-update`, run by hand, is that path. **Never put
-   it on cron**: that would turn it into exactly the unattended register.sh
-   update this constraint forbids.
+   deliberately — the dashboard's push-update, or `pervium-update` run by
+   hand, is that path. **Never put either on cron or trigger it
+   automatically** (e.g. on a build mismatch): that would turn it into
+   exactly the unattended register.sh update this constraint forbids.
 14. **Package selection on Alpine is load-bearing** (verified against the
    Alpine package index, not assumed):
    - `iputils-ping`, not `iputils`. The ping binary lives in the subpackage;

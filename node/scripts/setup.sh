@@ -108,6 +108,18 @@ first_host() {
 }
 
 # -------------------------------------------------------------------
+# Two random lowercase letters then four random digits (e.g. xd2311): the
+# unique part of a derived hostname. Random rather than the IP so a lease
+# change never renames the node, and generated once (stored as NODE_ID) so a
+# reboot never does either. An existing NODE_ID in another shape is kept.
+# -------------------------------------------------------------------
+new_node_id() {
+    _l=$(tr -dc 'a-z' < /dev/urandom 2>/dev/null | head -c 2)
+    _d=$(tr -dc '0-9' < /dev/urandom 2>/dev/null | head -c 4)
+    printf '%s%s' "$_l" "$_d"
+}
+
+# -------------------------------------------------------------------
 # Create configuration file
 #
 # Precedence for each value: guestinfo -> environment -> prompt.
@@ -136,6 +148,12 @@ if [ -f "$CONFIG_FILE" ]; then
         fi
         log "Updated ${_key} from guestinfo: '${_cur}' -> '${_gi}'"
     done
+    # Configs written before NODE_ID existed get one now; see the hostname
+    # section below.
+    if ! grep -q '^NODE_ID=.' "$CONFIG_FILE"; then
+        printf 'NODE_ID=%s\n' "$(new_node_id)" >> "$CONFIG_FILE"
+        log "Generated NODE_ID"
+    fi
 else
     _gi_hub=$(read_guestinfo "pervium.hub_url")
     _gi_group=$(read_guestinfo "pervium.group")
@@ -198,9 +216,15 @@ GROUP_NAME=${_group_name}
 SUBNET=${_subnet}
 
 # Explicit hostname. If empty, the hostname is derived as
-# <HOSTNAME_PREFIX>-<group>-<ip>, e.g. pv-site-a-10-1-1-10.
+# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. pv-site-a-xd2311.
+# NODE_ID is random, generated once; keep it and the name stays put.
 NODE_HOSTNAME=${_hostname}
 HOSTNAME_PREFIX=pv
+NODE_ID=$(new_node_id)
+
+# Let the hub SSH in with its pinned management key to push updates
+# (pervium-trust-hub). false removes the key.
+HUB_MANAGED=${HUB_MANAGED:-true}
 
 # Test cadence. Traceroute runs on the slower TRACEROUTE_INTERVAL because an
 # unanswered hop costs roughly the probe timeout, making a black-holed path
@@ -241,9 +265,8 @@ fi
 # -------------------------------------------------------------------
 # Detect IP, with a manual failsafe if DHCP never came through
 #
-# Runs before the hostname step because a derived hostname includes this
-# address. Uses the same lookup as register.sh, so the name's suffix always
-# matches the IP the node registers with.
+# Uses the same lookup as register.sh, so the address logged here is the
+# one the node registers with.
 #
 # Nodes are DHCP by design, but a node with no address can never register
 # or be tested -- and nothing surfaces that anywhere except this VM's own
@@ -307,15 +330,15 @@ fi
 # node then skips it as "self", testing nothing.
 #
 # Prefer an explicit name (guestinfo.pervium.hostname, captured into the config
-# above). Otherwise derive <prefix>-<group>-<ip>, e.g. pv-site-a-10-1-1-10.
-# The group alone is not unique (two nodes in one group would collide), and
-# only the full address is: per-site subnets like 10.1.1.0/24 and 10.2.1.0/24
-# share their last two octets. A derived name is recomputed on every run, so
-# re-running setup.sh after the IP changes renames the node; the old hub
-# entry then ages out after HUB_STALE_ENDPOINT_HOURS.
+# above). Otherwise derive <prefix>-<group>-<NODE_ID>, e.g. pv-site-a-xd2311.
+# The group alone is not unique (two nodes in one group would collide);
+# NODE_ID is random (26^2 * 10^4 = 6.76M values) and stored in the config, so the name is
+# stable across reboots and IP changes. Template cleanup deletes the config,
+# so every clone draws its own.
 # -------------------------------------------------------------------
 HOSTNAME_PREFIX="${HOSTNAME_PREFIX:-pv}"
 NODE_HOSTNAME="${NODE_HOSTNAME:-}"
+NODE_ID="${NODE_ID:-}"
 
 # A live guestinfo value wins even on re-runs, so re-homing a node in vCenter
 # is picked up without hand-editing the config.
@@ -326,12 +349,13 @@ if [ -n "$NODE_HOSTNAME" ]; then
     DESIRED_HOSTNAME="$NODE_HOSTNAME"
 else
     _slug=$(printf '%s' "$GROUP_NAME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9-' '-' | sed 's/-*$//')
-    if [ -n "$MY_IP" ]; then
-        DESIRED_HOSTNAME="${HOSTNAME_PREFIX}-${_slug}-$(printf '%s' "$MY_IP" | tr '.' '-')"
-    else
-        DESIRED_HOSTNAME="${HOSTNAME_PREFIX}-${_slug}"
-        log "WARNING: no IP to make the derived hostname unique; using $DESIRED_HOSTNAME. Set an explicit hostname if another node shares group '$GROUP_NAME'."
+    if [ -z "$NODE_ID" ]; then
+        # Only reachable if the config was hand-edited to blank it.
+        NODE_ID=$(new_node_id)
+        sed -i '/^NODE_ID=/d' "$CONFIG_FILE"
+        printf 'NODE_ID=%s\n' "$NODE_ID" >> "$CONFIG_FILE"
     fi
+    DESIRED_HOSTNAME="${HOSTNAME_PREFIX}-${_slug}-${NODE_ID}"
 fi
 
 CURRENT_HOSTNAME=$(hostname)
@@ -366,14 +390,17 @@ if [ "$SRC_DIR" != "$SCRIPT_DIR" ]; then
     cp -f "$SRC_DIR/register.sh"    "$SCRIPT_DIR/register.sh"
     cp -f "$SRC_DIR/test-cycle.sh"  "$SCRIPT_DIR/test-cycle.sh"
     cp -f "$SRC_DIR/test-status.sh" "$SCRIPT_DIR/test-status.sh"
+    cp -f "$SRC_DIR/trust-hub.sh"   "$SCRIPT_DIR/trust-hub.sh"
 else
     log "Scripts already in place at $SCRIPT_DIR"
 fi
-chmod +x "$SCRIPT_DIR/register.sh" "$SCRIPT_DIR/test-cycle.sh" "$SCRIPT_DIR/test-status.sh"
+chmod +x "$SCRIPT_DIR/register.sh" "$SCRIPT_DIR/test-cycle.sh" "$SCRIPT_DIR/test-status.sh" \
+    "$SCRIPT_DIR/trust-hub.sh"
 # On PATH by name, same as node-setup.sh. Re-linked unconditionally (not
 # just on first install) so a node built before test-status.sh existed picks
 # it up the moment this script is re-run.
 ln -sf "$SCRIPT_DIR/test-status.sh" /usr/local/bin/test-status
+ln -sf "$SCRIPT_DIR/trust-hub.sh" /usr/local/bin/pervium-trust-hub
 
 # -------------------------------------------------------------------
 # Install crontab
@@ -522,6 +549,12 @@ if [ "${ENABLE_SMTP:-false}" = "true" ]; then
 else
     log "SMTP disabled (ENABLE_SMTP=${ENABLE_SMTP:-false})"
 fi
+
+# -------------------------------------------------------------------
+# SSH keys from the hub: the mesh test key and the pinned management key.
+# See trust-hub.sh. register.sh retries this if the hub was down now.
+# -------------------------------------------------------------------
+"$SCRIPT_DIR/trust-hub.sh" --auto || log "WARNING: hub key step failed"
 
 # -------------------------------------------------------------------
 # Run initial registration

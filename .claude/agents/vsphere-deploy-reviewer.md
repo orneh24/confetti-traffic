@@ -54,8 +54,8 @@ powered on with the right keys set before it ever boots.
 - Node keys: `guestinfo.pervium.hub_url`, `guestinfo.pervium.group`,
   `guestinfo.pervium.subnet` (optional — falls back to the DHCP lease),
   `guestinfo.pervium.hostname` (optional — derived as
-  `<HOSTNAME_PREFIX>-<group-slug>-<ip>` when unset, IP dots as hyphens,
-  e.g. `pv-site-a-10-1-1-10`), `guestinfo.pervium.dns_server`
+  `<HOSTNAME_PREFIX>-<group-slug>-<NODE_ID>` when unset, NODE_ID two random
+  letters + four random digits, e.g. `pv-site-a-xd2311`), `guestinfo.pervium.dns_server`
   / `guestinfo.pervium.dns_query` (optional pair — DNS test only runs when
   `dns_server` is set). Precedence in-guest is guestinfo → environment →
   prompt.
@@ -161,8 +161,9 @@ clean.
 ## Example
 
 A change adds `-NodeGroups @("site-a","site-a","site-b")` support with no
-duplicate check → the derived hostnames would differ by IP, but both
-clones are named `pv-site-a` in vCenter → the second `New-VM`
+duplicate check → the in-guest hostnames would still differ (each clone
+draws its own random `NODE_ID`), but both clones are named `pv-site-a` in
+vCenter → the second `New-VM`
 fails on a duplicate VM name, partway through the run, and the mesh
 comes up one node short. Flag this and require either a duplicate-check
 `throw` before any clone is made, or a unique per-node VM name — and

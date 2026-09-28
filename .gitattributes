@@ -14,6 +14,11 @@ node/services/*.conf           text eol=lf
 node/config.sample             text eol=lf
 hub/requirements.txt           text eol=lf
 
+# The HTTP test compares these byte for byte (SHA-256) between nodes. A CRLF
+# copy anywhere would read as "content changed" on every peer.
+node/web/probe/*               text eol=lf
+node/web/cgi-bin/*             text eol=lf
+
 # dev/ scripts don't ship to a VM, but they run under the same Git Bash
 # /bin/sh on the workstation and are just as CRLF-intolerant at the shebang.
 dev/shims/*                    text eol=lf

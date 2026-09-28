@@ -1,0 +1,30 @@
+#!/bin/sh
+# pv-bw -- the node end of the dashboard's browser bandwidth test.
+# Served by busybox httpd as /cgi-bin/pv-bw; the browser talks to this node
+# directly, so the path measured is the real client-to-node path.
+#
+#   GET   streams zeros (nothing on disk) until the browser stops reading,
+#         up to 4 GiB; the browser counts bytes over the test duration.
+#   POST  reads the body and throws it away.
+#
+# CORS: the page doing the measuring is the hub's dashboard, a different
+# origin. The browser sends POST as text/plain so it stays a "simple"
+# request with no OPTIONS preflight, which busybox httpd can't answer.
+#
+# One upload tops out around 300 Mbit/s here (busybox httpd relays the body
+# itself), so the browser runs four in parallel: ~1.8 Gbit/s measured.
+
+printf 'Access-Control-Allow-Origin: *\r\nCache-Control: no-store\r\n'
+case "$REQUEST_METHOD" in
+    GET)
+        printf 'Content-Type: application/octet-stream\r\n\r\n'
+        exec dd if=/dev/zero bs=65536 count=65536 2>/dev/null
+        ;;
+    POST)
+        cat > /dev/null
+        printf 'Content-Type: text/plain\r\n\r\nok\n'
+        ;;
+    *)
+        printf 'Status: 405 Method Not Allowed\r\nContent-Type: text/plain\r\n\r\n'
+        ;;
+esac

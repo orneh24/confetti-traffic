@@ -6,85 +6,139 @@ End-to-end connectivity testing between nodes on a network. It goes beyond
 ICMP: it makes real TCP connections (HTTP, SSH, SMB, SMTP, iperf3) and
 measures packet loss/jitter, path MTU, DNS and traceroute. Results show on a
 web dashboard, optionally next to syslog from the network devices on the path.
-The dashboard has five colour themes (Dark, Light, Catppuccin Mocha, Gruvbox,
-Terminal green), picked from the header, or Shuffle, which switches between them at random every 5-10 minutes.
+The dashboard has eight colour themes (Dark, Light, Nord, Dracula, Solarized Dark,
+Monokai, High Contrast, Terminal green), picked from the header, or Shuffle, which switches between them at random every 5-10 minutes.
+A Timeline page groups failures, route changes, syslog and bandwidth tests into incidents, and a slider replays the mesh at any earlier moment (1 hour, 6 hours or 24 hours back).
 
 ![Dashboard with a synthetic 5-node mesh, one failing path selected, and its syslog correlation panel open](docs/img/dashboard-mock.jpg)
 
 *Mock data from a synthetic 5-node mesh, not a real lab. See
 [Running the hub locally](#running-the-hub-locally).*
 
+## Tests
+
+Every node tests every other node once a minute and sends the results to the
+hub. Each cell in the dashboard's matrix shows one letter per test: green
+passed, yellow slow, red failed, grey no data.
+
+| Letter | Test | What it checks | Runs |
+|---|---|---|---|
+| H | HTTP | Fetches a small fixed website from the peer (5 files, one of them ~57 KB) and checks every byte. Catches devices that rewrite or cut short web traffic, not just blocked ports. | always |
+| S | SSH | Logs in with a shared key and runs `echo ok`. The key can do nothing else. | always |
+| M | Path MTU | Sends a full 1500-byte packet with "don't fragment" set. On failure it steps down to find the largest size that gets through. Catches paths where small packets work but large transfers hang. | always |
+| L | Loss | Packet loss and jitter with `fping`. Some loss is shown as data, not a failure; only 100% loss fails. | always |
+| T | Traceroute | The hop-by-hop path. The hub flags when a path changes between runs. | every 5 min, and right after H or S fails |
+| D | DNS | Looks up a name on a given DNS server. | when `DNS_SERVER` is set |
+| I | iperf3 | TCP throughput. | when enabled |
+| B | SMB | Downloads an 8 MB file from the peer's file share. Catches problems that only show in sustained transfers. | when enabled |
+| E | SMTP | Holds a mail conversation up to the recipient, then stops. It never sends mail. Shows when a firewall rewrites mail commands. | when enabled |
+
+"When enabled" tests are switched on per node in its config, or for the
+whole mesh from the dashboard's Mesh Settings panel.
+
+**Static targets** are addresses that run no Pervium software, such as a
+gateway, a switch loopback or an outside server. You add them once on the
+hub, choose which of the tests above apply to each, and every node tests
+them too.
+
+**Bandwidth on demand.** The dashboard's Bandwidth Test panel measures
+throughput when you ask, in both directions. It can test between two nodes,
+using `iperf3` with 1–8 streams, or between a node and your own browser.
+
+Details for each test: [BUILD_GUIDE §6.1](docs/BUILD_GUIDE.md#61-test-types).
+
 ## Quick start
 
-Each step runs on a different VM. To build it yourself step by step instead,
-see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
+Two parts: install the hub first, then add nodes. To build it yourself step
+by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
 
-**1. Base VM.** Install Alpine (`setup-alpine`), then clone it in vCenter
-into two VMs: one for the hub, one for the node template. On each clone, run
-this as root. It downloads the repo and starts `install.sh`, which asks
-whether the VM becomes the hub or a node:
+### 1. Install the hub
+
+1. **Base VM.** Install Alpine on a new VM (`setup-alpine`). Put it on a
+   segment that every node subnet and your workstation can reach.
+2. **Run the installer** as root. It downloads the repo and starts
+   `install.sh`, which asks whether the VM becomes a hub or a node. Pick
+   *hub*:
+
+   ```sh
+   wget -O- https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/pervium-main /root/pervium && sh /root/pervium/install.sh
+   ```
+
+3. **Set the network.** Log out and back in: `hub-setup.sh` asks for the
+   static IP (with prefix, e.g. `/24`) and the gateway, which defaults to the
+   subnet's `.1`. It also asks for an optional DNS server and hostname, then
+   restarts networking and starts the hub. Or do the same by hand:
+
+   ```sh
+   set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
+   rc-service networking restart
+   rc-service pervium-hub start
+   ```
+
+   Or set `guestinfo.hub.ip`, `guestinfo.hub.gateway` (and optionally
+   `guestinfo.hub.dns`, `guestinfo.hub.hostname`) on the VM in vCenter
+   before first boot, and the hub configures itself.
+4. **Check** that `http://<hub-ip>/` loads.
+
+### 2. Add nodes
+
+There are two ways. Both give the same result: a node that registers with the
+hub and shows up at `http://<hub-ip>/endpoints`. The hostname is set
+automatically (`pv-<group>-<ab1234>`, e.g. `pv-site-a-xd2311`).
+
+**Option A: straight from the hub (one line).** On a plain Alpine VM with
+network access to the hub, as root. No template, no GitHub access needed:
 
 ```sh
-wget -O- https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/pervium-main /root/pervium && sh /root/pervium/install.sh
+wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
 ```
 
-**2. Hub** (the clone where you picked *hub*). Log out and back in:
-`hub-setup.sh` asks for the static IP (with prefix, e.g. `/24`) and the
-gateway, which defaults to the subnet's `.1`. It also asks for an optional
-DNS server and hostname. Then it restarts networking and starts the hub. Or run
-the same steps by hand:
+It downloads the node bundle from the hub, installs it, and asks for the
+group if you did not pass one. Good for a few nodes, or where a VM can't be
+cloned.
 
-```sh
-set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
-rc-service networking restart
-rc-service pervium-hub start
-```
+**Option B: vCenter template and guestinfo.** Best for many nodes.
 
-Check that `http://<hub-ip>/` loads.
+1. On a second Alpine VM, run the same installer as in part 1 and pick
+   *node*. The build cleans the VM for cloning when it finishes.
+2. Shut it down and convert it to a vCenter template. Don't configure or test
+   it first: that undoes the cleanup. Test on the first clone instead.
+3. Clone the template once per network segment and put each clone on its
+   segment's port group.
+4. Before first boot, set `guestinfo.pervium.hub_url` and
+   `guestinfo.pervium.group` on each clone (all keys are listed under
+   [VMware guestinfo keys](#vmware-guestinfo-keys)). It then configures
+   itself. Without them, log in and answer the `node-setup.sh` prompt.
 
-**3. Node template** (the clone where you picked *node*). The build already
-cleaned it for cloning. Shut it down and convert it to a vCenter template.
-Don't configure or test it first: that undoes the cleanup. Test on the first
-clone instead.
-
-**4. Nodes.** Clone the template once per network segment and put each clone
-on its segment's port group. Then either:
-
-- set `guestinfo.pervium.hub_url` and `guestinfo.pervium.group` on the
-  clone before first boot, and it configures itself, or
-- boot it, log in, and answer the `node-setup.sh` prompt.
-
-The hostname is set automatically (`pv-<group>-<ip>`). Check that the node
-appears at `http://<hub-ip>/endpoints`.
+Every node fetches its SSH keys from the hub at setup. The hub's management
+key is trusted on first use and lets the hub push updates from the dashboard.
+Set `HUB_MANAGED=false` in a node's config to opt it out.
 
 `install.sh` refuses to run on a VM that is already a hub or node, because
 re-running a build wipes its config or the hub's database. Pass `hub` or
 `node` to skip the menu, and `-y` to skip the confirmation.
 
-**Single VM, no cloning.** Run the step 1 command on a fresh Alpine VM,
-then finish in place: for a hub, step 2; for a node, log out and back in and
+**Single VM, no cloning.** Run the installer on a fresh Alpine VM, then
+finish in place: for a hub, step 3 above; for a node, log out and back in and
 answer the `node-setup.sh` prompt (or run `/usr/local/bin/pervium/setup.sh`).
 Ignore the node build's "convert to template" message. Fresh VM only: an
 existing `/root/pervium` makes the `mv` put the new copy inside it.
 
 ### Updating
 
-To get the latest code onto an installed VM, run `pervium-update` as root,
-on the hub first and then on each node. It asks before changing anything,
-and keeps configs, the hub database and the root password. On VMs built
-before it existed, fetch it once:
+Update the hub first: run `pervium-update` on it as root. It downloads the
+latest code from GitHub, asks before changing anything, and keeps hub.env,
+the database and the root password. It also rebuilds the node bundle the hub
+serves.
 
-```sh
-curl -fsSLo /tmp/pervium-update https://raw.githubusercontent.com/orneh24/pervium/main/update.sh && sh /tmp/pervium-update
-```
+Then update the nodes from the dashboard: the update button on a node's
+row, or **update all**. The hub runs `pervium-update` on each node over SSH,
+one at a time, and the node downloads the new code from the hub. Each node's
+build shows under its name, in yellow when it differs from what the hub
+serves.
+`pervium-update` run on a node by hand does the same thing.
 
-To update all nodes from the hub in one go, run
-`pervium-push-node-update.sh` on the hub after updating it. It lists the
-nodes seen in the last 10 minutes, asks for their root password once, and
-runs `pervium-update` on each in turn.
-
-Details, including why the hub goes first:
-[BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
+Details: [BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
 
 ### VMware guestinfo keys
 
@@ -97,7 +151,7 @@ two marked keys are required.
 | `guestinfo.pervium.hub_url` | node | `http://10.0.0.100` | **required** |
 | `guestinfo.pervium.group` | node | `site-a` | **required**; groups nodes on the dashboard |
 | `guestinfo.pervium.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
-| `guestinfo.pervium.hostname` | node | `pv-site-a` | `pv-<group>-<ip>` if unset; must be unique |
+| `guestinfo.pervium.hostname` | node | `pv-site-a` | `pv-<group>-<ab1234>` if unset; must be unique |
 | `guestinfo.pervium.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
 | `guestinfo.pervium.dns_query` | node | `example.com` | name the DNS test looks up |
 | `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `hub-setup.sh` asks at login |

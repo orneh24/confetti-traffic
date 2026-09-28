@@ -7,19 +7,22 @@
 <script>
 // Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
 // below; dark is the default and has no attribute. Same localStorage key on
-// both hub pages, so one choice covers both. Applied before first paint so a
+// every hub page, so one choice covers all. Applied before first paint so a
 // saved choice doesn't flash dark on load.
 var THEMES = [
     ['dark', 'Dark'],
     ['light', 'Light'],
-    ['catppuccin', 'Catppuccin Mocha'],
-    ['gruvbox', 'Gruvbox'],
+    ['nord', 'Nord'],
+    ['dracula', 'Dracula'],
+    ['solarized', 'Solarized Dark'],
+    ['monokai', 'Monokai'],
+    ['contrast', 'High Contrast'],
     ['terminal', 'Terminal green'],
 ];
 // "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
 // and moves to a different one every 5-10 minutes. The saved choice is
 // 'shuffle'; the palette on screen and when it next changes live under
-// pervium-theme-shuffle, so both pages show the same one and a reload does
+// pervium-theme-shuffle, so all pages show the same one and a reload does
 // not reshuffle early.
 var SHUFFLE_MIN_MS = 5 * 60 * 1000;
 var SHUFFLE_MAX_MS = 10 * 60 * 1000;
@@ -122,45 +125,105 @@ function syncThemeSelect() {
     --gray:      #57606a;
     --cyan:      #0b7a75;
 }
-/* Catppuccin Mocha */
-:root[data-theme="catppuccin"] {
-    --bg:        #1e1e2e;
-    --bg-card:   #262637;
-    --bg-hover:  #313244;
-    --bg-muted:  #313244;
-    --border:    #45475a;
-    --row-line:  rgba(69,71,90,.5);
-    --text:      #cdd6f4;
-    --text-dim:  #a6adc8;
-    --green:     #a6e3a1;
-    --green-bg:  #2b3b31;
-    --red:       #f38ba8;
-    --red-bg:    #4a2838;
-    --yellow:    #f9e2af;
-    --yellow-bg: #443d33;
-    --blue:      #89b4fa;
-    --gray:      #7f849c;
-    --cyan:      #94e2d5;
+/* Nord */
+:root[data-theme="nord"] {
+    --bg:        #2e3440;
+    --bg-card:   #3b4252;
+    --bg-hover:  #434c5e;
+    --bg-muted:  #434c5e;
+    --border:    #4c566a;
+    --row-line:  rgba(76,86,106,.5);
+    --text:      #eceff4;
+    --text-dim:  #a3adbf;
+    --green:     #a3be8c;
+    --green-bg:  #34413a;
+    --red:       #bf616a;
+    --red-bg:    #43353b;
+    --yellow:    #ebcb8b;
+    --yellow-bg: #454135;
+    --blue:      #81a1c1;
+    --gray:      #8792a8;
+    --cyan:      #88c0d0;
 }
-/* Gruvbox */
-:root[data-theme="gruvbox"] {
-    --bg:        #282828;
-    --bg-card:   #32302f;
-    --bg-hover:  #3c3836;
-    --bg-muted:  #3c3836;
-    --border:    #504945;
-    --row-line:  rgba(80,73,69,.5);
-    --text:      #ebdbb2;
-    --text-dim:  #bdae93;
-    --green:     #8ec07c;
-    --green-bg:  #2c3d2e;
-    --red:       #fb4934;
-    --red-bg:    #4a2320;
-    --yellow:    #fabd2f;
-    --yellow-bg: #4a3d1e;
-    --blue:      #83a598;
-    --gray:      #928374;
-    --cyan:      #b8bb26;
+/* Dracula */
+:root[data-theme="dracula"] {
+    --bg:        #282a36;
+    --bg-card:   #2f3142;
+    --bg-hover:  #383a4d;
+    --bg-muted:  #383a4d;
+    --border:    #44475a;
+    --row-line:  rgba(68,71,90,.5);
+    --text:      #f8f8f2;
+    --text-dim:  #a9acc6;
+    --green:     #50fa7b;
+    --green-bg:  #23402f;
+    --red:       #ff5555;
+    --red-bg:    #4a2530;
+    --yellow:    #f1fa8c;
+    --yellow-bg: #44452f;
+    --blue:      #bd93f9;
+    --gray:      #7b86b3;
+    --cyan:      #8be9fd;
+}
+/* Solarized Dark */
+:root[data-theme="solarized"] {
+    --bg:        #002b36;
+    --bg-card:   #073642;
+    --bg-hover:  #0b404e;
+    --bg-muted:  #0b404e;
+    --border:    #27505b;
+    --row-line:  rgba(39,80,91,.5);
+    --text:      #eee8d5;
+    --text-dim:  #93a1a1;
+    --green:     #859900;
+    --green-bg:  #1f3a1c;
+    --red:       #dc322f;
+    --red-bg:    #3b2227;
+    --yellow:    #b58900;
+    --yellow-bg: #33341a;
+    --blue:      #268bd2;
+    --gray:      #7a8f95;
+    --cyan:      #2aa198;
+}
+/* Monokai */
+:root[data-theme="monokai"] {
+    --bg:        #272822;
+    --bg-card:   #2e2f28;
+    --bg-hover:  #3a3b32;
+    --bg-muted:  #3a3b32;
+    --border:    #49483e;
+    --row-line:  rgba(73,72,62,.5);
+    --text:      #f8f8f2;
+    --text-dim:  #b3b19f;
+    --green:     #a6e22e;
+    --green-bg:  #33401c;
+    --red:       #f92672;
+    --red-bg:    #4a1f33;
+    --yellow:    #e6db74;
+    --yellow-bg: #44402a;
+    --blue:      #66d9ef;
+    --gray:      #908b74;
+    --cyan:      #66d9ef;
+}
+/* High Contrast — pure black, full-strength colours, for legibility */
+:root[data-theme="contrast"] {
+    --bg:        #000000;
+    --bg-card:   #0a0a0a;
+    --bg-hover:  #1a1a1a;
+    --bg-muted:  #1a1a1a;
+    --border:    #ffffff;
+    --row-line:  rgba(255,255,255,.35);
+    --text:      #ffffff;
+    --text-dim:  #e0e0e0;
+    --green:     #00ff66;
+    --green-bg:  #003318;
+    --red:       #ff3b3b;
+    --red-bg:    #3a0000;
+    --yellow:    #ffdd00;
+    --yellow-bg: #332b00;
+    --blue:      #4db8ff;
+    --gray:      #c8c8c8;
+    --cyan:      #00ffff;
 }
 /* Terminal green — mostly one hue by design; red and amber stay distinct so failures still read */
 :root[data-theme="terminal"] {
@@ -198,9 +261,9 @@ header h1 {
     color: var(--cyan); letter-spacing: 0.5px; white-space: nowrap;
 }
 
-/* Same nav pair as the dashboard's header: a link to the other page, and a
-   non-clickable marker for the page you're already on. Kept identical
-   between the two templates so the pair reads as one component. */
+/* Same nav set as the other hub pages' headers: links to the other pages, and
+   a non-clickable marker for the page you're already on. Kept identical
+   between the three templates so it reads as one component. */
 .btn-nav {
     background: var(--bg-hover);
     border: 1px solid var(--cyan);
@@ -284,6 +347,7 @@ td.sevcol { white-space: nowrap; }
     <h1>SYSLOG MESSAGES</h1>
     <a href="/" class="btn-nav">Dashboard</a>
     <span class="btn-nav-current">Syslog</span>
+    <a href="/timeline" class="btn-nav">Timeline</a>
     <div class="status">
         <span id="clock" class="clock" title="Hub clock — every correlation on this page depends on it">clock: --</span>
         &nbsp;|&nbsp;

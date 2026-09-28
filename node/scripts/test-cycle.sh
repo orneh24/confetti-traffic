@@ -228,6 +228,68 @@ json_escape() {
 # -------------------------------------------------------------------
 # Run HTTP test against a target
 # -------------------------------------------------------------------
+# The probe site every node serves (node/web/probe/), fetched in browser
+# order: page, stylesheet, script, then two more pages. report.html is the
+# large one (many segments).
+PROBE_DIR="/var/www/localhost/htdocs/probe"
+PROBE_FILES="index.html style.css app.js about.html report.html"
+
+# Mesh peers: fetch the probe site and compare each file's SHA-256 with our
+# own copy. A status code only proves something answered; the hash proves
+# the page arrived unchanged -- no injected content, no truncated transfer.
+# Stops at the first failure, so a dead peer costs one request's timeout
+# (constraint 10's reasoning), not five.
+#
+# No local probe site (test-cycle.sh self-updates ahead of the bundle that
+# installs it): fall back to the status-only check of /, so a hub update
+# never turns every H cell red before the nodes are pushed.
+run_http_probe_test() {
+    _target_ip="$1"
+    [ -f "${PROBE_DIR}/index.html" ] || { run_http_test "$@"; return; }
+
+    _tmp="/tmp/pervium-probe.$$"
+    _total="0"
+    _bytes=0
+    _n=0
+    _fail=""
+    for _f in $PROBE_FILES; do
+        _r=$(curl -s -o "$_tmp" -w '%{http_code} %{time_total} %{size_download}' \
+            --connect-timeout 5 --max-time 10 \
+            "http://${_target_ip}/probe/${_f}" 2>/dev/null) || true
+        _code=$(printf '%s' "$_r" | awk '{print $1}')
+        _t=$(printf '%s' "$_r" | awk '{print $2}')
+        _size=$(printf '%s' "$_r" | awk '{print $3+0}')
+        _total=$(awk -v a="$_total" -v b="${_t:-0}" 'BEGIN {printf "%.6f", a + b}')
+        if [ "${_code:-000}" != "200" ]; then
+            _fail="${_f}: HTTP ${_code:-000}"
+            break
+        fi
+        _want=$(sha256sum "${PROBE_DIR}/${_f}" 2>/dev/null | awk '{print $1}')
+        _got=$(sha256sum "$_tmp" | awk '{print $1}')
+        if [ "$_got" != "$_want" ]; then
+            _fail="${_f}: content changed (${_size} of $(wc -c < "${PROBE_DIR}/${_f}" | tr -d ' ') bytes)"
+            break
+        fi
+        _n=$((_n + 1))
+        _bytes=$((_bytes + _size))
+    done
+    rm -f "$_tmp"
+
+    if [ -z "$_fail" ]; then
+        _success="true"
+        _msg="${_n} files, ${_bytes} bytes unchanged in ${_total}s"
+    else
+        _success="false"
+        _msg="$_fail (after ${_n} ok)"
+    fi
+    _latency=$(awk -v t="$_total" 'BEGIN {printf "%.2f", t * 1000}')
+    _output_escaped=$(json_escape "$_msg")
+
+    printf '{"target_hostname":"%s","target_ip":"%s","test_type":"http","success":%s,"latency_ms":%s,"output":%s,"timestamp":"%s"}' \
+        "$2" "$_target_ip" "$_success" "$_latency" "$_output_escaped" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+}
+
+# Static targets (and the fallback above): any 2xx/3xx for /.
 run_http_test() {
     _target_ip="$1"
     _start=$(date +%s%N 2>/dev/null || date +%s)
@@ -267,9 +329,10 @@ run_ssh_test() {
     _target_ip="$1"
     _start_s=$(date +%s)
 
-    # BatchMode=yes disables password prompts, so this needs the shared lab
-    # keypair that build-template.sh bakes into the image; without a key the
-    # test could never pass. UserKnownHostsFile=/dev/null keeps a rebuilt
+    # BatchMode=yes disables password prompts, so this needs the mesh keypair
+    # every node fetches from the hub (trust-hub.sh); without a key the test
+    # could never pass. Peers accept that key only with a forced `echo ok`,
+    # which is exactly what is run here. UserKnownHostsFile=/dev/null keeps a rebuilt
     # clone (new host key, recycled DHCP address) from tripping host-key
     # mismatches and reporting a routing failure that isn't one.
     _output=$(ssh -o StrictHostKeyChecking=no \
@@ -784,7 +847,7 @@ while [ "$i" -lt "$ENDPOINT_COUNT" ]; do
     # Each test is isolated so one failure cannot prevent the others running.
 
     log "  HTTP test -> $EP_IP"
-    HTTP_RESULT=$(run_http_test "$EP_IP" "$EP_HOSTNAME") || true
+    HTTP_RESULT=$(run_http_probe_test "$EP_IP" "$EP_HOSTNAME") || true
     append_result "$HTTP_RESULT"
 
     log "  SSH test -> $EP_IP"

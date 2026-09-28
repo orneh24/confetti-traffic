@@ -55,8 +55,15 @@ log "Detected hostname=$HOSTNAME ip=$IP group=$GROUP_NAME subnet=$SUBNET"
 # -------------------------------------------------------------------
 # Build JSON payload
 # -------------------------------------------------------------------
-PAYLOAD=$(printf '{"hostname":"%s","ip":"%s","subnet":"%s","group_name":"%s"}' \
-    "$HOSTNAME" "$IP" "$SUBNET" "$GROUP_NAME")
+# build: the commit this node's code came from (update.sh / node-install.sh
+# write /etc/pervium-release). managed: whether the hub may SSH in to push
+# updates (HUB_MANAGED, default true). Both are shown on the dashboard.
+BUILD=$(sed -n 's/^commit=//p' /etc/pervium-release 2>/dev/null | head -n 1 | tr -cd '0-9a-z')
+BUILD="${BUILD:-unknown}"
+if [ "${HUB_MANAGED:-true}" = "true" ]; then MANAGED=true; else MANAGED=false; fi
+
+PAYLOAD=$(printf '{"hostname":"%s","ip":"%s","subnet":"%s","group_name":"%s","build":"%s","managed":%s}' \
+    "$HOSTNAME" "$IP" "$SUBNET" "$GROUP_NAME" "$BUILD" "$MANAGED")
 
 # -------------------------------------------------------------------
 # POST to hub with retry logic
@@ -126,6 +133,27 @@ if [ -d "$WEB_ROOT" ]; then
 </body>
 </html>
 EOF
+fi
+
+# -------------------------------------------------------------------
+# Hub key check. Report only: the pinned management key is never replaced
+# from here. A different key at the hub means the hub was rebuilt -- or
+# something else is answering as the hub. Re-pin deliberately with
+# pervium-trust-hub once you know which.
+# -------------------------------------------------------------------
+# Keys still missing (the hub was down when setup.sh ran): retry now.
+if [ ! -f /etc/pervium/id_pervium ] || \
+   { [ "${HUB_MANAGED:-true}" = "true" ] && [ ! -f /etc/pervium/hub_key.pub ]; }; then
+    /usr/local/bin/pervium/trust-hub.sh --auto 2>&1 | while IFS= read -r _l; do log "$_l"; done
+fi
+
+if [ "${HUB_MANAGED:-true}" = "true" ] && [ -f /etc/pervium/hub_key.pub ]; then
+    _served=$(curl -s -f --connect-timeout 5 --max-time 10 "${HUB_URL}/node/hub-key.pub" 2>/dev/null \
+        | awk 'NR==1 {print $1, $2}') || _served=""
+    _pinned=$(awk 'NR==1 {print $1, $2}' /etc/pervium/hub_key.pub)
+    if [ -n "$_served" ] && [ "$_served" != "$_pinned" ]; then
+        log "WARNING: hub serves a different management key than the pinned one; not replacing it (run pervium-trust-hub to re-pin)"
+    fi
 fi
 
 # -------------------------------------------------------------------
@@ -237,8 +265,8 @@ update_script() {
 # test register.sh is circular.
 #
 # test-cycle.sh is what actually gets iterated on, and it is safely
-# verifiable. To roll out a register.sh change, update the template or push
-# it deliberately: run pervium-update on the node (update.sh, repo root),
+# verifiable. To roll out a register.sh change, push it deliberately: the
+# dashboard's update button (or pervium-update on the node) runs update.sh,
 # which re-runs setup.sh and so tries the new register.sh on the spot.
 update_script "test-cycle.sh"
 

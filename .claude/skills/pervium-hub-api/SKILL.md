@@ -17,15 +17,20 @@ The hub (`hub/app/app.py`) is the single source of truth for endpoints and resul
 
 ## Contract (do not break without reflashing nodes)
 
-`POST /register` — body must contain all four:
+`POST /register` — body must contain the first four; `build` and `managed` are optional (older nodes omit them):
 
 ```json
-{"hostname": "node-1", "ip": "10.1.1.50", "subnet": "10.1.1.0/24", "group_name": "site-a"}
+{"hostname": "pv-site-a-xd2311", "ip": "10.1.1.50", "subnet": "10.1.1.0/24", "group_name": "site-a",
+ "build": "9ecdcbe...", "managed": true}
 ```
 
-Upsert keyed on `hostname`; `last_seen` is set server-side to UTC ISO-8601. Missing any field → 400.
+Upsert keyed on `hostname`; `last_seen` is set server-side to UTC ISO-8601. Missing any required field → 400.
 
-`GET /endpoints` — array of `{hostname, ip, subnet, group_name, last_seen}`, ordered by group then hostname. Nodes skip their own hostname when iterating.
+`GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, last_seen, build, managed, update_state, update_msg, update_at}`, ordered by group then hostname. The management fields are extra keys only; never change the array shape. Nodes skip their own hostname when iterating.
+
+Node management (see CLAUDE.md "Hub-managed nodes"): `GET /node/bundle.tar.gz`, `GET /node/release` → `{"commit": ...}`, `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub`, `GET /install.sh`; `POST /api/nodes/<hostname>/update` (202 / 404 / 409 + reason) and `POST /api/nodes/update` → `{"queued": [...], "skipped": [{"hostname", "reason"}]}`.
+
+Bandwidth test (CLAUDE.md "On-demand bandwidth test"): `GET /api/bw`, `POST /api/bw/node`, `POST /api/bw/browser`, `POST /api/bw/browser/<id>`; one at a time; `bwtests` table (`fwd_mbps` From→To, `rev_mbps` To→From).
 
 `POST /results`:
 
@@ -54,6 +59,7 @@ The hub also receives syslog on UDP/514 (`hub/app/syslog_server.py`, started by 
 - `GET /api/syslog` — newest first. Params: `minutes` (default 60), `from`/`to` (UTC ISO-8601, used by the dashboard drill-down links and mutually exclusive with `minutes`), `severity` (maximum, 0–7), `host` (a single value, matched against parsed hostname OR source IP — not a list), `q` (substring of message/mnemonic/raw), `limit` (default and cap both 2000).
 - `GET /api/syslog/sources` — distinct senders with counts, for the filter dropdown.
 - `GET /syslog` — the page. A `from`/`to` pair pins the view and disables auto-refresh.
+- `GET /timeline` — the timeline page. No API of its own: it reads `/endpoints`, `/api/results`, `/api/path-changes`, `/api/syslog`, `/api/bw` and `/api/health`.
 
 Storage rules that differ from `results`:
 

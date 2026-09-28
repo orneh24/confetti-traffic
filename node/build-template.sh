@@ -213,36 +213,10 @@ else
     log "Credentials: root / ${PERVIUM_ROOT_PASSWORD}"
 fi
 
-# -------------------------------------------------------------------
-# 2c. Shared SSH keypair for the mesh
-#
-# The SSH test runs with BatchMode=yes, which accepts key auth only. With no
-# key distributed between clones every SSH test would fail regardless of
-# whether the path actually worked. One keypair is generated here, before
-# cloning, so every clone trusts every other clone.
-#
-# This is a deliberately shared lab credential: any VM in the mesh can log
-# into any other as root. That is appropriate for an isolated R&S lab and
-# nowhere else — do not reuse this template outside it.
-# -------------------------------------------------------------------
-log "Generating shared lab SSH keypair"
-mkdir -p /etc/pervium /root/.ssh
-chmod 700 /root/.ssh
-
-if [ ! -f /etc/pervium/id_pervium ]; then
-    ssh-keygen -t ed25519 -N '' -C 'pervium' -f /etc/pervium/id_pervium
-fi
-chmod 600 /etc/pervium/id_pervium
-chmod 644 /etc/pervium/id_pervium.pub
-
-# Trust the shared key for root logins.
-touch /root/.ssh/authorized_keys
-if ! grep -qF "$(cat /etc/pervium/id_pervium.pub)" /root/.ssh/authorized_keys 2>/dev/null; then
-    cat /etc/pervium/id_pervium.pub >> /root/.ssh/authorized_keys
-fi
-chmod 600 /root/.ssh/authorized_keys
-
-log "Shared mesh keypair installed"
+# No SSH keys are generated here. The mesh test key and the hub's
+# management key both come from the hub when setup.sh runs (trust-hub.sh),
+# so a node installed straight from the hub and a clone of this template end
+# up with the same keys.
 
 # -------------------------------------------------------------------
 # 3. Create directories
@@ -292,10 +266,12 @@ install_script "${SCRIPT_DIR}/scripts/test-cycle.sh"  "$INSTALL_DIR/test-cycle.s
 install_script "${SCRIPT_DIR}/scripts/setup.sh"       "$INSTALL_DIR/setup.sh"
 install_script "${SCRIPT_DIR}/scripts/node-setup.sh"  "$INSTALL_DIR/node-setup.sh"
 install_script "${SCRIPT_DIR}/scripts/test-status.sh" "$INSTALL_DIR/test-status.sh"
+install_script "${SCRIPT_DIR}/scripts/trust-hub.sh"   "$INSTALL_DIR/trust-hub.sh"
 
 # On PATH by name, same as the hub's hub-setup.sh / set-static-ip.
 ln -sf "$INSTALL_DIR/node-setup.sh" /usr/local/bin/node-setup.sh
 ln -sf "$INSTALL_DIR/test-status.sh" /usr/local/bin/test-status
+ln -sf "$INSTALL_DIR/trust-hub.sh" /usr/local/bin/pervium-trust-hub
 
 # The code updater (repo-root update.sh). Copied, not linked: the repo copy
 # this build ran from is usually deleted afterwards. install_script, not cp:
@@ -410,6 +386,29 @@ if grep -qE '^[[:space:]]*action[[:space:]]+.*[[:space:]]relay' /etc/smtpd/smtpd
 fi
 
 # -------------------------------------------------------------------
+# 6b. Probe site for the HTTP test (node/web/probe/ -> /probe/)
+#
+# Fixed files every node serves and every peer fetches and compares by
+# SHA-256 against its own copy (test-cycle.sh run_http_test). Installed on
+# --update too, since it is code-like content that must match across nodes.
+# Each file via a temp name and mv: a peer fetching mid-copy would otherwise
+# read a half-written file and report "content changed".
+# -------------------------------------------------------------------
+log "Installing HTTP probe site"
+mkdir -p "${WEB_ROOT}/probe"
+for _f in "${SCRIPT_DIR}"/web/probe/*; do
+    cp -f "$_f" "${WEB_ROOT}/probe/.$(basename "$_f").new"
+    chmod 0644 "${WEB_ROOT}/probe/.$(basename "$_f").new"
+    mv -f "${WEB_ROOT}/probe/.$(basename "$_f").new" "${WEB_ROOT}/probe/$(basename "$_f")"
+done
+
+# The browser end of the dashboard's on-demand bandwidth test: busybox httpd
+# runs anything executable in /cgi-bin/. See node/web/cgi-bin/pv-bw.
+log "Installing bandwidth test endpoint"
+mkdir -p "${WEB_ROOT}/cgi-bin"
+install_script "${SCRIPT_DIR}/web/cgi-bin/pv-bw" "${WEB_ROOT}/cgi-bin/pv-bw"
+
+# -------------------------------------------------------------------
 # 7. Create placeholder identity page
 # -------------------------------------------------------------------
 # Not on --update: a configured node already has its real page, which
@@ -489,9 +488,20 @@ fi
 log "Cleaning up for template conversion"
 
 # Remove SSH *host* keys so each clone generates its own on first boot.
-# The shared mesh keypair in /etc/pervium/ is deliberately kept — it has
-# to survive cloning for the SSH test to work.
 rm -f /etc/dropbear/dropbear_*_host_key
+
+# Remove the keys fetched from a hub during build-time testing. Each clone
+# fetches them from its own hub at setup (trust-hub.sh); a pin baked into
+# the image would make every clone trust whichever hub the template was
+# tested against.
+rm -f /etc/pervium/id_pervium /etc/pervium/id_pervium.pub \
+      /etc/pervium/hub_key.pub /etc/pervium/hub_key.url
+if [ -f /root/.ssh/authorized_keys ]; then
+    grep -v -e ' pervium-hub$' -e ' pervium-mesh$' -e ' pervium$' /root/.ssh/authorized_keys \
+        > /root/.ssh/authorized_keys.new || true
+    chmod 600 /root/.ssh/authorized_keys.new
+    mv -f /root/.ssh/authorized_keys.new /root/.ssh/authorized_keys
+fi
 
 # Remove Samba's state databases (secrets.tdb and friends carry a machine
 # SID / server GUID) so each clone generates its own on first start instead

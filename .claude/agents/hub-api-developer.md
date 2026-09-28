@@ -17,8 +17,8 @@ You develop the Pervium hub: `hub/app/app.py` (Flask), SQLite storage, and `hub/
 
 ## Frozen Contract
 
-- `POST /register` — requires `hostname`, `ip`, `subnet`, `group_name`; upsert on hostname; `last_seen` set server-side; 400 on missing fields.
-- `GET /endpoints` — array of `{hostname, ip, subnet, group_name, last_seen}`, ordered by group then hostname. Prunes endpoints past `STALE_ENDPOINT_HOURS` as a side effect.
+- `POST /register` — requires `hostname`, `ip`, `subnet`, `group_name`; optional `build` (string) and `managed` (bool) — older nodes omit them; upsert on hostname; `last_seen` set server-side; 400 on missing fields.
+- `GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, last_seen, build, managed, update_state, update_msg, update_at}` (the last five may be null), ordered by group then hostname. Prunes endpoints past `STALE_ENDPOINT_HOURS` as a side effect.
 - `POST /results` — `{source, results: [{target_hostname, target_ip, test_type, success, latency_ms, output, timestamp}]}`; `success` stored 0/1; `latency_ms` REAL nullable; `output` free text; 400 on missing `source` or empty `results`. Runs the retention sweep as a side effect.
 - `DELETE /endpoints/<hostname>` — 404 if unknown.
 - `GET /api/results?minutes=N` (default 10), `GET /api/results/<source>/<target>` (LIMIT 200, newest first).
@@ -26,9 +26,13 @@ You develop the Pervium hub: `hub/app/app.py` (Flask), SQLite storage, and `hub/
 - `GET|POST /targets`, `DELETE /targets/<name>` — static targets; each declares which tests apply. Unknown test names rejected 400 with the valid list.
 - `GET /settings` — `{enable_smb, enable_smtp, enable_iperf}`, each bool or null (null = node's own config); pulled by `test-cycle.sh` every cycle. `POST /settings` — partial update from the dashboard, bool/null only, unknown keys 400. Never fold these into `/endpoints`' bare array.
 - `GET /agent/manifest`, `GET /agent/<script>` — agent distribution; checksums computed on demand.
+- `GET /node/bundle.tar.gz`, `GET /node/release` (`{commit}`) — node bundle nodes install/update from; `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub` — hub keys (never serve `id_hub` privately); `GET /install.sh` — `node-install.sh` with the hub URL filled in from `Host`.
+- `POST /api/nodes/<hostname>/update` (202 queued / 404 / 409 with reason), `POST /api/nodes/update` (`{queued, skipped:[{hostname, reason}]}`) — push-update, run one at a time by `hub/app/nodemgmt.py`.
+- `GET /api/bw` (history, newest first), `POST /api/bw/node` `{source, target, duration, streams}` (202 `{id}` / 409 busy or unmanaged), `POST /api/bw/browser` `{node, duration}` → `{id, url, duration}`, `POST /api/bw/browser/<id>` `{fwd_mbps, rev_mbps, error}` — on-demand bandwidth test, one at a time, `hub/app/bandwidth.py`; `bwtests` table.
 - `GET /api/syslog` — stored messages. `minutes=N` (default 60) *or* `from=&to=` for a pinned window, plus `host=` (one value, matched against parsed hostname or source IP), `severity=N` (at or worse than N), `q=`, `limit=N` (default and cap 2000).
 - `GET /api/syslog/sources` — distinct senders with counts, for the filter dropdown.
 - `GET /syslog` — the viewer page. A `from`/`to` pair pins it and disables auto-refresh.
+- `GET /timeline` — the timeline page; built client-side from the endpoints above, no API of its own.
 - `GET /api/time` — hub clock plus chrony tracking state. **Always 200**: every failure (no chronyc, daemon down, timeout, unparseable output) returns `chrony: null` with a `reason`, because the syslog header renders a failure as `clock: unavailable` and a 500 would blank it.
 - `GET /api/health` — hub self-health for the dashboard's "Hub Health" panel: OpenRC service status (`HUB_HEALTH_SERVICES`), syslog listener state, load average, memory, disk, uptime. Same never-500 discipline as `/api/time` — each check degrades independently rather than failing the endpoint.
 

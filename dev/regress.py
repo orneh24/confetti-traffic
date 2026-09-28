@@ -188,12 +188,52 @@ def _():
     return p
 
 
-@check("R3", "shared SSH keypair survives cloning")
+@check("R3", "mesh SSH key comes from the hub, restricted to `echo ok`")
 def _():
     p = []
+    trust = "node/scripts/trust-hub.sh"
     need(grep(r"^\s*rm .*dropbear_.*host_key", NODE_BUILD), "cleanup no longer deletes dropbear host keys", p)
-    p += ["cleanup deletes the shared keypair: " + x
-          for x in at(NODE_BUILD, [h for h in grep(r"\brm\b.*id_pervium", NODE_BUILD) if not is_comment(h[1])])]
+    # Every node must hold the same key; a per-build keygen breaks the SSH
+    # test between nodes installed separately.
+    p += ["node build generates its own mesh key: " + x
+          for x in at(NODE_BUILD, [h for h in grep(r"ssh-keygen", NODE_BUILD) if not is_comment(h[1])])]
+    # The private key is served over HTTP: only safe with the forced command.
+    need(grep(r'command=\\"echo ok\\",no-pty,no-port-forwarding', trust),
+         "trust-hub.sh no longer restricts the mesh key to command=\"echo ok\"", p)
+    need(grep(r"echo ok", CYCLE), "test-cycle.sh's SSH test no longer runs `echo ok`", p)
+    # The management key must never be served privately.
+    p += ["hub serves the private management key: " + x
+          for x in at(APP, grep(r'"id_hub"', APP))]
+    return p
+
+
+@check("R3b", "hub management key is pinned on first use, never replaced by cron")
+def _():
+    p = []
+    trust = "node/scripts/trust-hub.sh"
+    body = read(trust)
+    need(re.search(r'MODE" = "auto" \] && \[ -f "\$PIN" \] && \[ "\$\(cat "\$PIN_URL"', body),
+         "trust-hub.sh --auto no longer keeps an existing pin for the same HUB_URL", p)
+    # register.sh runs every 5 minutes: it may only warn, or run --auto when
+    # nothing is pinned yet.
+    for n, l in grep(r"hub_key\.pub", REGISTER):
+        if re.search(r">\s*/etc/pervium/hub_key\.pub", l):
+            p.append("%s:%d register.sh writes the pin: %s" % (REGISTER, n, l.strip()))
+    for n, l in grep(r"trust-hub\.sh", REGISTER):
+        if not is_comment(l) and "--auto" not in l:
+            p.append("%s:%d register.sh runs trust-hub.sh without --auto: %s" % (REGISTER, n, l.strip()))
+    return p
+
+
+@check("R28", "derived hostname is pv-<group>-<random NODE_ID>, not the IP")
+def _():
+    p = []
+    need(grep(r'DESIRED_HOSTNAME="\$\{HOSTNAME_PREFIX\}-\$\{_slug\}-\$\{NODE_ID\}"', SETUP),
+         "setup.sh no longer derives <prefix>-<group>-<NODE_ID>", p)
+    need(grep(r"tr -dc 'a-z' < /dev/urandom.*head -c 2", SETUP)
+         and grep(r"tr -dc '0-9' < /dev/urandom.*head -c 4", SETUP),
+         "NODE_ID is no longer 2 random letters + 4 random digits", p)
+    p += at(SETUP, [h for h in grep(r"DESIRED_HOSTNAME=.*MY_IP", SETUP) if not is_comment(h[1])])
     return p
 
 
@@ -333,11 +373,13 @@ def _():
         need(want in pkgs, "package %s missing from apk add" % want, p)
     for bad in ("dropbear-ssh", "iputils", "samba", "opensmtpd-openrc"):
         need(bad not in pkgs, "package %s must not be installed" % bad, p)
-    # The hub needs an ssh client and sshpass for pervium-push-node-update.sh.
+    # The hub needs an ssh client (and ssh-keygen, which it pulls in) for
+    # push-update and its keypairs. sshpass went with the password-based
+    # push script.
     hm = re.search(r"apk add --no-cache[^\n]*\\\n((?:[^\n]*\\\n)*[^\n]*)", read(HUB_BUILD))
     hub_pkgs = set(re.findall(r"[a-z0-9][a-z0-9._-]+", hm.group(0))) if hm else set()
-    for want in ("openssh-client", "sshpass"):
-        need(want in hub_pkgs, "hub: package %s missing from apk add" % want, p)
+    need("openssh-client" in hub_pkgs, "hub: package openssh-client missing from apk add", p)
+    need("sshpass" not in hub_pkgs, "hub: sshpass is back in apk add", p)
     p += at(NODE_BUILD, grep(r"^[^#]*dropbear-ssh", NODE_BUILD))
     p += at(NODE_BUILD, grep(r"^[^#]*opensmtpd-openrc", NODE_BUILD))
     return p
@@ -456,7 +498,7 @@ def _():
 def _():
     p = []
     for f in (SETUP, "node/scripts/node-setup.sh", "hub/scripts/hub-setup.sh",
-              "hub/scripts/pervium-push-node-update.sh", "update.sh"):
+              "node/scripts/trust-hub.sh", "update.sh"):
         for n, l in grep(r"\bread -r\b", f):
             if is_comment(l):
                 continue
@@ -687,7 +729,8 @@ LIVE = [("T2-live", "real node cycle posts to a live hub"),
         ("R18-live", "syslog window and filter input"),
         ("R19-live", "null row keeps the batch; bad bodies get 400"),
         ("R21", "/api/time answers 200 on every chrony failure"),
-        ("R22-live", "correlation window round trip")]
+        ("R22-live", "correlation window round trip"),
+        ("R29-live", "every hub page answers 200 and links to the others")]
 
 
 def live_checks(base, db, tmp):
@@ -811,6 +854,20 @@ def live_checks(base, db, tmp):
                n("from=%s&to=%s&host=SW2" % (frm, to)), n("from=%s&to=%s" % (z(shifted), to)),
                n("from=%s&to=%s" % (offset, to))]
         return [] if got == [1, 1, 0, 0, 1] else ["counts %s, want [1, 1, 0, 0, 1]" % got]
+
+    @check("R29-live", "every hub page answers 200 and links to the others")
+    def _():
+        pages = {"/": ("/syslog", "/timeline"), "/syslog": ("/", "/timeline"), "/timeline": ("/", "/syslog")}
+        p = []
+        for path, links in pages.items():
+            code, body = http("GET", base + path)
+            if code != 200:
+                p.append("%s answered %s" % (path, code))
+                continue
+            for link in links:
+                if 'href="%s"' % link not in body:
+                    p.append("%s has no nav link to %s" % (path, link))
+        return p
 
     @check("R21", "/api/time answers 200 on every chrony failure")
     def _():

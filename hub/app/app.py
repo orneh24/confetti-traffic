@@ -6,13 +6,16 @@ import hashlib
 import shutil
 import subprocess
 import sys
+import re
 from datetime import datetime, timezone
 
-from flask import Flask, request, jsonify, render_template, g, Response
+from flask import Flask, request, jsonify, render_template, g, Response, send_file
 
 from . import config
 from . import syslog_server
 from . import pathchange
+from . import nodemgmt
+from . import bandwidth
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"),
             static_folder=os.path.join(os.path.dirname(__file__), "..", "static"))
@@ -92,6 +95,20 @@ def init_db():
             value   TEXT NOT NULL,
             updated TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS bwtests (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            started_at  TEXT NOT NULL,
+            finished_at TEXT,
+            kind        TEXT NOT NULL,
+            src         TEXT NOT NULL,
+            dst         TEXT NOT NULL,
+            duration    INTEGER NOT NULL,
+            streams     INTEGER NOT NULL,
+            state       TEXT NOT NULL,
+            fwd_mbps    REAL,
+            rev_mbps    REAL,
+            msg         TEXT
+        );
         CREATE INDEX IF NOT EXISTS idx_results_received ON results(received_at);
         CREATE INDEX IF NOT EXISTS idx_results_source_target ON results(source, target_hostname);
         CREATE INDEX IF NOT EXISTS idx_results_trace ON results(source, target_hostname, test_type, received_at);
@@ -115,6 +132,23 @@ def init_db():
         db.commit()
     db.execute("DROP TABLE IF EXISTS snmp_metrics")
     db.execute("DROP TABLE IF EXISTS snmp_targets")
+    db.commit()
+
+    # Node management columns: what build a node runs, whether the hub may
+    # SSH in, and the state of the last push-update. All nullable, so a node
+    # that doesn't send them still registers.
+    ep_cols = {r[1] for r in db.execute("PRAGMA table_info(endpoints)").fetchall()}
+    for col in ("build", "managed", "update_state", "update_msg", "update_at"):
+        if col not in ep_cols:
+            db.execute("ALTER TABLE endpoints ADD COLUMN {} TEXT".format(col))
+    # The push queue lives in memory; anything it held died with the last
+    # process, so don't leave those nodes showing "queued" forever.
+    db.execute("""UPDATE endpoints SET update_state = 'failed',
+                  update_msg = 'interrupted by a hub restart'
+                  WHERE update_state IN ('queued', 'running')""")
+    # Same for a bandwidth test the last process was running.
+    db.execute("""UPDATE bwtests SET state = 'failed', msg = 'interrupted by a hub restart'
+                  WHERE state = 'running'""")
     db.commit()
 
     db.close()
@@ -223,15 +257,23 @@ def register():
     if not all(k in data for k in required):
         return jsonify({"error": "Missing required fields", "required": list(required)}), 400
 
+    # Optional: older nodes don't send these. Stored as text, "true"/"false"
+    # for managed; None when absent.
+    build = data.get("build")
+    build = str(build)[:64] if build is not None else None
+    managed = data.get("managed")
+    managed = ("true" if managed else "false") if managed is not None else None
+
     now = sqlite_now()
     db = get_db()
     db.execute(
-        """INSERT INTO endpoints (hostname, ip, subnet, group_name, last_seen)
-           VALUES (?, ?, ?, ?, ?)
+        """INSERT INTO endpoints (hostname, ip, subnet, group_name, last_seen, build, managed)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(hostname) DO UPDATE SET
                ip=excluded.ip, subnet=excluded.subnet,
-               group_name=excluded.group_name, last_seen=excluded.last_seen""",
-        (data["hostname"], data["ip"], data["subnet"], data["group_name"], now),
+               group_name=excluded.group_name, last_seen=excluded.last_seen,
+               build=excluded.build, managed=excluded.managed""",
+        (data["hostname"], data["ip"], data["subnet"], data["group_name"], now, build, managed),
     )
     db.commit()
     return jsonify({"status": "ok", "hostname": data["hostname"], "last_seen": iso(now)})
@@ -268,13 +310,19 @@ def list_endpoints():
     db = get_db()
     prune_stale_endpoints(db)
     db.commit()
+    # Still a bare array (deployed nodes parse it); the management fields are
+    # extra keys per element, which older nodes ignore.
     rows = db.execute(
-        "SELECT hostname, ip, subnet, group_name, last_seen FROM endpoints ORDER BY group_name, hostname"
+        """SELECT hostname, ip, subnet, group_name, last_seen,
+                  build, managed, update_state, update_msg, update_at
+           FROM endpoints ORDER BY group_name, hostname"""
     ).fetchall()
     out = []
     for r in rows:
         d = dict(r)
         d["last_seen"] = iso(d["last_seen"])
+        d["update_at"] = iso(d["update_at"])
+        d["managed"] = None if d["managed"] is None else d["managed"] == "true"
         out.append(d)
     return jsonify(out)
 
@@ -775,6 +823,13 @@ def syslog_page():
     return render_template("syslog.html")
 
 
+@app.route("/timeline")
+def timeline_page():
+    """Serve the timeline page (incidents and replay, built client-side
+    from the existing /api endpoints)."""
+    return render_template("timeline.html")
+
+
 # ---------------------------------------------------------------------------
 # Hub clock
 #
@@ -1076,6 +1131,238 @@ def agent_script(name):
         return jsonify({"error": "not found"}), 404
     with open(path, "r") as fh:
         return Response(fh.read(), mimetype="text/plain")
+
+
+# ---------------------------------------------------------------------------
+# Node management
+#
+# Everything a node needs from its hub: the node bundle (install and
+# update), the build it carries, and the two SSH public keys plus the mesh
+# private key. Served over plain HTTP like everything else here; see
+# node/scripts/trust-hub.sh for why each key is safe to fetch that way.
+# ---------------------------------------------------------------------------
+
+def _hub_file(directory, name):
+    path = os.path.join(directory, name)
+    return path if os.path.isfile(path) else None
+
+
+def _text_file(path):
+    if not path:
+        return jsonify({"error": "not found"}), 404
+    with open(path, "r") as fh:
+        return Response(fh.read(), mimetype="text/plain")
+
+
+def bundle_commit():
+    path = _hub_file(config.BUNDLE_DIR, "RELEASE")
+    if not path:
+        return None
+    with open(path, "r") as fh:
+        for line in fh:
+            if line.startswith("commit="):
+                return line.strip()[len("commit="):] or None
+    return None
+
+
+@app.route("/node/bundle.tar.gz", methods=["GET"])
+def node_bundle():
+    path = _hub_file(config.BUNDLE_DIR, "pervium-node.tar.gz")
+    if not path:
+        return jsonify({"error": "no node bundle on this hub"}), 404
+    return send_file(os.path.abspath(path), mimetype="application/gzip")
+
+
+@app.route("/node/release", methods=["GET"])
+def node_release():
+    """The build nodes get from this hub; the dashboard flags nodes that differ."""
+    return jsonify({"commit": bundle_commit()})
+
+
+@app.route("/node/hub-key.pub", methods=["GET"])
+def node_hub_key():
+    return _text_file(_hub_file(config.KEY_DIR, "id_hub.pub"))
+
+
+@app.route("/node/mesh-key.pub", methods=["GET"])
+def node_mesh_key_pub():
+    return _text_file(_hub_file(config.KEY_DIR, "id_pervium.pub"))
+
+
+@app.route("/node/mesh-key", methods=["GET"])
+def node_mesh_key():
+    # A private key over HTTP, on purpose: nodes only accept it with a forced
+    # `echo ok` command (trust-hub.sh), so it proves reachability and nothing
+    # else. Never serve id_hub this way.
+    return _text_file(_hub_file(config.KEY_DIR, "id_pervium"))
+
+
+@app.route("/install.sh", methods=["GET"])
+def node_install_script():
+    """node-install.sh with this hub's URL filled in.
+
+    The URL comes from the request's Host header -- the address the operator
+    just used to reach the hub, which is the one the node should use too.
+    Restricted to host[:port] characters, since it lands in a shell script.
+    """
+    here = os.path.dirname(__file__)
+    path = (_hub_file(os.path.join(here, ".."), "node-install.sh")
+            or _hub_file(os.path.join(here, "..", "scripts"), "node-install.sh"))
+    if not path:
+        return jsonify({"error": "not found"}), 404
+    host = request.host
+    if not re.fullmatch(r"[A-Za-z0-9.\-:\[\]]+", host or ""):
+        return jsonify({"error": "unusable Host header"}), 400
+    with open(path, "r") as fh:
+        body = fh.read().replace("@HUB_URL@", "{}://{}".format(request.scheme, host))
+    return Response(body, mimetype="text/plain")
+
+
+def _push_candidates(db, hostname=None):
+    sql = """SELECT hostname, managed, update_state,
+                    last_seen >= datetime('now', ? || ' minutes') AS recent
+             FROM endpoints"""
+    args = [f"-{config.PUSH_SEEN_MINUTES}"]
+    if hostname is not None:
+        sql += " WHERE hostname = ?"
+        args.append(hostname)
+    return db.execute(sql + " ORDER BY group_name, hostname", args).fetchall()
+
+
+@app.route("/api/nodes/<hostname>/update", methods=["POST"])
+def push_update_one(hostname):
+    """Queue a push-update for one node (runs pervium-update on it over SSH)."""
+    db = get_db()
+    rows = _push_candidates(db, hostname)
+    if not rows:
+        return jsonify({"error": "not found"}), 404
+    reason = nodemgmt.eligible(rows[0])
+    if reason:
+        return jsonify({"error": reason, "hostname": hostname}), 409
+    nodemgmt.enqueue(db, hostname)
+    return jsonify({"status": "queued", "hostname": hostname}), 202
+
+
+# ---------------------------------------------------------------------------
+# On-demand bandwidth tests (see bandwidth.py). One at a time mesh-wide.
+# ---------------------------------------------------------------------------
+
+def _bw_params(data):
+    """(duration, streams) clamped to the allowed range, or None if not ints."""
+    try:
+        duration = int(data.get("duration", 10))
+        streams = int(data.get("streams", 1))
+    except (TypeError, ValueError):
+        return None
+    return (max(1, min(duration, bandwidth.MAX_DURATION)),
+            max(1, min(streams, bandwidth.MAX_STREAMS)))
+
+
+def _bw_row(r):
+    d = dict(r)
+    d["started_at"] = iso(d["started_at"])
+    d["finished_at"] = iso(d["finished_at"])
+    return d
+
+
+@app.route("/api/bw", methods=["GET"])
+def bw_list():
+    """Recent bandwidth tests, newest first; the dashboard polls this."""
+    rows = get_db().execute(
+        "SELECT * FROM bwtests ORDER BY id DESC LIMIT ?", (bandwidth.HISTORY_ROWS,)).fetchall()
+    return jsonify([_bw_row(r) for r in rows])
+
+
+@app.route("/api/bw/node", methods=["POST"])
+def bw_node():
+    """Start a node-to-node test: {source, target, duration, streams}."""
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON object required"}), 400
+    params = _bw_params(data)
+    if params is None:
+        return jsonify({"error": "duration and streams must be integers"}), 400
+    duration, streams = params
+    src, dst = data.get("source"), data.get("target")
+    if not src or not dst or src == dst:
+        return jsonify({"error": "pick two different nodes"}), 400
+    db = get_db()
+    ips = {}
+    for host in (src, dst):
+        row = db.execute("SELECT ip, managed FROM endpoints WHERE hostname = ?", (host,)).fetchone()
+        if row is None:
+            return jsonify({"error": "unknown node: " + host}), 404
+        if row["managed"] != "true":
+            return jsonify({"error": host + " is not managed by the hub (needed to start iperf3 on it)"}), 409
+        ips[host] = row["ip"]
+    test_id = bandwidth.claim(db, "node", src, dst, duration, streams)
+    if test_id is None:
+        return jsonify({"error": "another bandwidth test is running"}), 409
+    bandwidth.start_node_test(test_id, ips[src], ips[dst], duration, streams)
+    return jsonify({"id": test_id}), 202
+
+
+@app.route("/api/bw/browser", methods=["POST"])
+def bw_browser_start():
+    """Claim the slot for a browser test: {node, duration}.
+
+    Returns the node URL the browser measures against. The browser does the
+    transfer itself and reports back to /api/bw/browser/<id>.
+    """
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON object required"}), 400
+    params = _bw_params(data)
+    if params is None:
+        return jsonify({"error": "duration must be an integer"}), 400
+    duration = params[0]
+    db = get_db()
+    row = db.execute("SELECT ip FROM endpoints WHERE hostname = ?", (data.get("node") or "",)).fetchone()
+    if row is None:
+        return jsonify({"error": "unknown node"}), 404
+    client = "browser " + (request.remote_addr or "?")
+    test_id = bandwidth.claim(db, "browser", data["node"], client, duration, 1)
+    if test_id is None:
+        return jsonify({"error": "another bandwidth test is running"}), 409
+    return jsonify({"id": test_id, "url": "http://{}/cgi-bin/pv-bw".format(row["ip"]),
+                    "duration": duration})
+
+
+@app.route("/api/bw/browser/<int:test_id>", methods=["POST"])
+def bw_browser_result(test_id):
+    """The browser's result: {fwd_mbps, rev_mbps, error}."""
+    if not bandwidth.is_active(test_id):
+        return jsonify({"error": "no such running test (it may have timed out)"}), 409
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON object required"}), 400
+
+    def mbps(key):
+        try:
+            v = float(data.get(key))
+        except (TypeError, ValueError):
+            return None
+        return round(v, 1) if 0 <= v < 1e6 else None
+
+    fwd, rev = mbps("fwd_mbps"), mbps("rev_mbps")
+    err = str(data.get("error") or "")
+    bandwidth.finish(get_db(), test_id, "failed" if err or fwd is None else "ok", fwd, rev, err)
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/nodes/update", methods=["POST"])
+def push_update_all():
+    """Queue a push-update for every eligible node; report the rest."""
+    db = get_db()
+    queued, skipped = [], []
+    for row in _push_candidates(db):
+        reason = nodemgmt.eligible(row)
+        if reason:
+            skipped.append({"hostname": row["hostname"], "reason": reason})
+        else:
+            nodemgmt.enqueue(db, row["hostname"])
+            queued.append(row["hostname"])
+    return jsonify({"queued": queued, "skipped": skipped}), 202
 
 
 @app.route("/favicon.ico")

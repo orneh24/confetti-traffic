@@ -28,7 +28,7 @@ Nodes are ~128 MB Alpine clones from one golden image. They get an IP by DHCP, r
 
 ## Config
 
-`/etc/pervium/config` (from `node/config.sample`), sourced by both scripts: `HUB_URL` (no trailing slash), `GROUP_NAME` and `SUBNET` — plus optional `ENABLE_IPERF`, `ENABLE_SMB`, `ENABLE_SMTP`, `TRACEROUTE_INTERVAL`, `TRACEROUTE_MAX_HOPS`, `PMTU_SIZE`, `DNS_SERVER`, `DNS_QUERY`, `AGENT_AUTOUPDATE`, `HUB_SETTINGS`.
+`/etc/pervium/config` (from `node/config.sample`), sourced by both scripts: `HUB_URL` (no trailing slash), `GROUP_NAME` and `SUBNET` — plus optional `NODE_HOSTNAME`, `HOSTNAME_PREFIX`, `NODE_ID` (random, generated once; hostname is `<prefix>-<group>-<NODE_ID>`), `HUB_MANAGED` (default true; false removes the hub's pinned management key), `ENABLE_IPERF`, `ENABLE_SMB`, `ENABLE_SMTP`, `TRACEROUTE_INTERVAL`, `TRACEROUTE_MAX_HOPS`, `PMTU_SIZE`, `DNS_SERVER`, `DNS_QUERY`, `AGENT_AUTOUPDATE`, `HUB_SETTINGS`.
 
 **Mesh settings.** Right after `/endpoints`, `test-cycle.sh` fetches `GET /settings`; any boolean there overrides `ENABLE_SMB`/`ENABLE_SMTP`/`ENABLE_IPERF`, null leaves the config value. `sync_service()` then runs `rc-update add` + `rc-service start` (or `stop` + `rc-update del`) so `pervium-smbd`/`pervium-smtpd`/`iperf3` follow the flag. `HUB_SETTINGS=false` ignores the hub. A failed fetch must fall back silently — a cycle that fails here would get a self-updated script rolled back.
 

@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mesh Timeline</title>
+<script>
+// Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
+// below; dark is the default and has no attribute. Same localStorage key on
+// every hub page, so one choice covers all of them. Applied before first
+// paint so a saved choice doesn't flash dark on load.
+var THEMES = [
+    ['dark', 'Dark'],
+    ['light', 'Light'],
+    ['nord', 'Nord'],
+    ['dracula', 'Dracula'],
+    ['solarized', 'Solarized Dark'],
+    ['monokai', 'Monokai'],
+    ['contrast', 'High Contrast'],
+    ['terminal', 'Terminal green'],
+];
+// "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
+// and moves to a different one every 5-10 minutes. The saved choice is
+// 'shuffle'; the palette on screen and when it next changes live under
+// pervium-theme-shuffle, so all pages show the same one and a reload does
+// not reshuffle early.
+var SHUFFLE_MIN_MS = 5 * 60 * 1000;
+var SHUFFLE_MAX_MS = 10 * 60 * 1000;
+var shuffling = false;
+var shuffleTimer = null;
+function themeKnown(name) {
+    for (var i = 0; i < THEMES.length; i++) { if (THEMES[i][0] === name) return true; }
+    return false;
+}
+function applyTheme(name) {
+    if (!themeKnown(name) || name === 'dark') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', name);
+}
+function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') || 'dark';
+}
+function shuffleStep() {
+    var now = Date.now();
+    var st = null;
+    try { st = JSON.parse(localStorage.getItem('pervium-theme-shuffle')); } catch (e) {}
+    if (!st || !themeKnown(st.theme) || !(st.until > now)) {
+        var avoid = st && themeKnown(st.theme) ? st.theme : currentTheme();
+        var pick;
+        do { pick = THEMES[Math.floor(Math.random() * THEMES.length)][0]; } while (pick === avoid);
+        st = { theme: pick, until: now + SHUFFLE_MIN_MS + Math.random() * (SHUFFLE_MAX_MS - SHUFFLE_MIN_MS) };
+        try { localStorage.setItem('pervium-theme-shuffle', JSON.stringify(st)); } catch (e) {}
+    }
+    applyTheme(st.theme);
+    clearTimeout(shuffleTimer);
+    shuffleTimer = setTimeout(function () { if (shuffling) shuffleStep(); }, Math.max(1000, st.until - now));
+}
+try {
+    var savedTheme = localStorage.getItem('pervium-theme');
+    if (savedTheme === 'shuffle') { shuffling = true; shuffleStep(); }
+    else applyTheme(savedTheme);
+} catch (e) {}
+function setTheme(name) {
+    clearTimeout(shuffleTimer);
+    shuffling = (name === 'shuffle');
+    if (shuffling) {
+        // A fresh pick now, not the tail of an earlier shuffle.
+        try { localStorage.removeItem('pervium-theme-shuffle'); } catch (e) {}
+        shuffleStep();
+    } else {
+        applyTheme(name);
+    }
+    try { localStorage.setItem('pervium-theme', shuffling ? 'shuffle' : currentTheme()); } catch (e) {}
+    syncThemeSelect();
+}
+function syncThemeSelect() {
+    var sel = document.getElementById('theme-select');
+    if (!sel) return;
+    if (!sel.options.length) {
+        THEMES.concat([['shuffle', 'Shuffle']]).forEach(function (t) {
+            var o = document.createElement('option');
+            o.value = t[0];
+            o.textContent = t[1];
+            sel.appendChild(o);
+        });
+    }
+    sel.value = shuffling ? 'shuffle' : currentTheme();
+}
+</script>
+<style>
+:root {
+    --bg:        #0d1117;
+    --bg-card:   #161b22;
+    --bg-hover:  #1c2128;
+    --bg-muted:  #21262d;
+    --border:    #30363d;
+    --row-line:  rgba(48,54,61,.5);
+    --text:      #c9d1d9;
+    --text-dim:  #8b949e;
+    --green:     #3fb950;
+    --green-bg:  #16281c;
+    --red:       #f85149;
+    --red-bg:    #3d1214;
+    --yellow:    #d29922;
+    --yellow-bg: #2e2213;
+    --blue:      #58a6ff;
+    --gray:      #6e7681;
+    --cyan:      #39d2c0;
+}
+:root[data-theme="light"] {
+    --bg:        #d9dee4;
+    --bg-card:   #e5e9ee;
+    --bg-hover:  #d3d9e0;
+    --bg-muted:  #d3d9e0;
+    --border:    #b6bfca;
+    --row-line:  rgba(182,191,202,.6);
+    --text:      #000000;
+    --text-dim:  #252b32;
+    --green:     #1a7f37;
+    --green-bg:  #dafbe1;
+    --red:       #cf222e;
+    --red-bg:    #ffebe9;
+    --yellow:    #9a6700;
+    --yellow-bg: #fff8c5;
+    --blue:      #0969da;
+    --gray:      #57606a;
+    --cyan:      #0b7a75;
+}
+/* Nord */
+:root[data-theme="nord"] {
+    --bg:        #2e3440;
+    --bg-card:   #3b4252;
+    --bg-hover:  #434c5e;
+    --bg-muted:  #434c5e;
+    --border:    #4c566a;
+    --row-line:  rgba(76,86,106,.5);
+    --text:      #eceff4;
+    --text-dim:  #a3adbf;
+    --green:     #a3be8c;
+    --green-bg:  #34413a;
+    --red:       #bf616a;
+    --red-bg:    #43353b;
+    --yellow:    #ebcb8b;
+    --yellow-bg: #454135;
+    --blue:      #81a1c1;
+    --gray:      #8792a8;
+    --cyan:      #88c0d0;
+}
+/* Dracula */
+:root[data-theme="dracula"] {
+    --bg:        #282a36;
+    --bg-card:   #2f3142;
+    --bg-hover:  #383a4d;
+    --bg-muted:  #383a4d;
+    --border:    #44475a;
+    --row-line:  rgba(68,71,90,.5);
+    --text:      #f8f8f2;
+    --text-dim:  #a9acc6;
+    --green:     #50fa7b;
+    --green-bg:  #23402f;
+    --red:       #ff5555;
+    --red-bg:    #4a2530;
+    --yellow:    #f1fa8c;
+    --yellow-bg: #44452f;
+    --blue:      #bd93f9;
+    --gray:      #7b86b3;
+    --cyan:      #8be9fd;
+}
+/* Solarized Dark */
+:root[data-theme="solarized"] {
+    --bg:        #002b36;
+    --bg-card:   #073642;
+    --bg-hover:  #0b404e;
+    --bg-muted:  #0b404e;
+    --border:    #27505b;
+    --row-line:  rgba(39,80,91,.5);
+    --text:      #eee8d5;
+    --text-dim:  #93a1a1;
+    --green:     #859900;
+    --green-bg:  #1f3a1c;
+    --red:       #dc322f;
+    --red-bg:    #3b2227;
+    --yellow:    #b58900;
+    --yellow-bg: #33341a;
+    --blue:      #268bd2;
+    --gray:      #7a8f95;
+    --cyan:      #2aa198;
+}
+/* Monokai */
+:root[data-theme="monokai"] {
+    --bg:        #272822;
+    --bg-card:   #2e2f28;
+    --bg-hover:  #3a3b32;
+    --bg-muted:  #3a3b32;
+    --border:    #49483e;
+    --row-line:  rgba(73,72,62,.5);
+    --text:      #f8f8f2;
+    --text-dim:  #b3b19f;
+    --green:     #a6e22e;
+    --green-bg:  #33401c;
+    --red:       #f92672;
+    --red-bg:    #4a1f33;
+    --yellow:    #e6db74;
+    --yellow-bg: #44402a;
+    --blue:      #66d9ef;
+    --gray:      #908b74;
+    --cyan:      #66d9ef;
+}
+/* High Contrast — pure black, full-strength colours, for legibility */
+:root[data-theme="contrast"] {
+    --bg:        #000000;
+    --bg-card:   #0a0a0a;
+    --bg-hover:  #1a1a1a;
+    --bg-muted:  #1a1a1a;
+    --border:    #ffffff;
+    --row-line:  rgba(255,255,255,.35);
+    --text:      #ffffff;
+    --text-dim:  #e0e0e0;
+    --green:     #00ff66;
+    --green-bg:  #003318;
+    --red:       #ff3b3b;
+    --red-bg:    #3a0000;
+    --yellow:    #ffdd00;
+    --yellow-bg: #332b00;
+    --blue:      #4db8ff;
+    --gray:      #c8c8c8;
+    --cyan:      #00ffff;
+}
+/* Terminal green — mostly one hue by design; red and amber stay distinct so failures still read */
+:root[data-theme="terminal"] {
+    --bg:        #050805;
+    --bg-card:   #0a120a;
+    --bg-hover:  #112011;
+    --bg-muted:  #112011;
+    --border:    #1f4a1f;
+    --row-line:  rgba(31,74,31,.5);
+    --text:      #33ff66;
+    --text-dim:  #22aa44;
+    --green:     #66ff99;
+    --green-bg:  #0d2b12;
+    --red:       #ff5f5f;
+    --red-bg:    #3a0f0f;
+    --yellow:    #ffcc33;
+    --yellow-bg: #332a0a;
+    --blue:      #00e676;
+    --gray:      #1a8a3a;
+    --cyan:      #7dffb0;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+/* Header matches the dashboard's: same font, sizes, padding and spacing. */
+header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--bg-card);
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+header h1 {
+    font-size: 16px; margin: 0; font-weight: 600;
+    color: var(--cyan); letter-spacing: 0.5px; white-space: nowrap;
+}
+/* Same nav set as the other hub pages: links to the other pages, and a
+   non-clickable marker for the page you're already on. Kept identical
+   between the three templates so it reads as one component. */
+.btn-nav {
+    background: var(--bg-hover);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+}
+.btn-nav:hover { background: var(--cyan); color: var(--bg); text-decoration: none; }
+.btn-nav-current {
+    background: var(--cyan);
+    border: 1px solid var(--cyan);
+    color: var(--bg);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: default;
+}
+.theme-select { cursor: pointer; margin-left: 8px; }
+.theme-select option { background: var(--bg-card); color: var(--text); }
+.status { margin-left: auto; color: var(--text-dim); font-size: 11px; }
+
+select, input {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 4px; padding: 4px 6px; font: inherit; font-size: 12px;
+}
+button {
+    background: var(--bg-hover); color: var(--text); border: 1px solid var(--border);
+    border-radius: 4px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer;
+    min-height: 28px;
+}
+button:hover { border-color: var(--blue); }
+button[aria-pressed="true"] { background: var(--cyan); border-color: var(--cyan); color: var(--bg); font-weight: 600; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid var(--blue); outline-offset: 2px;
+}
+a { color: var(--blue); }
+
+.page { padding: 16px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; }
+.card-head {
+    padding: 8px 14px; border-bottom: 1px solid var(--border); color: var(--text-dim);
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    display: flex; gap: 12px; align-items: baseline; justify-content: space-between; flex-wrap: wrap;
+}
+.card-body { padding: 12px 14px; }
+
+/* Replay bar */
+.replay-top { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.replay-time { min-width: 210px; }
+.replay-time .big { font-size: 24px; font-weight: 600; line-height: 1.2; }
+.replay-time .sum { color: var(--text-dim); font-size: 12px; }
+.ribbon-wrap { flex: 1 1 300px; min-width: 0; }
+.ribbon-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.ribbon { display: flex; flex-wrap: wrap; gap: 3px; }
+.cell { width: 18px; height: 22px; border-radius: 2px; background: var(--bg-muted); border: 1px solid var(--border); }
+.cell.ok    { background: var(--green); border-color: var(--green); opacity: .55; }
+.cell.fail  { background: var(--red); border-color: var(--red); }
+.cell.route { background: var(--blue); border-color: var(--blue); }
+.cell.none  { background: var(--bg-muted); border-style: dashed; }
+.replay-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-left: auto; }
+.btn-group { display: inline-flex; gap: 4px; }
+.scrub { margin-top: 12px; }
+.marks { position: relative; height: 40px; }
+.mark { position: absolute; width: 9px; height: 9px; margin-left: -4px; }
+.mark.m-fail    { background: var(--red); }
+.mark.m-recover { border: 2px solid var(--green); border-radius: 50%; }
+.mark.m-route   { background: var(--blue); border-radius: 50%; }
+.mark.m-syslog  { background: var(--gray); width: 7px; height: 7px; border-radius: 1px; }
+.mark.m-action  { border: 2px solid var(--cyan); }
+.mark.after { opacity: .3; }
+#scrub { width: 100%; margin: 0; padding: 0; accent-color: var(--cyan); height: 28px; cursor: ew-resize; }
+.axis { display: flex; justify-content: space-between; color: var(--text-dim); font-size: 11px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } .page { padding: 12px 16px 24px; } }
+
+/* Incidents */
+.incidents { display: flex; flex-direction: column; gap: 12px; }
+.inc-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.inc-title { font-size: 14px; font-weight: 600; }
+.inc-span { margin-left: auto; color: var(--text-dim); font-size: 12px; }
+.tag { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 3px; white-space: nowrap; }
+.tag-open   { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+.tag-closed { background: var(--bg-muted); color: var(--text-dim); border: 1px solid var(--border); }
+.tag-future { background: var(--bg-muted); color: var(--text-dim); border: 1px dashed var(--border); }
+.ev { display: grid; grid-template-columns: 74px 16px minmax(0, 1fr); gap: 8px; padding: 6px 14px; border-bottom: 1px solid var(--row-line); }
+.ev.after { opacity: .38; }
+.ev-time { color: var(--text-dim); font-size: 12px; padding-top: 1px; white-space: nowrap; }
+.ev-dot { width: 10px; height: 10px; margin-top: 5px; }
+.ev-dot.m-fail    { background: var(--red); }
+.ev-dot.m-recover { border: 2px solid var(--green); border-radius: 50%; }
+.ev-dot.m-route   { background: var(--blue); border-radius: 50%; }
+.ev-dot.m-syslog  { background: var(--gray); border-radius: 1px; }
+.ev-dot.m-action  { border: 2px solid var(--cyan); }
+.ev-what { font-weight: 600; word-break: break-word; }
+.ev-detail { color: var(--text-dim); font-size: 12px; word-break: break-word; }
+.inc-foot { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 8px 14px; font-size: 12px; }
+.more { background: transparent; border: 1px dashed var(--border); color: var(--text-dim); }
+.empty { padding: 32px 16px; text-align: center; color: var(--text-dim); }
+
+/* Side column */
+.side { display: flex; flex-direction: column; gap: 16px; }
+.filter { display: flex; align-items: center; gap: 8px; min-height: 30px; color: var(--text); font-size: 13px; cursor: pointer; }
+.filter input { width: 16px; height: 16px; margin: 0; accent-color: var(--cyan); }
+.swatch { width: 10px; height: 10px; flex-shrink: 0; }
+.note { color: var(--text-dim); font-size: 12px; line-height: 1.5; }
+.note + .note { margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>MESH TIMELINE</h1>
+    <a href="/" class="btn-nav">Dashboard</a>
+    <a href="/syslog" class="btn-nav">Syslog</a>
+    <span class="btn-nav-current">Timeline</span>
+    <div class="status">
+        <span id="st-loading"></span>
+        <span id="st-updated">--</span>
+        &nbsp;|&nbsp;
+        <span id="st-count">--</span>
+        <select id="theme-select" class="btn-nav theme-select" aria-label="Colour theme" onchange="setTheme(this.value)"></select>
+        <script>syncThemeSelect();</script>
+    </div>
+</header>
+
+<div class="page">
+
+    <section class="card" aria-label="Replay">
+        <div class="card-body">
+            <div class="replay-top">
+                <div class="replay-time">
+                    <div class="big" id="rp-time">--</div>
+                    <div class="sum" id="rp-sum"></div>
+                </div>
+                <div class="ribbon-wrap">
+                    <div class="ribbon-label">Mesh paths at this moment (one square per source &rarr; target)</div>
+                    <div class="ribbon" id="ribbon"></div>
+                </div>
+                <div class="replay-btns">
+                    <div class="btn-group" role="group" aria-label="History range" id="range-btns"></div>
+                    <button type="button" id="btn-prev">&larr; Previous event</button>
+                    <button type="button" id="btn-next">Next event &rarr;</button>
+                    <button type="button" id="btn-now">Now</button>
+                </div>
+            </div>
+            <div class="scrub">
+                <div class="marks" id="marks"></div>
+                <label for="scrub" style="position:absolute;left:-9999px">Replay the mesh at a moment in the selected range</label>
+                <input type="range" id="scrub" min="0" max="1000" step="1" value="1000">
+                <div class="axis" id="axis"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="layout">
+        <div class="incidents" id="incidents"></div>
+
+        <aside class="side">
+            <section class="card">
+                <div class="card-head"><span>Show</span></div>
+                <div class="card-body" id="filters"></div>
+            </section>
+            <section class="card">
+                <div class="card-head"><span>How events are grouped</span></div>
+                <div class="card-body">
+                    <div class="note">Failures and route changes join one incident when they share a node or group and fall within 5 minutes of each other. A recovery joins the incident that holds its path.</div>
+                    <div class="note">Syslog (severity 5 or worse) and bandwidth tests within 5 minutes of an incident are listed under it as <em>nearby</em>. That is timing, not proof of cause: the hub has no map from a device name to a node.</div>
+                    <div class="note">A path already failing when the range begins gets one event at its first sample. &ldquo;On a new route&rdquo; means a path change in the 15 minutes before the moment shown.</div>
+                </div>
+            </section>
+            <section class="card">
+                <div class="card-head"><span>Quiet</span></div>
+                <div class="card-body" id="quiet"></div>
+            </section>
+        </aside>
+    </div>
+</div>
+
+<script>
+(function() {
+    "use strict";
+
+    var RANGES = [["1h", 60], ["6h", 360], ["24h", 1440]];
+    var GAP_MS = 5 * 60000;         // events this close, sharing a node/group, are one incident
+    var NEAR_MS = 5 * 60000;        // syslog / bandwidth tests this close to an incident are "nearby"
+    var ROUTE_MS = 15 * 60000;      // how long after a path change a path counts as "on a new route"
+    var MAX_SYSLOG_PER_INCIDENT = 6;
+    var EVENTS_SHOWN = 12;
+    var KINDS = [
+        ["fail", "Failures"],
+        ["recover", "Recoveries"],
+        ["route", "Route changes"],
+        ["syslog", "Syslog, severity 5 or worse"],
+        ["action", "Bandwidth tests"]
+    ];
+    var TYPE_NAMES = {
+        http: "HTTP", ssh: "SSH", traceroute: "Trace", pmtu: "PMTU", dns: "DNS",
+        smb: "SMB", iperf3: "iperf", loss: "Loss", smtp: "SMTP"
+    };
+
+    var rangeKey = "1h";
+    try {
+        var savedRange = localStorage.getItem("pervium-timeline-range");
+        for (var ri = 0; ri < RANGES.length; ri++) { if (RANGES[ri][0] === savedRange) rangeKey = savedRange; }
+    } catch (e) {}
+
+    var S = {
+        loaded: false, loading: false, partial: false,
+        start: 0, end: 0, t: 0, atNow: true,
+        eps: [], nodeInfo: {}, series: {}, pairTypes: {}, routeByPair: {},
+        events: [], incidents: [], other: [], evTimes: [],
+        show: { fail: true, recover: true, route: true, syslog: true, action: true },
+        expanded: {}, otherExpanded: false,
+        resultCount: 0, health: null, updatedAt: null
+    };
+    var seq = 0, timer = null;
+
+    // ---------------------------------------------------------------
+    // Small helpers (same behaviour as the dashboard's copies).
+    // ---------------------------------------------------------------
+    function esc(s) {
+        if (s === null || s === undefined || s === "") return "";
+        var d = document.createElement("div");
+        d.appendChild(document.createTextNode(String(s)));
+        return d.innerHTML;
+    }
+    function escAttr(s) {
+        return esc(s).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    }
+    function parseMs(ts) {
+        if (!ts) return null;
+        var s = String(ts);
+        if (s.indexOf("T") === -1) s = s.replace(" ", "T") + "Z";
+        var d = new Date(s);
+        return isNaN(d.getTime()) ? null : d.getTime();
+    }
+    function getJSON(url) {
+        return fetch(url, { cache: "no-store" }).then(function(r) {
+            if (!r.ok) throw new Error(String(r.status));
+            return r.json();
+        }).catch(function() { return null; });
+    }
+    function two(n) { return (n < 10 ? "0" : "") + n; }
+    function clock(ms, withSeconds) {
+        var d = new Date(ms);
+        return two(d.getHours()) + ":" + two(d.getMinutes()) + (withSeconds ? ":" + two(d.getSeconds()) : "");
+    }
+    function duration(ms) {
+        var m = Math.round(ms / 60000);
+        if (m < 1) return "<1 min";
+        if (m < 60) return m + " min";
+        return Math.floor(m / 60) + " h " + two(m % 60) + " min";
+    }
+    function typeName(t) { return TYPE_NAMES[t] || t; }
+    function shortText(s, n) {
+        s = String(s || "");
+        return s.length > n ? s.slice(0, n - 1) + "…" : s;
+    }
+    function lastAtOrBefore(arr, t) {
+        var lo = 0, hi = arr.length - 1, ans = -1;
+        while (lo <= hi) {
+            var mid = (lo + hi) >> 1;
+            if (arr[mid].t <= t) { ans = mid; lo = mid + 1; } else { hi = mid - 1; }
+        }
+        return ans;
+    }
+    function groupOf(host) {
+        var n = S.nodeInfo[host];
+        return n ? n.group : null;
+    }
+
+    // ---------------------------------------------------------------
+    // Load and build. Every fetch may fail on its own; a failed one just
+    // leaves that part of the page empty. Nothing here may throw.
+    // ---------------------------------------------------------------
+    function minutes() {
+        for (var i = 0; i < RANGES.length; i++) { if (RANGES[i][0] === rangeKey) return RANGES[i][1]; }
+        return 60;
+    }
+
+    function load() {
+        var mySeq = ++seq;
+        var mins = minutes();
+        S.loading = true;
+        renderStatus();
+        Promise.all([
+            getJSON("/endpoints"),
+            getJSON("/api/results?minutes=" + mins),
+            getJSON("/api/path-changes?minutes=" + mins),
+            getJSON("/api/syslog?minutes=" + mins + "&severity=5&limit=2000"),
+            getJSON("/api/bw"),
+            getJSON("/api/health")
+        ]).then(function(r) {
+            if (mySeq !== seq) return;      // a newer range choice superseded this load
+            try { build(r, mins); } catch (e) { S.partial = true; }
+            S.loading = false;
+            S.loaded = true;
+            S.updatedAt = Date.now();
+            renderAll();
+            schedule();
+        });
+    }
+
+    function schedule() {
+        clearTimeout(timer);
+        // A day of results is a big download; poll it less often.
+        timer = setTimeout(load, minutes() > 60 ? 120000 : 30000);
+    }
+
+    function build(r, mins) {
+        S.partial = !(r[0] && r[1] && r[2] && r[3] && r[4] && r[5]);
+        var eps = Array.isArray(r[0]) ? r[0] : [];
+        var rows = Array.isArray(r[1]) ? r[1] : [];
+        var pcs = Array.isArray(r[2]) ? r[2] : [];
+        var sysl = Array.isArray(r[3]) ? r[3] : [];
+        var bws = Array.isArray(r[4]) ? r[4] : [];
+        S.health = r[5] && typeof r[5] === "object" ? r[5] : null;
+        S.resultCount = rows.length;
+
+        eps.sort(function(a, b) {
+            var ga = a.group_name || "", gb = b.group_name || "";
+            if (ga !== gb) return ga < gb ? -1 : 1;
+            return a.hostname < b.hostname ? -1 : a.hostname > b.hostname ? 1 : 0;
+        });
+        S.eps = eps;
+        S.nodeInfo = {};
+        eps.forEach(function(e) { S.nodeInfo[e.hostname] = { group: e.group_name || null, ip: e.ip || "" }; });
+
+        var end = Date.now();
+        var events = [];
+
+        // Series per (src|dst|type), chronological: the replay reads these.
+        S.series = {};
+        S.pairTypes = {};
+        rows.forEach(function(row) {
+            var ms = parseMs(row.received_at);
+            if (ms === null) return;
+            var pk = row.source + "|" + row.target_hostname;
+            var sk = pk + "|" + row.test_type;
+            (S.series[sk] = S.series[sk] || []).push({ t: ms, ok: !!row.success, out: row.output || "" });
+            var pt = (S.pairTypes[pk] = S.pairTypes[pk] || []);
+            if (pt.indexOf(row.test_type) === -1) pt.push(row.test_type);
+            if (ms > end) end = ms;
+        });
+
+        // Pass/fail flips, as the dashboard's "Recent Changes" finds them but
+        // uncapped. A pair's first sample can't flip; if it is already a
+        // failure it gets one "carried" event so a long-running fault shows up.
+        var merged = {};
+        Object.keys(S.series).forEach(function(sk) {
+            var arr = S.series[sk];
+            arr.sort(function(a, b) { return a.t - b.t; });
+            var parts = sk.split("|");
+            for (var i = 0; i < arr.length; i++) {
+                var carried = (i === 0 && !arr[0].ok);
+                if (i > 0 && arr[i].ok === arr[i - 1].ok) continue;
+                if (i === 0 && !carried) continue;
+                var kind = arr[i].ok ? "recover" : "fail";
+                var mk = kind + "|" + parts[0] + "|" + parts[1] + "|" + arr[i].t + "|" + carried;
+                var ev = merged[mk];
+                if (!ev) {
+                    ev = merged[mk] = { t: arr[i].t, kind: kind, src: parts[0], dst: parts[1], types: [], out: "", carried: carried };
+                    events.push(ev);
+                }
+                ev.types.push(parts[2]);
+                if (!ev.out && !arr[i].ok) ev.out = arr[i].out;
+            }
+        });
+
+        S.routeByPair = {};
+        pcs.forEach(function(p) {
+            var ms = parseMs(p.received_at);
+            if (ms === null) return;
+            var pk = p.source + "|" + p.target;
+            (S.routeByPair[pk] = S.routeByPair[pk] || []).push(ms);
+            events.push({ t: ms, kind: "route", src: p.source, dst: p.target, detail: p.detail || "" });
+            if (ms > end) end = ms;
+        });
+
+        var startCut = end - mins * 60000;
+        sysl.forEach(function(m) {
+            var ms = parseMs(m.received_at);
+            if (ms === null || m.severity === null || m.severity === undefined) return;
+            if (m.host === "pervium-hub" && String(m.mnemonic || "").indexOf("PATHCHANGE") !== -1) return; // already a route event
+            events.push({ t: ms, kind: "syslog", host: m.host || m.source_ip || "?", ip: m.source_ip || "",
+                          sev: m.severity, msg: m.message || "" });
+            if (ms > end) end = ms;
+        });
+
+        bws.forEach(function(b) {
+            var ms = parseMs(b.started_at);
+            if (ms === null || ms < startCut) return;
+            events.push({ t: ms, kind: "action", src: b.src || "?", dst: b.dst || "?", bw: b });
+            if (ms > end) end = ms;
+        });
+
+        S.end = end;
+        S.start = end - mins * 60000;
+        events = events.filter(function(e) { return e.t >= S.start && e.t <= S.end; });
+        events.sort(function(a, b) { return a.t - b.t; });
+        S.events = events;
+
+        groupIncidents();
+
+        // Keep the viewed moment across refreshes unless it is "Now".
+        if (S.atNow || S.t < S.start) S.t = S.end;
+        if (S.t > S.end) S.t = S.end;
+    }
+
+    // ---------------------------------------------------------------
+    // Incidents.
+    // ---------------------------------------------------------------
+    function groupIncidents() {
+        var incs = [];
+        var core = S.events.filter(function(e) { return e.kind === "fail" || e.kind === "route" || e.kind === "recover"; });
+
+        function shares(inc, e) {
+            if (inc.nodes[e.src] || inc.nodes[e.dst]) return true;
+            var g1 = groupOf(e.src), g2 = groupOf(e.dst);
+            return (g1 && inc.groups[g1]) || (g2 && inc.groups[g2]) ? true : false;
+        }
+        function add(inc, e) {
+            inc.events.push(e);
+            inc.nodes[e.src] = true; inc.nodes[e.dst] = true;
+            var g1 = groupOf(e.src), g2 = groupOf(e.dst);
+            if (g1) inc.groups[g1] = true;
+            if (g2) inc.groups[g2] = true;
+            inc.pairs[e.src + "|" + e.dst] = true;
+            inc.start = Math.min(inc.start, e.t);
+            inc.end = Math.max(inc.end, e.t);
+        }
+        function fresh(e) {
+            return { events: [], nodes: {}, groups: {}, pairs: {}, failing: {}, types: {},
+                     start: e.t, end: e.t, lastCore: e.t, hasFail: false, hasRoute: false };
+        }
+
+        core.forEach(function(e) {
+            var inc = null, i;
+            if (e.kind === "recover") {
+                for (i = incs.length - 1; i >= 0; i--) {
+                    if (incs[i].pairs[e.src + "|" + e.dst]) { inc = incs[i]; break; }
+                }
+                if (!inc) { inc = fresh(e); incs.push(inc); }
+                add(inc, e);
+                // The path is healthy again wherever it had failed.
+                incs.forEach(function(o) {
+                    e.types.forEach(function(t) { delete o.failing[e.src + "|" + e.dst + "|" + t]; });
+                });
+                return;
+            }
+            for (i = incs.length - 1; i >= 0; i--) {
+                if (e.t - incs[i].lastCore <= GAP_MS && shares(incs[i], e)) { inc = incs[i]; break; }
+            }
+            if (!inc) { inc = fresh(e); incs.push(inc); }
+            add(inc, e);
+            inc.lastCore = Math.max(inc.lastCore, e.t);
+            if (e.kind === "fail") {
+                inc.hasFail = true;
+                e.types.forEach(function(t) { inc.failing[e.src + "|" + e.dst + "|" + t] = true; inc.types[t] = true; });
+            } else {
+                inc.hasRoute = true;
+            }
+        });
+
+        // Syslog and bandwidth tests go to the nearest incident within
+        // NEAR_MS; the rest stay in "Other events".
+        var other = [];
+        S.events.forEach(function(e) {
+            if (e.kind !== "syslog" && e.kind !== "action") return;
+            var best = null, bestD = NEAR_MS + 1;
+            incs.forEach(function(inc) {
+                var endT = isOpen(inc) ? S.end : inc.end;
+                var d = e.t < inc.start ? inc.start - e.t : e.t > endT ? e.t - endT : 0;
+                if (d > NEAR_MS) return;
+                if (e.kind === "action" && !(inc.nodes[e.src] || inc.nodes[e.dst])) return;
+                if (d < bestD) { best = inc; bestD = d; }
+            });
+            if (best) { (best.nearby = best.nearby || []).push(e); } else { other.push(e); }
+        });
+        incs.forEach(function(inc) {
+            var nb = inc.nearby || [];
+            nb.forEach(function(e) {
+                if (e.kind === "syslog") {
+                    e.match = !!(inc.groups[e.host]) || !!(inc.nodes[e.host]) ||
+                              Object.keys(inc.nodes).some(function(h) { return e.ip && S.nodeInfo[h] && S.nodeInfo[h].ip === e.ip; });
+                }
+            });
+            var sys = nb.filter(function(e) { return e.kind === "syslog"; });
+            var act = nb.filter(function(e) { return e.kind === "action"; });
+            sys.sort(function(a, b) {
+                if (!!a.match !== !!b.match) return a.match ? -1 : 1;
+                if (a.sev !== b.sev) return a.sev - b.sev;
+                return Math.abs(a.t - inc.start) - Math.abs(b.t - inc.start);
+            });
+            other = other.concat(sys.slice(MAX_SYSLOG_PER_INCIDENT));
+            inc.shown = inc.events.concat(sys.slice(0, MAX_SYSLOG_PER_INCIDENT), act);
+            inc.shown.sort(function(a, b) { return a.t - b.t; });
+        });
+        other.sort(function(a, b) { return b.t - a.t; });
+
+        incs.forEach(function(inc) { inc.open = isOpen(inc); });
+        incs.sort(function(a, b) {
+            if (a.open !== b.open) return a.open ? -1 : 1;
+            return b.start - a.start;
+        });
+        S.incidents = incs;
+        S.other = other;
+    }
+
+    function isOpen(inc) {
+        if (Object.keys(inc.failing).length) return true;
+        return !inc.hasFail && inc.hasRoute && (S.end - inc.lastCore) <= ROUTE_MS;
+    }
+
+    function incidentTitle(inc) {
+        var groups = Object.keys(inc.groups).sort();
+        var where;
+        if (groups.length >= 2) where = groups.slice(0, 2).join(" ⇄ ") + (groups.length > 2 ? " +" + (groups.length - 2) : "");
+        else if (groups.length === 1) where = "within " + groups[0];
+        else where = Object.keys(inc.nodes).slice(0, 2).join(", ");
+        var paths = Object.keys(inc.pairs).length;
+        var tail = " · " + paths + (paths === 1 ? " path" : " paths");
+        if (inc.hasFail) {
+            var tt = Object.keys(inc.types).map(typeName);
+            return tt.join(", ") + " failing: " + where + tail;
+        }
+        if (inc.hasRoute) return "Route changed: " + where + tail;
+        return "Recovered: " + where + tail;
+    }
+
+    // ---------------------------------------------------------------
+    // Replay: the mesh as it stood at moment t.
+    // ---------------------------------------------------------------
+    function stateAt(t) {
+        var cells = [], counts = { fail: 0, route: 0, ok: 0, none: 0 };
+        S.eps.forEach(function(a) {
+            S.eps.forEach(function(b) {
+                if (a.hostname === b.hostname) return;
+                var pk = a.hostname + "|" + b.hostname;
+                var types = S.pairTypes[pk] || [];
+                var st = "none", bad = [];
+                types.forEach(function(ty) {
+                    var arr = S.series[pk + "|" + ty];
+                    var i = lastAtOrBefore(arr, t);
+                    if (i < 0) return;
+                    if (st === "none") st = "ok";
+                    if (!arr[i].ok) { st = "fail"; bad.push(typeName(ty)); }
+                });
+                if (st !== "fail") {
+                    var rs = S.routeByPair[pk] || [];
+                    for (var k = 0; k < rs.length; k++) {
+                        if (rs[k] <= t && t - rs[k] <= ROUTE_MS) { st = "route"; break; }
+                    }
+                }
+                counts[st]++;
+                var label = a.hostname + " → " + b.hostname + ": " +
+                    (st === "fail" ? "failing (" + bad.join(", ") + ")" : st === "route" ? "on a new route" : st === "ok" ? "passing" : "no data yet");
+                cells.push({ st: st, label: label });
+            });
+        });
+        return { cells: cells, counts: counts };
+    }
+
+    // ---------------------------------------------------------------
+    // Rendering.
+    // ---------------------------------------------------------------
+    function renderStatus() {
+        document.getElementById("st-loading").textContent = S.loading ? "loading… | " : "";
+        document.getElementById("st-updated").textContent = S.updatedAt ? "Updated: " + clock(S.updatedAt, true) : "--";
+        document.getElementById("st-count").textContent = S.loaded
+            ? S.resultCount + " results" + (S.partial ? " (some data unavailable)" : "")
+            : "--";
+    }
+
+    function renderRange() {
+        var el = document.getElementById("range-btns");
+        var html = "";
+        RANGES.forEach(function(r) {
+            html += "<button type='button' data-range='" + r[0] + "' aria-pressed='" + (r[0] === rangeKey ? "true" : "false") + "'>" + r[0] + "</button>";
+        });
+        el.innerHTML = html;
+    }
+
+    function renderFilters() {
+        var html = "";
+        KINDS.forEach(function(k) {
+            html += "<label class='filter'><input type='checkbox' data-kind='" + k[0] + "'" + (S.show[k[0]] ? " checked" : "") + ">" +
+                    "<span class='swatch ev-dot m-" + k[0] + "'></span>" + esc(k[1]) + "</label>";
+        });
+        document.getElementById("filters").innerHTML = html;
+    }
+
+    function visible(e) { return S.show[e.kind]; }
+
+    function renderReplay() {
+        var t = S.t;
+        var span = Math.max(1, S.end - S.start);
+        var st = stateAt(t);
+        var big = S.atNow || t >= S.end ? "Now, " + clock(S.end) : clock(t, true);
+        document.getElementById("rp-time").textContent = S.loaded ? big : "--";
+        document.getElementById("rp-sum").textContent = S.loaded
+            ? st.counts.fail + " failing · " + st.counts.route + " on a new route · " + st.counts.ok + " fine" +
+              (st.counts.none ? " · " + st.counts.none + " no data" : "")
+            : "";
+
+        var rb = "";
+        st.cells.forEach(function(c) { rb += "<span class='cell " + c.st + "' title='" + escAttr(c.label) + "'></span>"; });
+        document.getElementById("ribbon").innerHTML = rb || "<span class='note'>No nodes registered.</span>";
+
+        var mk = "";
+        var rowTop = { syslog: 0, fail: 14, recover: 14, route: 28, action: 28 };
+        S.events.forEach(function(e) {
+            if (!visible(e)) return;
+            var x = ((e.t - S.start) / span * 100).toFixed(2);
+            mk += "<span class='mark m-" + e.kind + (e.t > t ? " after" : "") + "' style='left:" + x + "%;top:" + rowTop[e.kind] + "px' title='" +
+                  escAttr(clock(e.t, true) + " " + eventWhat(e)) + "'></span>";
+        });
+        document.getElementById("marks").innerHTML = mk;
+
+        var ax = "";
+        for (var i = 0; i <= 4; i++) ax += "<span>" + clock(S.start + span * i / 4) + "</span>";
+        document.getElementById("axis").innerHTML = ax;
+
+        var slider = document.getElementById("scrub");
+        slider.value = String(Math.round((t - S.start) / span * 1000));
+    }
+
+    function eventWhat(e) {
+        if (e.kind === "fail" || e.kind === "recover") {
+            var names = e.types.map(typeName).join(", ");
+            return e.src + " → " + e.dst + ": " + names + (e.kind === "fail" ? (e.carried ? " already failing" : " failed") : " passed again");
+        }
+        if (e.kind === "route") return e.src + " → " + e.dst + ": route changed";
+        if (e.kind === "syslog") return e.host + " (sev " + e.sev + ")";
+        var b = e.bw || {};
+        return "Bandwidth test " + e.src + " → " + e.dst + (b.state === "done" ? "" : " (" + (b.state || "unknown") + ")");
+    }
+
+    function eventDetail(e) {
+        if (e.kind === "fail") {
+            var o = shortText(e.out, 220);
+            return (e.carried ? "Already failing when this range began. " : "") + o;
+        }
+        if (e.kind === "recover") return "";
+        if (e.kind === "route") return e.detail;
+        if (e.kind === "syslog") return e.msg + (e.match ? "  (sender matches this incident)" : "  (nearby)");
+        var b = e.bw || {};
+        if (b.state && b.state !== "done") return b.msg || "";
+        var parts = [];
+        if (b.fwd_mbps !== null && b.fwd_mbps !== undefined) parts.push(b.fwd_mbps + " → Mbit/s");
+        if (b.rev_mbps !== null && b.rev_mbps !== undefined) parts.push(b.rev_mbps + " ← Mbit/s");
+        if (b.duration) parts.push(b.duration + " s");
+        if (b.streams) parts.push(b.streams + (b.streams === 1 ? " stream" : " streams"));
+        return parts.join(" · ") + (e.kind === "action" ? "  (nearby)" : "");
+    }
+
+    function eventRow(e, t) {
+        return "<div class='ev" + (e.t > t ? " after" : "") + "'>" +
+               "<span class='ev-time'>" + esc(clock(e.t, true)) + "</span>" +
+               "<span class='ev-dot m-" + e.kind + "'></span>" +
+               "<div><div class='ev-what'>" + esc(eventWhat(e)) + "</div>" +
+               (eventDetail(e) ? "<div class='ev-detail'>" + esc(eventDetail(e)) + "</div>" : "") + "</div></div>";
+    }
+
+    function syslogHref(from, to) {
+        function z(ms) { return new Date(ms).toISOString().replace(/\.\d+Z$/, "Z"); }
+        return "/syslog?from=" + encodeURIComponent(z(from - NEAR_MS)) + "&to=" + encodeURIComponent(z(to + NEAR_MS));
+    }
+
+    function renderIncidents() {
+        var t = S.t, html = "", shownAny = false;
+        S.incidents.forEach(function(inc, idx) {
+            var evs = (inc.shown || inc.events).filter(visible);
+            if (!evs.length) return;
+            shownAny = true;
+            var future = inc.start > t;
+            var endT = inc.open ? S.end : inc.end;
+            var tag = future ? "<span class='tag tag-future'>NOT YET</span>"
+                : inc.open ? "<span class='tag tag-open'>OPEN · " + esc(duration(S.end - inc.start)) + "</span>"
+                : "<span class='tag tag-closed'>CLOSED · " + esc(duration(inc.end - inc.start)) + "</span>";
+            var lim = S.expanded[inc.start + "|" + idx] ? evs.length : EVENTS_SHOWN;
+            html += "<article class='card' style='" + (future ? "opacity:.5" : "") + "'>" +
+                    "<div class='inc-head'>" + tag + "<span class='inc-title'>" + esc(incidentTitle(inc)) + "</span>" +
+                    "<span class='inc-span'>" + esc(clock(inc.start, true)) + " – " + (inc.open ? "now" : esc(clock(inc.end, true))) + "</span></div>";
+            evs.slice(0, lim).forEach(function(e) { html += eventRow(e, t); });
+            if (evs.length > lim) {
+                html += "<div class='inc-foot'><button type='button' class='more' data-more='" + escAttr(inc.start + "|" + idx) + "'>Show all " + evs.length + " events</button></div>";
+            }
+            html += "<div class='inc-foot'><a href='" + escAttr(syslogHref(inc.start, endT)) + "'>Syslog around this incident</a><a href='/'>Dashboard</a></div></article>";
+        });
+
+        var other = S.other.filter(visible);
+        if (other.length) {
+            var olim = S.otherExpanded ? other.length : EVENTS_SHOWN;
+            html += "<article class='card'><div class='inc-head'><span class='tag tag-closed'>OTHER</span><span class='inc-title'>Events not near an incident</span></div>";
+            other.slice(0, olim).forEach(function(e) { html += eventRow(e, t); });
+            if (other.length > olim) html += "<div class='inc-foot'><button type='button' class='more' data-more='other'>Show all " + other.length + " events</button></div>";
+            html += "</article>";
+            shownAny = true;
+        }
+
+        if (!shownAny) {
+            html = "<div class='card'><div class='empty'>" + (S.loaded
+                ? "Nothing changed in this range. All paths held steady."
+                : "Loading…") + "</div></div>";
+        }
+        document.getElementById("incidents").innerHTML = html;
+    }
+
+    function renderQuiet() {
+        var total = 0, involved = {};
+        S.eps.forEach(function(a) { S.eps.forEach(function(b) { if (a.hostname !== b.hostname) total++; }); });
+        S.incidents.forEach(function(inc) { Object.keys(inc.pairs).forEach(function(k) { involved[k] = true; }); });
+        var quiet = 0;
+        S.eps.forEach(function(a) {
+            S.eps.forEach(function(b) {
+                if (a.hostname !== b.hostname && !involved[a.hostname + "|" + b.hostname]) quiet++;
+            });
+        });
+        var html = "<div class='note'>" + quiet + " of " + total + " mesh paths had no failure or route change in this range.</div>";
+        var h = S.health;
+        if (h && h.services) {
+            var names = Object.keys(h.services), up = 0, known = 0;
+            names.forEach(function(n) {
+                var s = h.services[n] && h.services[n].status;
+                if (s === "up" || s === "down") known++;
+                if (s === "up") up++;
+            });
+            if (known) {
+                html += "<div class='note'>Hub: " + up + " of " + known + " checked services up" +
+                        (h.syslog_listening === false ? ", syslog listener not running" : "") + ".</div>";
+            }
+        }
+        document.getElementById("quiet").innerHTML = html;
+    }
+
+    function renderAll() {
+        renderStatus();
+        renderRange();
+        renderFilters();
+        renderReplay();
+        renderIncidents();
+        renderQuiet();
+    }
+
+    // ---------------------------------------------------------------
+    // Events from the controls.
+    // ---------------------------------------------------------------
+    function moveTo(t) {
+        S.t = Math.max(S.start, Math.min(S.end, t));
+        S.atNow = S.t >= S.end;
+        renderReplay();
+        renderIncidents();
+    }
+
+    function times() {
+        var out = [];
+        S.events.forEach(function(e) { if (visible(e)) out.push(e.t); });
+        return out;
+    }
+
+    document.getElementById("scrub").addEventListener("input", function() {
+        moveTo(S.start + (Number(this.value) / 1000) * (S.end - S.start));
+    });
+    document.getElementById("btn-now").addEventListener("click", function() { moveTo(S.end); });
+    document.getElementById("btn-prev").addEventListener("click", function() {
+        var prev = null;
+        times().forEach(function(x) { if (x < S.t - 500 && (prev === null || x > prev)) prev = x; });
+        if (prev !== null) moveTo(prev);
+    });
+    document.getElementById("btn-next").addEventListener("click", function() {
+        var next = null;
+        times().forEach(function(x) { if (x > S.t + 500 && (next === null || x < next)) next = x; });
+        moveTo(next !== null ? next : S.end);
+    });
+    document.getElementById("range-btns").addEventListener("click", function(ev) {
+        var b = ev.target.closest ? ev.target.closest("button[data-range]") : null;
+        if (!b || b.getAttribute("data-range") === rangeKey) return;
+        rangeKey = b.getAttribute("data-range");
+        try { localStorage.setItem("pervium-timeline-range", rangeKey); } catch (e) {}
+        S.atNow = true;
+        renderRange();
+        load();
+    });
+    document.getElementById("filters").addEventListener("change", function(ev) {
+        var k = ev.target.getAttribute("data-kind");
+        if (!k) return;
+        S.show[k] = ev.target.checked;
+        renderReplay();
+        renderIncidents();
+    });
+    document.getElementById("incidents").addEventListener("click", function(ev) {
+        var b = ev.target.closest ? ev.target.closest("button[data-more]") : null;
+        if (!b) return;
+        var k = b.getAttribute("data-more");
+        if (k === "other") S.otherExpanded = true; else S.expanded[k] = true;
+        renderIncidents();
+    });
+
+    renderAll();
+    load();
+})();
+</script>
+</body>
+</html>

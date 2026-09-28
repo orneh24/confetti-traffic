@@ -94,8 +94,7 @@ apk_step apk add --no-cache --no-progress \
     open-vm-tools \
     chrony \
     lldpd \
-    openssh-client \
-    sshpass
+    openssh-client
 
 log "Packages installed"
 
@@ -151,12 +150,12 @@ cp -f "${SCRIPT_DIR}/requirements.txt" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/serve.py" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/run.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/hub-setup.sh" "$HUB_INSTALL_DIR/"
-cp -f "${SCRIPT_DIR}/scripts/pervium-push-node-update.sh" "$HUB_INSTALL_DIR/"
-chmod +x "$HUB_INSTALL_DIR/run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/hub-setup.sh" \
-    "$HUB_INSTALL_DIR/pervium-push-node-update.sh"
+# Served at /install.sh: installs a plain Alpine VM as a node from this hub.
+cp -f "${SCRIPT_DIR}/scripts/node-install.sh" "$HUB_INSTALL_DIR/"
+chmod +x "$HUB_INSTALL_DIR/run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/hub-setup.sh"
 ln -sf "$HUB_INSTALL_DIR/hub-setup.sh" /usr/local/bin/hub-setup.sh
-# Manual only (see the script's header): never scheduled.
-ln -sf "$HUB_INSTALL_DIR/pervium-push-node-update.sh" /usr/local/bin/pervium-push-node-update.sh
+# Replaced by the dashboard's push-update (hub management key, no sshpass).
+rm -f "$HUB_INSTALL_DIR/pervium-push-node-update.sh" /usr/local/bin/pervium-push-node-update.sh
 
 # The code updater (repo-root update.sh). Copied, not linked: the repo copy
 # this build ran from is usually deleted afterwards. Via a temp name and mv,
@@ -194,6 +193,39 @@ elif [ -d "${SCRIPT_DIR}/agent" ]; then
 else
     log "  WARNING: no agent scripts found -- self-update will be unavailable"
     log "  copy test-cycle.sh and register.sh into $HUB_INSTALL_DIR/agent/ later"
+fi
+
+# -------------------------------------------------------------------
+# Node bundle: everything a node needs to be installed or updated from this
+# hub (node/, update.sh, install.sh), served at /node/bundle.tar.gz. Nodes
+# update only from here, never from GitHub, so they can't get ahead of
+# their hub. Rebuilt on every hub update, from the same code the hub itself
+# was just updated to.
+#
+# The top directory is pervium/ with update.sh in it, which is what
+# update.sh's own download path looks for. RELEASE carries the commit: this
+# tarball has no GitHub pax header to read it from.
+# -------------------------------------------------------------------
+log "Building node bundle"
+mkdir -p "$HUB_INSTALL_DIR/bundle"
+if [ -d "${SCRIPT_DIR}/../node" ] && [ -f "${SCRIPT_DIR}/../update.sh" ]; then
+    _commit="${PERVIUM_UPDATE_COMMIT:-unknown}"
+    if [ "$_commit" = "unknown" ] && command -v git >/dev/null 2>&1; then
+        _commit=$(git -C "${SCRIPT_DIR}/.." rev-parse HEAD 2>/dev/null) || _commit="unknown"
+    fi
+    _stage=$(mktemp -d /tmp/pervium-bundle.XXXXXX)
+    mkdir "$_stage/pervium"
+    cp -r "${SCRIPT_DIR}/../node" "$_stage/pervium/"
+    cp -f "${SCRIPT_DIR}/../update.sh" "$_stage/pervium/"
+    cp -f "${SCRIPT_DIR}/../install.sh" "$_stage/pervium/" 2>/dev/null || true
+    printf 'commit=%s\n' "$_commit" > "$_stage/pervium/RELEASE"
+    tar -czf "$HUB_INSTALL_DIR/bundle/pervium-node.tar.gz.new" -C "$_stage" pervium
+    mv -f "$HUB_INSTALL_DIR/bundle/pervium-node.tar.gz.new" "$HUB_INSTALL_DIR/bundle/pervium-node.tar.gz"
+    printf 'commit=%s\n' "$_commit" > "$HUB_INSTALL_DIR/bundle/RELEASE"
+    rm -rf "$_stage"
+    log "  node bundle built (commit $_commit)"
+else
+    log "  WARNING: no ../node tree -- nodes cannot install or update from this hub"
 fi
 
 # -------------------------------------------------------------------
@@ -277,6 +309,12 @@ HUB_HEALTH_SERVICE_TIMEOUT_S=3
 # hop path changes between samples. Detection itself always runs; this only
 # gates whether a change gets written.
 HUB_PATH_CHANGE_ENABLED=true
+
+# --- Push-update (dashboard) -------------------------------------------
+# Time limit for one node's update (it re-runs setup.sh and may install
+# packages), and how recently a node must have registered to be pushed to.
+HUB_PUSH_TIMEOUT_S=600
+HUB_PUSH_SEEN_MINUTES=10
 ENVEOF
 fi
 
@@ -316,6 +354,16 @@ start_pre() {
     fi
 
     checkpath --directory --mode 0755 /var/lib/pervium
+
+    # The hub's two SSH keypairs, created on first start so every hub (and
+    # every clone of the hub template) has its own. id_hub is the management
+    # key nodes pin; id_pervium is the mesh SSH-test key nodes install with
+    # a forced `echo ok` command.
+    checkpath --directory --mode 0700 /etc/pervium-hub/keys
+    [ -f /etc/pervium-hub/keys/id_hub ] || \
+        ssh-keygen -q -t ed25519 -N '' -C pervium-hub -f /etc/pervium-hub/keys/id_hub
+    [ -f /etc/pervium-hub/keys/id_pervium ] || \
+        ssh-keygen -q -t ed25519 -N '' -C pervium-mesh -f /etc/pervium-hub/keys/id_pervium
 }
 
 depend() {
@@ -459,6 +507,11 @@ log "Cleaning up for template conversion"
 
 # Remove SSH host keys (regenerated on boot)
 rm -f /etc/dropbear/dropbear_*_host_key
+
+# Remove the hub's management and mesh keypairs, if the service ran during
+# the build. pervium-hub's start_pre makes new ones, so two hubs cloned from
+# this template never share the key their nodes pin.
+rm -rf /etc/pervium-hub/keys
 
 # Clear machine-id
 : > /etc/machine-id 2>/dev/null || true
