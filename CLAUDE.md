@@ -321,6 +321,18 @@ group never collide (constraint 1).
 dashboard and filters syslog by sender; it carries no network-topology
 meaning to the hub.
 
+**Changing a key after the node is built applies at the next reboot.**
+`/etc/pervium/config` is written once, so on every later boot
+`pervium-firstboot` compares all six keys with it (`_guestinfo_changed`) and
+re-runs `setup.sh` if a *set* key differs. An unset key never counts, so a
+DHCP-derived `subnet` stays put. `setup.sh` writes the new values into the
+existing config, renames the node if its hostname changes, and after the new
+name registers, `DELETE`s the old name from the hub, so the dashboard doesn't
+show both. Deliberately not done from `register.sh`'s 5-minute run:
+constraint 13 keeps register.sh minimal. Limit: when `hub_url` changes along
+with the name, the delete goes to the new hub, and the old hub's entry ages
+out (`HUB_STALE_ENDPOINT_HOURS`).
+
 The table above is read by the nodes. The **hub** has its own, smaller
 set, read by `pervium-hub-firstboot` (`hub/services/firstboot.initd`) and
 set on the hub's own VM object, not the nodes':
@@ -334,7 +346,10 @@ set on the hub's own VM object, not the nodes':
 
 `dns` and `hostname` are applied only together with `ip` and `gateway` (all
 four go to `set-static-ip`). `hub-setup.sh` asks for the same four, with DNS
-and hostname optional.
+and hostname optional. It re-asks for the IP until it has a `/prefix`, and
+offers the subnet's first address (network + 1) as the gateway default, which
+the user can override. `setup.sh`'s no-DHCP fallback does the same; both use
+an identical `first_host()` helper.
 All optional — with ip/gateway absent, the firstboot service stands down
 (same reasoning as the nodes: no reliable tty inside an OpenRC `start()`
 to prompt from) and `hub-setup.sh` prompts interactively at first login
@@ -362,7 +377,7 @@ hub/
   templates/          — dashboard.html, syslog.html. Colour themes (Dark, Light, Catppuccin Mocha,
                         Gruvbox, Terminal green) are inline in BOTH pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
-                        localStorage key pervium-theme. Adding or changing a theme means
+                        localStorage key pervium-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, pervium-theme-shuffle, so both pages stay in step. Adding or changing a theme means
                         editing both pages. syslog.html has its own variable set (--row-line,
                         and --gray is a text grey there, not a fill).
   static/

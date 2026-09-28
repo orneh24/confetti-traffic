@@ -109,7 +109,9 @@ are wrong.
 
 Log out and back in. `hub-setup.sh` asks for the static IP and gateway, plus
 an optional DNS server and hostname. Then it restarts networking and starts
-the hub. Give it a DNS server if you can: without one the hub can't resolve
+the hub. Type the IP with its prefix (e.g. `10.0.0.100/24`); the gateway
+then defaults to the subnet's first address (`10.0.0.1`), and you can type
+another one instead. Give it a DNS server if you can: without one the hub can't resolve
 names, so `pervium-update` can't download. To do it by hand instead:
 
 ```sh
@@ -174,7 +176,10 @@ $vm | New-AdvancedSetting -Name guestinfo.pervium.group   -Value "site-a"       
 ```
 
 To change a key later, use `Get-AdvancedSetting | Set-AdvancedSetting`;
-`New-AdvancedSetting` fails if the key exists. To deploy a whole lab at once,
+`New-AdvancedSetting` fails if the key exists. Then reboot the node: at boot,
+`pervium-firstboot` compares the keys with `/etc/pervium/config` and, if any
+differ, re-runs `setup.sh`. A new `group` renames the node (`pv-<group>-<ip>`),
+and the old name is removed from the hub. To deploy a whole lab at once,
 use `deploy/Deploy-Pervium.ps1` (see `deploy/README.md`).
 
 With govc:
@@ -401,7 +406,8 @@ cat /etc/network/interfaces
 ```
 
 Usual causes: no DHCP pool on the subnet, or wrong port group. If the subnet
-really has no DHCP, run `setup.sh` at the console: it asks for a static IP.
+really has no DHCP, run `setup.sh` at the console: it asks for a static IP (with its prefix), and
+offers the subnet's first address as the gateway.
 The zero-touch path can't ask, so it leaves the node unconfigured.
 
 ### Tests failing

@@ -88,12 +88,54 @@ derive_subnet() {
 }
 
 # -------------------------------------------------------------------
+# Check an IP/prefix and print the subnet's first address (network + 1),
+# the default offered for the gateway: 172.16.200.214/16 -> 172.16.0.1.
+# Exits 1 if the input is not IP/prefix. Prints nothing for /31 and /32,
+# which have no separate gateway address. Same integer method as
+# derive_subnet above. hub-setup.sh has an identical copy.
+# -------------------------------------------------------------------
+first_host() {
+    awk -v cidr="$1" 'BEGIN {
+        if (split(cidr, p, "/") != 2 || p[2] !~ /^[0-9]+$/ || p[2] > 32) exit 1
+        if (split(p[1], o, ".") != 4) exit 1
+        for (i = 1; i <= 4; i++) if (o[i] !~ /^[0-9]+$/ || o[i] > 255) exit 1
+        if (p[2] > 30) exit 0
+        ip = o[1]*16777216 + o[2]*65536 + o[3]*256 + o[4]
+        d = 2 ^ (32 - p[2])
+        gw = int(ip / d) * d + 1
+        printf "%d.%d.%d.%d", int(gw/16777216)%256, int(gw/65536)%256, int(gw/256)%256, gw%256
+    }'
+}
+
+# -------------------------------------------------------------------
 # Create configuration file
 #
 # Precedence for each value: guestinfo -> environment -> prompt.
 # -------------------------------------------------------------------
 if [ -f "$CONFIG_FILE" ]; then
     log "Config file already exists at $CONFIG_FILE, keeping it"
+
+    # ...except where guestinfo now says something different. A key changed
+    # in vCenter after the node was built would otherwise never reach it:
+    # this file is written once. firstboot.initd re-runs setup.sh at boot
+    # when any of these differ, so a changed key applies on the next reboot.
+    # Only non-empty guestinfo values count: an unset key leaves the config
+    # alone (a DHCP-derived SUBNET, for example).
+    for _pair in hub_url:HUB_URL group:GROUP_NAME subnet:SUBNET \
+                 hostname:NODE_HOSTNAME dns_server:DNS_SERVER dns_query:DNS_QUERY; do
+        _gi=$(read_guestinfo "pervium.${_pair%%:*}")
+        _key="${_pair#*:}"
+        [ -n "$_gi" ] || continue
+        _cur=$(sed -n "s/^${_key}=//p" "$CONFIG_FILE" | head -n 1)
+        [ "$_gi" = "$_cur" ] && continue
+        _esc=$(printf '%s' "$_gi" | sed 's/[&|\\]/\\&/g')
+        if grep -q "^${_key}=" "$CONFIG_FILE"; then
+            sed -i "s|^${_key}=.*|${_key}=${_esc}|" "$CONFIG_FILE"
+        else
+            printf '%s=%s\n' "$_key" "$_gi" >> "$CONFIG_FILE"
+        fi
+        log "Updated ${_key} from guestinfo: '${_cur}' -> '${_gi}'"
+    done
 else
     _gi_hub=$(read_guestinfo "pervium.hub_url")
     _gi_group=$(read_guestinfo "pervium.group")
@@ -217,11 +259,27 @@ MY_IP=$(ip -4 -o addr show scope global | awk 'NR==1 {split($4,a,"/"); print a[1
 
 if [ -z "$MY_IP" ]; then
     log "WARNING: no IP address detected (DHCP may have failed)"
-    printf 'No IP via DHCP. Static IP/CIDR to configure now (blank to skip): '
-    read -r _static_cidr || _static_cidr=""
+    # Asked again until it has a /prefix: the gateway default depends on it.
+    # EOF (firstboot's /dev/null) stops the loop and skips, same as blank.
+    _gw_default=""
+    while :; do
+        printf 'No IP via DHCP. Static IP/CIDR to configure now (blank to skip): '
+        if ! read -r _static_cidr; then _static_cidr=""; break; fi
+        [ -z "$_static_cidr" ] && break
+        if _gw_default=$(first_host "$_static_cidr"); then break; fi
+        case "$_static_cidr" in
+            */*) echo "Not a valid IP/prefix -- e.g. 10.1.1.10/24." ;;
+            *)   echo "Include the prefix length -- e.g. ${_static_cidr}/24." ;;
+        esac
+    done
     if [ -n "$_static_cidr" ]; then
-        printf 'Gateway: '
+        if [ -n "$_gw_default" ]; then
+            printf 'Gateway [%s]: ' "$_gw_default"
+        else
+            printf 'Gateway: '
+        fi
         read -r _static_gw || _static_gw=""
+        [ -n "$_static_gw" ] || _static_gw="$_gw_default"
         IFACE=$(ip -o link show | awk -F': ' '!/lo/{print $2; exit}')
         cat > /etc/network/interfaces <<EOF
 auto lo
@@ -277,8 +335,10 @@ else
 fi
 
 CURRENT_HOSTNAME=$(hostname)
+RENAMED_FROM=""
 if [ "$CURRENT_HOSTNAME" != "$DESIRED_HOSTNAME" ]; then
     log "Setting hostname: $CURRENT_HOSTNAME -> $DESIRED_HOSTNAME"
+    RENAMED_FROM="$CURRENT_HOSTNAME"
     printf '%s\n' "$DESIRED_HOSTNAME" > /etc/hostname
     hostname "$DESIRED_HOSTNAME"
 
@@ -467,6 +527,18 @@ fi
 # Run initial registration
 # -------------------------------------------------------------------
 log "Running initial registration"
-"$SCRIPT_DIR/register.sh" || log "WARNING: initial registration failed (hub may not be up yet)"
+if "$SCRIPT_DIR/register.sh"; then
+    # A renamed node would otherwise show twice on the dashboard until the
+    # old name ages out (HUB_STALE_ENDPOINT_HOURS). Only after the new name
+    # registered, so the node is never missing from the hub. A 404 (the old
+    # name was never registered, e.g. the template name) is fine.
+    if [ -n "$RENAMED_FROM" ]; then
+        _code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 10 \
+            -X DELETE "${HUB_URL}/endpoints/${RENAMED_FROM}" 2>/dev/null) || _code="000"
+        [ "$_code" = "200" ] && log "Removed old hub entry ${RENAMED_FROM}"
+    fi
+else
+    log "WARNING: initial registration failed (hub may not be up yet)"
+fi
 
 log "Setup complete"

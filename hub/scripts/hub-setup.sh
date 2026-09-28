@@ -36,7 +36,8 @@ echo
 # string, which `||` can't tell apart from a bare Enter) -- ANSWER below
 # defaults to yes, so EOF must not be read as consent. `||` stays correct
 # everywhere empty-and-EOF should mean the same thing, as with SKIP,
-# IP_CIDR, GATEWAY and CONFIRM below, none of which default to an action.
+# GATEWAY and CONFIRM below. GATEWAY has a default, but nothing is applied
+# until CONFIRM says yes, and CONFIRM defaults to no.
 printf 'Configure a static IP now? [Y/n] '
 if ! read -r ANSWER; then
     echo
@@ -60,10 +61,45 @@ case "$ANSWER" in
         ;;
 esac
 
-printf 'Static IP/CIDR (e.g. 10.0.0.100/24): '
-read -r IP_CIDR || IP_CIDR=""
-printf 'Gateway (e.g. 10.0.0.1): '
+# Checks an IP/prefix and prints the subnet's first address (network + 1),
+# the default offered for the gateway: 172.16.200.214/16 -> 172.16.0.1.
+# Exits 1 if the input is not IP/prefix. Prints nothing for /31 and /32,
+# which have no separate gateway address. Integer arithmetic, since BusyBox
+# awk has no bitwise AND. node/scripts/setup.sh has an identical copy.
+first_host() {
+    awk -v cidr="$1" 'BEGIN {
+        if (split(cidr, p, "/") != 2 || p[2] !~ /^[0-9]+$/ || p[2] > 32) exit 1
+        if (split(p[1], o, ".") != 4) exit 1
+        for (i = 1; i <= 4; i++) if (o[i] !~ /^[0-9]+$/ || o[i] > 255) exit 1
+        if (p[2] > 30) exit 0
+        ip = o[1]*16777216 + o[2]*65536 + o[3]*256 + o[4]
+        d = 2 ^ (32 - p[2])
+        gw = int(ip / d) * d + 1
+        printf "%d.%d.%d.%d", int(gw/16777216)%256, int(gw/65536)%256, int(gw/256)%256, gw%256
+    }'
+}
+
+# Asked again until it has a /prefix: the gateway default depends on it.
+# EOF stops the loop (`if ! read`), so a closed stdin cannot spin here.
+while :; do
+    printf 'Static IP/CIDR (e.g. 10.0.0.100/24): '
+    if ! read -r IP_CIDR; then IP_CIDR=""; break; fi
+    [ -z "$IP_CIDR" ] && break
+    if GW_DEFAULT=$(first_host "$IP_CIDR"); then break; fi
+    case "$IP_CIDR" in
+        */*) echo "Not a valid IP/prefix -- e.g. 10.0.0.100/24." ;;
+        *)   echo "Include the prefix length -- e.g. ${IP_CIDR}/24." ;;
+    esac
+done
+
+GW_DEFAULT="${GW_DEFAULT:-}"
+if [ -n "$GW_DEFAULT" ]; then
+    printf 'Gateway [%s]: ' "$GW_DEFAULT"
+else
+    printf 'Gateway (e.g. 10.0.0.1): '
+fi
 read -r GATEWAY || GATEWAY=""
+[ -n "$GATEWAY" ] || GATEWAY="$GW_DEFAULT"
 
 if [ -z "$IP_CIDR" ] || [ -z "$GATEWAY" ]; then
     echo "Both values are required -- aborting, nothing changed."

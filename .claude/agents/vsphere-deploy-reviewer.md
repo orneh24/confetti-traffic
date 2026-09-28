@@ -31,10 +31,19 @@ powered on with the right keys set before it ever boots.
 
 - Two golden templates, hub and node, each built by its own
   `build-template.sh` — never one script for both roles.
-- Guestinfo is read exactly once, at boot, by an OpenRC firstboot
-  service (`firstboot.initd`, hub and node each have their own) — nothing
-  re-reads it later. Any `New-AdvancedSetting` call must land before
-  `Start-VM`, not after.
+- Guestinfo is read at boot by an OpenRC firstboot service
+  (`firstboot.initd`, hub and node each have their own). Any
+  `New-AdvancedSetting` call in a deploy script must land before
+  `Start-VM`, so the first boot configures the VM. After that the roles
+  differ:
+  - **Hub:** one-shot. Its firstboot stands down for good once
+    `/etc/pervium-hub/.setup-done` exists; a later key change is ignored
+    (re-run `hub-setup.sh --force` instead).
+  - **Node:** re-read on every later boot. If a set
+    `guestinfo.pervium.*` key differs from `/etc/pervium/config`
+    (`_guestinfo_changed`), `setup.sh` re-runs, renames the node if its
+    hostname changes, and removes the old name from the hub. To change a
+    running node, `Set-AdvancedSetting` then reboot it; no re-clone needed.
 - Hub keys: `guestinfo.hub.ip` (CIDR, e.g. `10.0.0.100/24`),
   `guestinfo.hub.gateway`, plus optional `guestinfo.hub.dns` and
   `guestinfo.hub.hostname` (the script's `-HubDns` / `-HubHostname`; only

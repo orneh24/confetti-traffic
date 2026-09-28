@@ -7,7 +7,7 @@ ICMP: it makes real TCP connections (HTTP, SSH, SMB, SMTP, iperf3) and
 measures packet loss/jitter, path MTU, DNS and traceroute. Results show on a
 web dashboard, optionally next to syslog from the network devices on the path.
 The dashboard has five colour themes (Dark, Light, Catppuccin Mocha, Gruvbox,
-Terminal green), picked from the header.
+Terminal green), picked from the header, or Shuffle, which switches between them at random every 5-10 minutes.
 
 *Pervium* is Latin for "passable; a passage through", which is the question
 the tool keeps asking of every path. Formerly mesh-flux.
@@ -32,8 +32,9 @@ wget -O- https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz | tar
 ```
 
 **2. Hub** (the clone where you picked *hub*). Log out and back in:
-`hub-setup.sh` asks for the static IP and gateway, plus an optional DNS
-server and hostname. Then it restarts networking and starts the hub. Or run
+`hub-setup.sh` asks for the static IP (with prefix, e.g. `/24`) and the
+gateway, which defaults to the subnet's `.1`. It also asks for an optional
+DNS server and hostname. Then it restarts networking and starts the hub. Or run
 the same steps by hand:
 
 ```sh

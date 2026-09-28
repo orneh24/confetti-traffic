@@ -5,6 +5,10 @@
 # power on, and the VM configures and registers itself with no console
 # session at all.
 #
+# On later boots it re-runs setup.sh only if a guestinfo key was changed in
+# vCenter since (see _guestinfo_changed): changing guestinfo.pervium.group,
+# for example, then applies on the next reboot and renames the node.
+#
 # It only auto-runs when guestinfo actually carries the required keys. With
 # no keys present, setup.sh would block on its interactive prompts with
 # nobody attached, so the service stands down and leaves the MOTD
@@ -30,6 +34,7 @@ command_background="no"
 STAMP="/etc/pervium/.firstboot-done"
 SETUP_STAMP="/etc/pervium/.setup-done"
 SETUP="/usr/local/bin/pervium/setup.sh"
+CONFIG="/etc/pervium/config"
 
 _guestinfo() {
     if command -v vmware-rpctool >/dev/null 2>&1; then
@@ -39,9 +44,35 @@ _guestinfo() {
     fi
 }
 
+# True when any guestinfo key is set AND differs from /etc/pervium/config.
+# setup.sh writes the config once; this is what lets a key changed in
+# vCenter later reach the node, on its next boot. An unset key never counts
+# as a change (a DHCP-derived SUBNET stays put).
+_guestinfo_changed() {
+    [ -f "$CONFIG" ] || return 1
+    for _pair in hub_url:HUB_URL group:GROUP_NAME subnet:SUBNET \
+                 hostname:NODE_HOSTNAME dns_server:DNS_SERVER dns_query:DNS_QUERY; do
+        _gi=$(_guestinfo "pervium.${_pair%%:*}")
+        case "$_gi" in *"No value found"*) _gi="" ;; esac
+        [ -n "$_gi" ] || continue
+        _cur=$(sed -n "s/^${_pair#*:}=//p" "$CONFIG" | head -n 1)
+        [ "$_gi" = "$_cur" ] || return 0
+    done
+    return 1
+}
+
 start() {
     if [ -f "$STAMP" ]; then
-        einfo "pervium already configured; nothing to do"
+        if _guestinfo_changed; then
+            # setup.sh applies the new values, renames the node if its
+            # hostname changes, re-registers, and removes the old name from
+            # the hub. Same /dev/null stdin as the first run: never prompt.
+            ebegin "guestinfo changed since setup; re-applying"
+            "$SETUP" < /dev/null >> /var/log/pervium/firstboot.log 2>&1
+            eend $? "setup failed -- see /var/log/pervium/firstboot.log"
+        else
+            einfo "pervium already configured; guestinfo unchanged"
+        fi
         return 0
     fi
 
