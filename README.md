@@ -6,14 +6,17 @@ End-to-end connectivity testing between nodes on a network. It goes beyond
 ICMP: it makes real TCP connections (HTTP, SSH, SMB, SMTP, iperf3) and
 measures packet loss/jitter, path MTU, DNS and traceroute. Results show on a
 web dashboard, optionally next to syslog from the network devices on the path.
-The dashboard has eight colour themes (Dark, Light, Nord, Dracula, Solarized Dark,
-Monokai, High Contrast, Terminal green), picked from the header, or Shuffle, which switches between them at random every 5-10 minutes.
 A Timeline page groups failures, route changes, syslog and bandwidth tests into incidents, and a slider replays the mesh at any earlier moment (1 hour, 6 hours or 24 hours back).
 
 ![Dashboard with a synthetic 5-node mesh, one failing path selected, and its syslog correlation panel open](docs/img/dashboard-mock.jpg)
 
 *Mock data from a synthetic 5-node mesh, not a real lab. See
 [Running the hub locally](#running-the-hub-locally).*
+
+![Animated tour of the hub's Dashboard, Syslog and Timeline pages](docs/img/hub-pages.gif)
+
+*The three hub pages: Dashboard, Syslog and Timeline. Mock data from a
+synthetic 6-node mesh.*
 
 ## Tests
 
