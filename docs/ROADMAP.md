@@ -21,6 +21,13 @@ Nothing here works today. Checked against the code 2026-09-27.
   0, but the build does not assert it.
 - **Time-based syslog pruning.** Syslog is row-capped only
   (`HUB_SYSLOG_MAX_ROWS`). Results do have time-based retention (constraint 8).
+- **TODO: rename "Connectivity Matrix" to "Confetti Packet Matrix".** The
+  panel title in `hub/templates/dashboard.html`; check docs and README for
+  the old name too.
+- **TODO: make the connectivity check configurable instead of always
+  full-mesh.** Today every node tests every other node (http, ssh, pmtu,
+  loss, plus the opt-in tests). Allow choosing which pairs or groups test
+  each other.
 
 ## Not yet verified on real VMs
 
