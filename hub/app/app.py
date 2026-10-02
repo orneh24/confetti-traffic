@@ -141,6 +141,11 @@ def init_db():
     for col in ("build", "managed", "update_state", "update_msg", "update_at"):
         if col not in ep_cols:
             db.execute("ALTER TABLE endpoints ADD COLUMN {} TEXT".format(col))
+    # The node's own chrony state, from register. Nullable like the above:
+    # older nodes and nodes without chronyc send nothing.
+    for col, kind in (("clock_synced", "TEXT"), ("clock_offset_s", "REAL")):
+        if col not in ep_cols:
+            db.execute("ALTER TABLE endpoints ADD COLUMN {} {}".format(col, kind))
     # The push queue lives in memory; anything it held died with the last
     # process, so don't leave those nodes showing "queued" forever.
     db.execute("""UPDATE endpoints SET update_state = 'failed',
@@ -171,6 +176,21 @@ def prune_old_results(db):
     db.execute(
         "DELETE FROM results WHERE received_at < datetime('now', ? || ' hours')",
         (f"-{config.RESULT_RETENTION_HOURS}",),
+    )
+
+
+def prune_old_syslog(db):
+    """Delete syslog rows older than HUB_SYSLOG_RETENTION_HOURS (0 = off).
+
+    The row cap in syslog_server stays the real bound; this only adds an age
+    limit. received_at is in SQLite's format (constraint 18), so the
+    comparison is valid.
+    """
+    if config.SYSLOG_RETENTION_HOURS <= 0:
+        return
+    db.execute(
+        "DELETE FROM syslog WHERE received_at < datetime('now', ? || ' hours')",
+        (f"-{config.SYSLOG_RETENTION_HOURS}",),
     )
 
 
@@ -263,17 +283,26 @@ def register():
     build = str(build)[:64] if build is not None else None
     managed = data.get("managed")
     managed = ("true" if managed else "false") if managed is not None else None
+    # Clock state: anything but a real bool / number is stored as unknown
+    # (None) rather than guessed at — see constraint 19.
+    synced = data.get("clock_synced")
+    synced = ("true" if synced else "false") if isinstance(synced, bool) else None
+    offset = data.get("clock_offset_s")
+    offset = float(offset) if isinstance(offset, (int, float)) and not isinstance(offset, bool) else None
 
     now = sqlite_now()
     db = get_db()
     db.execute(
-        """INSERT INTO endpoints (hostname, ip, subnet, group_name, last_seen, build, managed)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
+        """INSERT INTO endpoints (hostname, ip, subnet, group_name, last_seen, build, managed,
+                                  clock_synced, clock_offset_s)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(hostname) DO UPDATE SET
                ip=excluded.ip, subnet=excluded.subnet,
                group_name=excluded.group_name, last_seen=excluded.last_seen,
-               build=excluded.build, managed=excluded.managed""",
-        (data["hostname"], data["ip"], data["subnet"], data["group_name"], now, build, managed),
+               build=excluded.build, managed=excluded.managed,
+               clock_synced=excluded.clock_synced, clock_offset_s=excluded.clock_offset_s""",
+        (data["hostname"], data["ip"], data["subnet"], data["group_name"], now, build, managed,
+         synced, offset),
     )
     db.commit()
     return jsonify({"status": "ok", "hostname": data["hostname"], "last_seen": iso(now)})
@@ -314,7 +343,8 @@ def list_endpoints():
     # extra keys per element, which older nodes ignore.
     rows = db.execute(
         """SELECT hostname, ip, subnet, group_name, last_seen,
-                  build, managed, update_state, update_msg, update_at
+                  build, managed, update_state, update_msg, update_at,
+                  clock_synced, clock_offset_s
            FROM endpoints ORDER BY group_name, hostname"""
     ).fetchall()
     out = []
@@ -323,6 +353,7 @@ def list_endpoints():
         d["last_seen"] = iso(d["last_seen"])
         d["update_at"] = iso(d["update_at"])
         d["managed"] = None if d["managed"] is None else d["managed"] == "true"
+        d["clock_synced"] = None if d["clock_synced"] is None else d["clock_synced"] == "true"
         out.append(d)
     return jsonify(out)
 
@@ -424,6 +455,7 @@ def push_results():
     # Opportunistic retention sweep — avoids needing a separate cron job on
     # the hub. One indexed DELETE per push is cheap at this scale.
     prune_old_results(db)
+    prune_old_syslog(db)
     db.commit()
     return jsonify({"status": "ok", "accepted": len(results_list)})
 

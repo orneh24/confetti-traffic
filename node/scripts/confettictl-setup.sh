@@ -226,6 +226,9 @@ NODE_ID=$(new_node_id)
 # (confettictl-trust-hub). false removes the key.
 HUB_MANAGED=${HUB_MANAGED:-true}
 
+# Sync this node's clock to the hub (chrony). false keeps chrony.conf as is.
+HUB_NTP=${HUB_NTP:-true}
+
 # Test cadence. Traceroute runs on the slower TRACEROUTE_INTERVAL because an
 # unanswered hop costs roughly the probe timeout, making a black-holed path
 # expensive; it also runs on demand whenever HTTP or SSH to a target fails.
@@ -500,6 +503,31 @@ cat > "${WEB_ROOT}/index.html" <<EOF
 </body>
 </html>
 EOF
+
+# -------------------------------------------------------------------
+# Time: sync to the hub
+# -------------------------------------------------------------------
+# The hub's clock is the mesh reference: it stamps received_at and the
+# syslog windows are pinned to it. Syncing nodes to it, not the internet,
+# means a lab with no outside access still agrees on one time. Rewritten on
+# every run, so a changed hub_url is followed. HUB_NTP=false leaves the file
+# alone.
+if [ "${HUB_NTP:-true}" = "true" ]; then
+    _hub_host=$(printf '%s' "$HUB_URL" | sed 's|^[A-Za-z]*://||; s|[/:].*||')
+    if [ -n "$_hub_host" ]; then
+        cat > /etc/chrony/chrony.conf <<EOF
+# Written by confettictl-setup.sh: sync to the confetti hub.
+# Set HUB_NTP=false in ${CONFIG_FILE} to manage this file yourself.
+server ${_hub_host} iburst
+makestep 1.0 3
+driftfile /var/lib/chrony/chrony.drift
+rtcsync
+EOF
+        rc-update add chronyd default 2>/dev/null || true
+        rc-service chronyd restart 2>/dev/null || rc-service chronyd start 2>/dev/null || true
+        log "chrony: syncing to hub ${_hub_host}"
+    fi
+fi
 
 # -------------------------------------------------------------------
 # Enable and start services

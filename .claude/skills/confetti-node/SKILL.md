@@ -38,7 +38,7 @@ Be conservative about adding a required variable that isn't derivable the way `S
 
 ## Script Structure
 
-`confettictl-register.sh` — boot + every 5 min. Detects hostname and the first global IPv4 (`ip -4 -o addr show scope global`), POSTs `/register`, retries 3× with 5 s backoff. Re-registration is what makes DHCP renewals invisible to the rest of the system; don't lengthen the interval past the lease's usable window.
+`confettictl-register.sh` — boot + every 5 min. Detects hostname and the first global IPv4 (`ip -4 -o addr show scope global`), POSTs `/register` (with `build`, `managed` and the node's chrony state as `clock_synced`/`clock_offset_s`, null when `chronyc` is missing — never a reason to fail), retries 3× with 5 s backoff. Re-registration is what makes DHCP renewals invisible to the rest of the system; don't lengthen the interval past the lease's usable window.
 
 `confettictl-test-cycle.sh` — every minute. Pulls `/endpoints`, validates JSON with `jq empty`, skips self by hostname, then per peer runs HTTP → SSH → PMTU → loss (all four always on, no gate — loss is fping-based packet loss/jitter), with traceroute only on `TRACEROUTE_INTERVAL` or right after an HTTP/SSH failure, iperf3 when `ENABLE_IPERF=true`, smb (fetching `probe.bin` via `smbclient`) when `ENABLE_SMB=true` — no contention retry, since `smbd` forks per connection — and smtp (an `EHLO`/`MAIL`/`RCPT`/`RSET`/`QUIT` conversation via hand-rolled `nc`, never `DATA`) when `ENABLE_SMTP=true`. `loss`'s `success` is `true` on any reply at all; the loss percentage lives in `output`, not the success field — never treat nonzero loss as a failure, that's the signal this test exists to report. `smtp`'s `success` gates on the banner+EHLO only, never on RCPT (a real relay correctly rejects the probe's `RCPT TO:<probe@confetti.invalid>` with 550) — capability tokens masked as runs of `X` in `output` mean an SMTP ALG / ESMTP inspection engine is rewriting the session, a finding, not a failure. Static targets from `/targets` run whichever tests each one declares — smtp's static-target arm is deliberately ungated, unlike smb's. DNS runs once per cycle against `DNS_SERVER`, not per target — it is a per-source test, which is why the dashboard renders it in its own panel rather than as a matrix column. All results POST in one payload.
 
@@ -57,19 +57,17 @@ Timeouts are deliberately short so a full cycle fits inside 60 s — read the ac
 
 ## Time
 
-`confettictl-build-template.sh` installs chrony and enables `chronyd`, but **nothing points
-a node at the hub**: `confettictl-setup.sh` contains no chrony configuration at all, so
-nodes run against Alpine's default pool. In an isolated lab that pool is
-unreachable and the node drifts.
+Nodes sync to the hub. `confettictl-setup.sh` rewrites `/etc/chrony/chrony.conf`
+on every run with the host from `HUB_URL` as the only server (`iburst`,
+`makestep 1.0 3`) and restarts `chronyd`; `HUB_NTP=false` in the config leaves
+the file alone. The hub build adds `allow all` + `local stratum 10 orphan`
+(a marked block), so it answers even with no upstream.
 
-That is tolerable today only because node clocks are not load-bearing: the hub
-stamps `received_at` itself and filters on that, so a drifting node skews the
-`timestamp` it reports but cannot hide its own results. The hub's clock is the
-one that matters — see `/api/time` and the `/syslog` header.
-
-Pointing nodes at the hub is designed and unimplemented (`docs/ROADMAP.md`). If you
-build it, it belongs in `confettictl-setup.sh` beside the other config writes, and the hub
-needs an access list before it will answer.
+Node clocks are still not load-bearing: the hub stamps `received_at` itself
+and filters on that, so a drifting node skews the `timestamp` it reports but
+cannot hide its own results. Each node reports its chrony state in register
+(`clock_synced`, `clock_offset_s`), shown on the dashboard; the hub's own
+clock is in `/api/time` and the `/syslog` header.
 
 ## Services
 

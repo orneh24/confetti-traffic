@@ -47,7 +47,8 @@ Restart the hub after editing: `rc-service confettid-hub restart`.
 | `HUB_SYSLOG_ENABLED` | true | |
 | `HUB_SYSLOG_BIND` | `0.0.0.0` | |
 | `HUB_SYSLOG_PORT` | 514 | needs root; use >1024 for a manual `confettictl-run.sh` |
-| `HUB_SYSLOG_MAX_ROWS` | 300000 | syslog is capped by rows, not time |
+| `HUB_SYSLOG_MAX_ROWS` | 300000 | syslog is capped by rows, not time (unless the age limit below is set) |
+| `HUB_SYSLOG_RETENTION_HOURS` | 0 | optional syslog age limit in hours on top of the row cap; 0 = off |
 | `HUB_BUSY_TIMEOUT_MS` | 5000 | |
 | `HUB_PATH_CHANGE_ENABLED` | true | log traceroute path changes to syslog |
 | `HUB_HEALTH_SERVICES` | `confettid-hub,chronyd,dropbear,open-vm-tools,lldpd` | shown in Hub Health |
@@ -111,8 +112,9 @@ curl -X DELETE http://<hub-ip>/targets/gw-a
 Test names: `http ssh traceroute pmtu dns iperf3 smb loss smtp`. List only
 what the target answers; a loopback has no web server.
 
-**Send a device's syslog to the hub:** UDP/514, RFC3164. Point the device's
-NTP at a real server, not the hub; the hub serves time to nobody.
+**Send a device's syslog to the hub:** UDP/514, RFC3164. The hub serves NTP,
+so a device may point at it. With no upstream it serves its own clock, so use
+a real server if you need true time.
 
 **A node stopped reporting:** it turns amber in the Endpoints list after 5
 minutes, and its matrix cells go grey (no data, not failure). Check the

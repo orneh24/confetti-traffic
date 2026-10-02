@@ -448,8 +448,9 @@ Keep in mind:
 
 - UDP syslog is lossy and anyone on the network can fake it. Use it for
   troubleshooting, not as an audit trail.
-- It is capped at `HUB_SYSLOG_MAX_ROWS` (300000) rows, not by time. A
-  chatty device shortens the history.
+- It is capped at `HUB_SYSLOG_MAX_ROWS` (300000) rows. A chatty device
+  shortens the history. An optional age limit, `HUB_SYSLOG_RETENTION_HOURS`
+  in `hub.env` (0 = off), also applies.
 - `HUB_SYSLOG_ENABLED=false` in `hub.env` turns it off.
 
 ---

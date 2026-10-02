@@ -196,7 +196,9 @@ configured to log to the hub simply has an empty `/syslog`.
 - Bounded by a **row cap** (`HUB_SYSLOG_MAX_ROWS`, default 300000), enforced
   every 500 inserts by an indexed delete on `id`. Not a time window: a device
   at debug level outpaces any retention period, so rows are what must be
-  bounded.
+  bounded. An optional age limit sits on top (`HUB_SYSLOG_RETENTION_HOURS`,
+  default 0 = off), swept on each `POST /results` beside the results
+  retention, not in the listener, so it runs even with the listener off.
 - **Not an audit trail.** UDP is lossy and unauthenticated — anything on the
   segment can inject. It is a troubleshooting aid, and stored rows are data to
   be rendered, never trusted or interpreted.
@@ -230,7 +232,8 @@ chatty device can evict path-change history before `results`' own retention
 does (`results` stays the durable evidence; the syslog row is a signpost),
 and with `HUB_SYSLOG_ENABLED=false` the cap's prune counter (which lives in
 the UDP listener) never runs, so hub-authored rows accumulate unbounded in
-principle — bounded in practice by how often paths actually change.
+principle — bounded in practice by how often paths actually change, and by
+`HUB_SYSLOG_RETENTION_HOURS` when set (its sweep runs on `POST /results`).
 Off-switch: `HUB_PATH_CHANGE_ENABLED` (default true).
 
 **Correlation from the dashboard.** The drill-down carries the moment across:
@@ -249,7 +252,8 @@ undisciplined one is surfaced rather than left to silently misalign every
 correlation.
 
 Config: `HUB_SYSLOG_ENABLED`, `HUB_SYSLOG_BIND`, `HUB_SYSLOG_PORT`,
-`HUB_SYSLOG_MAX_ROWS`, `HUB_BUSY_TIMEOUT_MS`, `HUB_PATH_CHANGE_ENABLED`.
+`HUB_SYSLOG_MAX_ROWS`, `HUB_SYSLOG_RETENTION_HOURS`, `HUB_BUSY_TIMEOUT_MS`,
+`HUB_PATH_CHANGE_ENABLED`.
 
 ### Agent self-update
 The hub serves `confettictl-test-cycle.sh` and `confettictl-register.sh` from
@@ -304,7 +308,11 @@ can push updates to them over SSH.
   `/etc/confetti-release`, else `unknown`) and `managed` to its POST; both
   optional hub-side, so older nodes still register. The dashboard shows it
   under each hostname (a second line, not a column: the sidebar has no
-  room), yellow when it differs from `/node/release`.
+  room), yellow when it differs from `/node/release`. It also sends
+  `clock_synced` and `clock_offset_s` from `chronyc -n tracking` (`null`
+  when chronyc is missing), shown on the same line as "clock ok" or, in
+  yellow, unsynced / off by more than 1 s. A register change, so it reaches
+  nodes only by push-update (constraint 13).
 - **Push-update.** Per-row button and "update all" on the dashboard queue
   jobs; one background thread (`hub/app/nodemgmt.py`) runs them one at a
   time: `ssh -i id_hub root@<ip> 'PATH=...; confettictl-update -y'`, host keys
@@ -399,7 +407,14 @@ dropbear's minimal PATH, so the push's remote command sets PATH itself.
 - Two separate golden templates, each built by its own `confettictl-build-template.sh`
 - Default credentials: **root / lab123** (isolated lab only) — override with
   `CONFETTI_ROOT_PASSWORD` when running either `confettictl-build-template.sh`
-- `chrony` on all VMs — the hub's clock is the mesh reference
+- `chrony` on all VMs — the hub's clock is the mesh reference, and the hub
+  serves it: its build appends `allow all` + `local stratum 10 orphan` to
+  `chrony.conf` (a marked block, rewritten on `--update`; the pool line stays
+  for a hub with internet). `confettictl-setup.sh` writes each node's
+  `chrony.conf` with the host from `HUB_URL` as its only server, so a lab
+  with no outside access still shares one time. `HUB_NTP=false` opts a node
+  out.
+- IP forwarding pinned off on both roles (`/etc/sysctl.d/99-confetti.conf`)
 - `lldpd` on both roles, always-on, not gated by any `ENABLE_*` flag — LLDP
   neighbor discovery for troubleshooting (e.g. `lldpcli show neighbors` to
   confirm which switch/port a node actually landed on). Not a test

@@ -51,8 +51,9 @@ shim (`DEV_HOSTNAME`), so one workstation plays many nodes.
   a failure-triggered traceroute, a losing loss/jitter row).
 
 External binaries the scripts shell out to (`ping`, `ssh`, `traceroute`,
-`dig`, `iperf3`, `smbclient`, `fping`, `nc`, `ip`) are shimmed under
-`dev/shims/`; `curl` and `jq` are the real thing.
+`dig`, `iperf3`, `smbclient`, `fping`, `nc`, `ip`, `chronyc`) are shimmed under
+`dev/shims/` (`DEV_CHRONY=ok|drift|unsynced|off` picks the clock state
+register reports); `curl` and `jq` are the real thing.
 
 **Known limitation, not a bug: HTTP always reads FAIL here.** `curl` hits a
 real socket and nothing listens on these fictional dev IPs. Every other

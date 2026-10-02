@@ -732,6 +732,8 @@ a:hover { text-decoration: underline; }
 .ep-table .push-ok { color: var(--green); }
 .ep-table .push-failed { color: var(--red); }
 .ep-table .push-busy { color: var(--blue); }
+.ep-table .clock-ok { color: var(--green); }
+.ep-table .clock-warn { color: var(--yellow); }
 
 /* Detail panel */
 .detail-empty {
@@ -1919,7 +1921,7 @@ a:hover { text-decoration: underline; }
             html += "<tr" + (stale ? " class='stale'" : "") + ">";
             // Build on a second line under the name: the sidebar has no room
             // for another column.
-            html += "<td>" + esc(ep.hostname) + "<div class='ep-build'>" + buildCell(ep) + "</div></td>";
+            html += "<td>" + esc(ep.hostname) + "<div class='ep-build'>" + buildCell(ep) + clockCell(ep) + "</div></td>";
             html += "<td>" + esc(ep.ip) + "</td>";
             html += "<td><span class='group-badge'>" + esc(ep.group_name) + "</span></td>";
             html += "<td>" + agoStr + (stale ? " !" : "") + "</td>";
@@ -1979,6 +1981,22 @@ a:hover { text-decoration: underline; }
                 (ep.update_msg || "")) + "'>" + m[1] + "</span>";
         }
         return html;
+    }
+
+    // The node's own chrony state from register. Kept to a word or two: the
+    // sidebar has no room. Nothing when the node doesn't report it (older
+    // register script, or no chronyc).
+    var CLOCK_WARN_S = 1;
+    function clockCell(ep) {
+        if (ep.clock_synced === null || ep.clock_synced === undefined) return "";
+        var off = ep.clock_offset_s;
+        var offTxt = typeof off === "number" ? (off >= 0 ? "+" : "") + off.toFixed(3) + "s" : "unknown";
+        var tip = escAttr("node clock: " + (ep.clock_synced ? "synced" : "not synced") + ", offset " + offTxt);
+        var txt, cls;
+        if (!ep.clock_synced) { txt = "clock unsynced"; cls = "clock-warn"; }
+        else if (typeof off === "number" && Math.abs(off) > CLOCK_WARN_S) { txt = "clock " + offTxt; cls = "clock-warn"; }
+        else { txt = "clock ok"; cls = "clock-ok"; }
+        return " &middot; <span class='" + cls + "' title='" + tip + "'>" + txt + "</span>";
     }
 
     // ---------------------------------------------------------------

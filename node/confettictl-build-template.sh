@@ -198,6 +198,17 @@ rc-update add chronyd default
 # actually plugged into without console access to that device.
 rc-update add lldpd default
 
+# Never route. Alpine already defaults forwarding off; pinned so nothing
+# installed later can turn it on — a node that forwarded could carry traffic
+# around the very path the mesh is testing.
+mkdir -p /etc/sysctl.d
+cat > /etc/sysctl.d/99-confetti.conf <<'EOF'
+net.ipv4.ip_forward = 0
+net.ipv6.conf.all.forwarding = 0
+EOF
+rc-update add sysctl boot >/dev/null 2>&1 || true
+sysctl -p /etc/sysctl.d/99-confetti.conf >/dev/null 2>&1 || true
+
 # -------------------------------------------------------------------
 # 2b. Set default lab credentials
 # -------------------------------------------------------------------

@@ -105,6 +105,35 @@ rc-update add open-vm-tools default
 # reference for the whole mesh. Keep it disciplined.
 rc-update add chronyd default
 
+# Serve that clock to the nodes (confettictl-setup.sh points them here). A
+# marked block appended to the package's config, so the pool line stays and a
+# hub with internet access still syncs upstream; with none, "local" keeps it
+# serving its own clock rather than nothing. The block is stripped first, so
+# --update rewrites it instead of stacking copies.
+CHRONY_CONF=/etc/chrony/chrony.conf
+if [ -f "$CHRONY_CONF" ]; then
+    sed -i '/^# confetti begin/,/^# confetti end/d' "$CHRONY_CONF"
+fi
+cat >> "$CHRONY_CONF" <<'EOF'
+# confetti begin - written by confettictl-build-template.sh, replaced on update
+allow all
+local stratum 10 orphan
+# confetti end
+EOF
+if rc-service chronyd --quiet status >/dev/null 2>&1; then
+    rc-service chronyd restart >/dev/null 2>&1 || true
+fi
+
+# Never route. Alpine already defaults forwarding off; pinned so nothing
+# installed later can turn it on.
+mkdir -p /etc/sysctl.d
+cat > /etc/sysctl.d/99-confetti.conf <<'EOF'
+net.ipv4.ip_forward = 0
+net.ipv6.conf.all.forwarding = 0
+EOF
+rc-update add sysctl boot >/dev/null 2>&1 || true
+sysctl -p /etc/sysctl.d/99-confetti.conf >/dev/null 2>&1 || true
+
 # LLDP neighbor discovery, for troubleshooting and network discovery — not a
 # test participant, just always-on infrastructure like chrony.
 rc-update add lldpd default
@@ -289,6 +318,11 @@ HUB_SYSLOG_PORT=514
 # Row cap, not a time window: a network device at debug level outpaces any
 # retention period, so rows are what must be bounded.
 HUB_SYSLOG_MAX_ROWS=300000
+
+# Optional age limit on top of the row cap, in hours; 0 keeps rows until the
+# cap evicts them. Applied on each result push, so it also bounds the hub's
+# own path-change rows when the syslog listener is off.
+HUB_SYSLOG_RETENTION_HOURS=0
 
 # The syslog listener is a second writer against the same SQLite file. Without
 # this, a message burst makes a concurrent result push fail with "database is

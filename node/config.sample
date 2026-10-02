@@ -186,3 +186,9 @@ AGENT_AUTOUPDATE=true
 # (trust on first use, see confettictl-trust-hub) so the dashboard can push
 # updates. false removes the key; the node then only updates by hand.
 HUB_MANAGED=true
+
+# Sync this node's clock to the hub: confettictl-setup.sh writes chrony.conf
+# with the hub (from HUB_URL) as its only server. The hub's clock is the
+# mesh reference, so this keeps nodes on it even with no internet. false
+# leaves chrony.conf alone.
+HUB_NTP=true

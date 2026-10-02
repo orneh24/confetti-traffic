@@ -62,8 +62,25 @@ BUILD=$(sed -n 's/^commit=//p' /etc/confetti-release 2>/dev/null | head -n 1 | t
 BUILD="${BUILD:-unknown}"
 if [ "${HUB_MANAGED:-true}" = "true" ]; then MANAGED=true; else MANAGED=false; fi
 
-PAYLOAD=$(printf '{"hostname":"%s","ip":"%s","subnet":"%s","group_name":"%s","build":"%s","managed":%s}' \
-    "$HOSTNAME" "$IP" "$SUBNET" "$GROUP_NAME" "$BUILD" "$MANAGED")
+# clock_synced / clock_offset_s: this node's chrony state, shown on the
+# dashboard. null when chronyc is missing or says nothing usable — this must
+# never stop registration (constraint 11). The offset goes through awk's
+# %.6f so it is always a valid JSON number (constraint 9).
+CLOCK_SYNCED=null
+CLOCK_OFFSET=null
+_tracking=$(chronyc -n tracking 2>/dev/null) || _tracking=""
+if [ -n "$_tracking" ]; then
+    case "$(printf '%s\n' "$_tracking" | sed -n 's/^Leap status *: *//p')" in
+        Normal) CLOCK_SYNCED=true ;;
+        ?*) CLOCK_SYNCED=false ;;
+    esac
+    CLOCK_OFFSET=$(printf '%s\n' "$_tracking" | awk -F: '/^System time/ {
+        split($2, w, " "); if (w[1] ~ /^[0-9.]+$/) printf "%.6f", ($0 ~ /slow/ ? -w[1] : w[1]) }')
+    CLOCK_OFFSET="${CLOCK_OFFSET:-null}"
+fi
+
+PAYLOAD=$(printf '{"hostname":"%s","ip":"%s","subnet":"%s","group_name":"%s","build":"%s","managed":%s,"clock_synced":%s,"clock_offset_s":%s}' \
+    "$HOSTNAME" "$IP" "$SUBNET" "$GROUP_NAME" "$BUILD" "$MANAGED" "$CLOCK_SYNCED" "$CLOCK_OFFSET")
 
 # -------------------------------------------------------------------
 # POST to hub with retry logic

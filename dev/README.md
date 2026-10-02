@@ -55,8 +55,8 @@ session. `-h` for the rest of the flags (group, `ENABLE_SMB`/`ENABLE_SMTP`/
 ### What's real vs. what's shimmed
 
 `dev/shims/` stands in for `ping`, `ssh`, `traceroute`, `dig`, `iperf3`,
-`smbclient`, `fping`, `nc` and `ip` — every external binary these scripts
-shell out to, matching exactly the call shape each script actually uses (see
+`smbclient`, `fping`, `nc`, `ip` and `chronyc` — every external binary these
+scripts shell out to, matching exactly the call shape each script actually uses (see
 each shim's own header comment). `curl` and `jq` are the real thing.
 
 **HTTP is the one test type that reads FAIL here, always.** `run_http_test`
@@ -75,6 +75,10 @@ demo mesh:
 ```sh
 DEV_FAIL_HOSTS=10.99.1.13 dev/confettictl-run-node-cycle.sh dev-node-a 10.99.1.11 site-a
 ```
+
+`DEV_CHRONY` sets the clock state the `chronyc` shim reports at registration,
+shown under the hostname on the dashboard: `ok` (default), `drift` (2.5 s
+off, yellow), `unsynced`, or `off` (no chronyd; the node reports nothing).
 
 ## 3. Look at it
 

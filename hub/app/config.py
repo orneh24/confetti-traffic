@@ -21,6 +21,10 @@ SYSLOG_PORT = int(os.environ.get("HUB_SYSLOG_PORT", "514"))
 # retention period, and the cap is what actually bounds the file. Enforced
 # every 500 inserts by syslog_server, by id range — see the note there.
 SYSLOG_MAX_ROWS = int(os.environ.get("HUB_SYSLOG_MAX_ROWS", "300000"))
+# Optional age limit on top of the cap; 0 (default) means off. Swept on each
+# POST /results rather than in the listener, so it still runs — and still
+# bounds the hub-authored path-change rows — with HUB_SYSLOG_ENABLED=false.
+SYSLOG_RETENTION_HOURS = int(os.environ.get("HUB_SYSLOG_RETENTION_HOURS", "0"))
 
 # The syslog listener is a *second writer* against the same SQLite file as the
 # results API. Without a busy timeout on both, a message burst makes a

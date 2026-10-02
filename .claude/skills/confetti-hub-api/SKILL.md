@@ -17,16 +17,16 @@ The hub (`hub/app/app.py`) is the single source of truth for endpoints and resul
 
 ## Contract (do not break without reflashing nodes)
 
-`POST /register` — body must contain the first four; `build` and `managed` are optional (older nodes omit them):
+`POST /register` — body must contain the first four; `build`, `managed`, `clock_synced` and `clock_offset_s` are optional (older nodes omit them; a non-bool / non-number clock value is stored as null):
 
 ```json
 {"hostname": "ct-site-a-xd2311", "ip": "10.1.1.50", "subnet": "10.1.1.0/24", "group_name": "site-a",
- "build": "9ecdcbe...", "managed": true}
+ "build": "9ecdcbe...", "managed": true, "clock_synced": true, "clock_offset_s": -0.0012}
 ```
 
 Upsert keyed on `hostname`; `last_seen` is set server-side to UTC ISO-8601. Missing any required field → 400.
 
-`GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, last_seen, build, managed, update_state, update_msg, update_at}`, ordered by group then hostname. The management fields are extra keys only; never change the array shape. Nodes skip their own hostname when iterating.
+`GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, last_seen, build, managed, update_state, update_msg, update_at, clock_synced, clock_offset_s}`, ordered by group then hostname. The management fields are extra keys only; never change the array shape. Nodes skip their own hostname when iterating.
 
 Node management (see CLAUDE.md "Hub-managed nodes"): `GET /node/bundle.tar.gz`, `GET /node/release` → `{"commit": ...}`, `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub`, `GET /install.sh`; `POST /api/nodes/<hostname>/update` (202 / 404 / 409 + reason) and `POST /api/nodes/update` → `{"queued": [...], "skipped": [{"hostname", "reason"}]}`.
 
@@ -64,7 +64,7 @@ The hub also receives syslog on UDP/514 (`hub/app/syslog_server.py`, started by 
 Storage rules that differ from `results`:
 
 - Identity is the parsed hostname with the source IP as fallback; there is no IP→device map. A device whose syslog hostname differs from a node's `GROUP_NAME` label will not match the dashboard's filtered link — the unfiltered ±5 min link is the reliable one.
-- Row cap only (`HUB_SYSLOG_MAX_ROWS`, default 300000), enforced every 500 inserts by an id-range delete. There is no time-based pruning, so the table can hold anything from an hour to a month depending on volume. Actual row count can exceed the cap by up to 500 between prunes.
+- Row cap only (`HUB_SYSLOG_MAX_ROWS`, default 300000), enforced every 500 inserts by an id-range delete. An optional age limit sits on top (`HUB_SYSLOG_RETENTION_HOURS`, default 0 = off), swept by `prune_old_syslog` on each `POST /results`; without it the table can hold anything from an hour to a month depending on volume. Actual row count can exceed the cap by up to 500 between prunes.
 - The listener is one thread with its own connection (`check_same_thread=False`, guarded by a lock). Do not reuse `get_db()` there — it is request-scoped via `g`.
 - Unparseable lines are stored with `raw` intact and null severity/mnemonic. Never drop a message because it did not parse.
 - Starting is idempotent: a second call sees the started flag, and a second process (Flask reloader) fails to bind and logs instead of crashing.
@@ -83,10 +83,11 @@ This makes a hub-authored row the one row in `syslog` the hub itself can vouch f
 
 The hub runs chrony to discipline **its own** clock, which matters because the
 hub stamps every `received_at` and those stamps are what results and syslog are
-filtered and correlated on. It is **not an NTP server**: `confettictl-build-template.sh`
-installs chrony and enables `chronyd` and configures nothing further — there is
-no access list and no `set-ntp-clients`. Point nodes and any logging network
-devices at real upstream time. The app exposes the hub's own state:
+filtered and correlated on. It also **serves** that time: the build appends a
+marked block (`allow all`, `local stratum 10 orphan`) to `chrony.conf`,
+rewritten on `--update`, and nodes sync to it by default (`HUB_NTP`). Logging
+devices may use it too; with no upstream it serves its own clock. The app
+exposes the hub's own state:
 
 - `GET /api/time` — always returns the hub's UTC time; `chrony` is null with a
   `reason` when `chronyc` is missing or fails. Parsed from `chronyc -n tracking`
@@ -107,7 +108,7 @@ filter on UTC text comparison, so skew makes rows invisible rather than wrong.
 - Indexes exist on `received_at`, `(source, target_hostname)`, and `(source, target_hostname, test_type, received_at)` for results, and on `received_at` and `host` for syslog. Any new query should use one of them or add its own index.
 - **Everything is stored in SQLite's own format, `YYYY-MM-DD HH:MM:SS`, and windows are `datetime('now', ...)`.** Write it with `sqlite_now()`; convert with `iso()` on the way out so browsers parse it as UTC. This is the opposite of what an earlier version of this file said, and the reason it matters is that the two formats sort against each other: `T` (0x54) is above space (0x20), so string-comparing an ISO timestamp against a `datetime('now', ...)` bound lets **every row from the same UTC date** through any window. See CLAUDE.md constraints 2 and 18.
 - The client's own `timestamp` field stays ISO-8601 and is passed through untouched — it is a record, never a filter. Filter on `received_at`, which the hub controls and which is immune to node clock drift.
-- Results are pruned **by age** (`HUB_RESULT_RETENTION_HOURS`), syslog **by row count** (`HUB_SYSLOG_MAX_ROWS`, id-range delete). They are bounded differently on purpose: see Retention below.
+- Results are pruned **by age** (`HUB_RESULT_RETENTION_HOURS`), syslog **by row count** (`HUB_SYSLOG_MAX_ROWS`, id-range delete) plus an optional age limit (`HUB_SYSLOG_RETENTION_HOURS`, 0 = off). They are bounded differently on purpose: see Retention below.
 - Set `PRAGMA busy_timeout` on any new connection. The syslog receiver is a second writer; without it a result submission during a burst fails with `database is locked` and the node loses that whole cycle.
 
 ## Adding a Test Type
@@ -127,7 +128,7 @@ Every hub setting is an env var with a default. **Read `hub/app/config.py` for t
 - The bind address is `HUB_HOST`, read directly in `hub/serve.py`, not through `config.py`.
 - A new setting must be added to the `hub.env` block in `hub/confettictl-build-template.sh` in the same change. A setting with nowhere to set it at deploy time is not configurable in practice.
 
-`confettictl-set-static-ip` manages one interface and rewrites `/etc/network/interfaces` wholesale, so a second NIC is a hand-edit if you ever need one. Nothing pins `net.ipv4.ip_forward=0` either — Alpine's default is 0, but the build does not assert it. `HUB_SYSLOG_BIND` lets you restrict the UDP listener to one address if the hub ever grows a second interface.
+`confettictl-set-static-ip` manages one interface and rewrites `/etc/network/interfaces` wholesale, so a second NIC is a hand-edit if you ever need one. The build pins forwarding off in `/etc/sysctl.d/99-confetti.conf`. `HUB_SYSLOG_BIND` lets you restrict the UDP listener to one address if the hub ever grows a second interface.
 
 `serve.py` reads `HUB_PORT` **at runtime**, and the init script sources `hub.env` in `start_pre`. Do not move a setting into the init script's `command_args`: OpenRC expands those at parse time, before `start_pre` runs, so the value in `hub.env` would be ignored. That ordering is why `serve.py` exists rather than invoking flask or waitress directly.
 

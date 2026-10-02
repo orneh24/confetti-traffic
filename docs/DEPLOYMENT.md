@@ -47,8 +47,10 @@ Build the hub first, so you can test the first node against it.
         VM and reboot.
 - [ ] Optional: edit `/opt/confetti-hub/hub.env` (each key is commented),
       then `rc-service confettid-hub restart`
-- [ ] Optional: set a real NTP server in `/etc/chrony/chrony.conf`. The build
-      enables chrony but doesn't configure it.
+- [ ] Optional: if the hub can reach a better time source than the Alpine
+      pool, add it to `/etc/chrony/chrony.conf` outside the
+      `# confetti begin`/`# confetti end` block (the build rewrites that
+      block: it lets the hub serve time and fall back to its own clock).
 
 Check:
 
@@ -62,8 +64,10 @@ Check:
       only as good as this clock.
 - [ ] `lldpcli show neighbors` names the switch port the hub is on
 
-The hub is not an NTP server. Point devices that log to it at a real NTP
-server.
+The hub serves NTP to the lab, and nodes sync to it (`HUB_NTP`, on by
+default). Devices that log to the hub can use it too; with no upstream it
+serves its own clock, so the lab agrees on one time even if not the true
+one.
 
 ---
 

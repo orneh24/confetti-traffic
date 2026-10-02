@@ -1,0 +1,31 @@
+#!/bin/sh
+# Dev shim for `chronyc -n tracking`, read by confettictl-register.sh for the
+# node's clock state. DEV_CHRONY picks what it reports:
+#   ok (default) - synced to the hub, 1.2 ms slow
+#   drift        - synced but 2.5 s fast (dashboard shows it in yellow)
+#   unsynced     - leap status "Not synchronised"
+#   off          - no chronyd: prints an error, exits 1 (register sends null)
+case "${DEV_CHRONY:-ok}" in
+    off)
+        echo "506 Cannot talk to daemon" >&2
+        exit 1
+        ;;
+    unsynced) _leap="Not synchronised"; _sys="0.000000000 seconds fast of NTP time" ;;
+    drift)    _leap="Normal"; _sys="2.500000000 seconds fast of NTP time" ;;
+    *)        _leap="Normal"; _sys="0.001200000 seconds slow of NTP time" ;;
+esac
+cat <<EOF
+Reference ID    : 0A000064 (10.0.0.100)
+Stratum         : 11
+Ref time (UTC)  : Fri Oct 02 12:00:00 2026
+System time     : ${_sys}
+Last offset     : -0.000081234 seconds
+RMS offset      : 0.000102345 seconds
+Frequency       : 12.345 ppm slow
+Residual freq   : -0.001 ppm
+Skew            : 0.045 ppm
+Root delay      : 0.000512345 seconds
+Root dispersion : 0.000234567 seconds
+Update interval : 64.2 seconds
+Leap status     : ${_leap}
+EOF
