@@ -241,6 +241,14 @@ re-run: it keeps an existing config.
 `HUB_MANAGED=false` in the config removes the management key, and the hub
 then won't push to that node.
 
+**Time from the hub.** Setup writes the node's `/etc/chrony/chrony.conf` with
+the hub (taken from `HUB_URL`) as its only time server. The hub serves NTP on
+UDP/123, and with no internet it serves its own clock, so the whole lab still
+agrees on one time. Each node reports its sync state when it registers, shown
+under its name on the dashboard. `HUB_NTP=false` in the config leaves
+`chrony.conf` alone. Both builds also pin IP forwarding off
+(`/etc/sysctl.d/99-confetti.conf`).
+
 ### 5.5 Alternative: install a node straight from the hub
 
 No template and no GitHub needed. On a plain Alpine VM (after
@@ -330,6 +338,14 @@ throughput when you ask. It isn't part of the minute-by-minute tests.
   duration in each direction, so avoid running it on a busy production link.
 - **Results:** every run is listed under the panel (the last 200), with
   Mbit/s for each direction. Hover over a failed run to see why it failed.
+
+**Mesh rules.** By default every node tests every other node. The
+dashboard's **Mesh Rules** panel excludes pairs of groups: type or pick two
+groups and press add. Nodes in those groups stop testing each other, both
+ways and for every test, from their next cycle (about a minute). The same
+group twice stops nodes in one group testing each other. An excluded pair
+shows as a muted dot in the matrix and isn't counted as passing or failing.
+Static targets are not affected. Remove the rule to go back to full mesh.
 
 ### 6.2 Static targets
 
@@ -496,6 +512,9 @@ fping -c 5 <peer-ip>
 nc <peer-ip> 25          # wait for the 220 line, then type EHLO test, then QUIT
 traceroute <peer-ip>
 ```
+
+A pair with no results at all may be excluded on purpose: check the Mesh
+Rules panel (or `curl http://<hub>/mesh-rules`).
 
 Usual causes: the service isn't running on the peer (dropbear,
 `confettid-httpd`, `iperf3`, `confettid-smbd`, `confettid-smtpd`), or a

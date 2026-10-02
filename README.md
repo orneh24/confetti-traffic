@@ -22,7 +22,8 @@ synthetic 6-node mesh.*
 
 Every node tests every other node once a minute and sends the results to the
 hub. Each cell in the dashboard's Confetti traffic matrix shows one letter per test: green
-passed, yellow slow, red failed, grey no data.
+passed, yellow slow, red failed, grey no data. A muted dot instead of letters
+means a mesh rule excludes that pair (below).
 
 | Letter | Test | What it checks | Runs |
 |---|---|---|---|
@@ -41,7 +42,14 @@ whole mesh from the dashboard's Mesh Settings panel.
 
 Every node tests every other node by default. The dashboard's Mesh Rules
 panel can exclude pairs of groups, for example to stop two branch sites
-testing each other when only their paths to the data centre matter.
+testing each other when only their paths to the data centre matter. A rule
+works both ways and covers every test; the same group twice stops nodes in
+one group testing each other.
+
+**One clock.** The hub serves time (NTP) to the lab, and nodes sync to it, so
+results and syslog line up even with no internet. Each node's clock state
+shows under its name on the dashboard: "clock ok", or in yellow when it is
+unsynced or more than a second off.
 
 **Static targets** are addresses that run no Confetti Traffic software, such as a
 gateway, a switch loopback or an outside server. You add them once on the

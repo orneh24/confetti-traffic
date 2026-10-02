@@ -13,6 +13,7 @@ reachable.
 |---|---|---|
 | Dashboard / API | hub, `confettid-hub` (waitress) | 80 |
 | Syslog receiver (optional, UDP) | hub, same process | 514 |
+| NTP for the lab (UDP) | hub, `chronyd` | 123 |
 | HTTP test target | node, `confettid-httpd` | 80 |
 | SSH test target | node, dropbear | 22 |
 | SMB test target (opt-in) | node, `confettid-smbd` | 445 |
@@ -78,6 +79,7 @@ The root password (`lab123`) is set at build time. Override it with
 | `DNS_QUERY` | no | default `example.com` |
 | `ENABLE_IPERF` / `ENABLE_SMB` / `ENABLE_SMTP` | no | default false; overridden by the dashboard's Mesh Settings when set there |
 | `HUB_SETTINGS` | no | default true; false ignores the dashboard's Mesh Settings |
+| `HUB_NTP` | no | default true; `confettictl-setup.sh` points chrony at the hub. false leaves `chrony.conf` alone |
 | `AGENT_AUTOUPDATE` | no | default true |
 
 If `HUB_URL`, `GROUP_NAME` or `SUBNET` is empty, `confettictl-register.sh` exits and the
