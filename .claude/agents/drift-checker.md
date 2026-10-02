@@ -29,7 +29,7 @@ agent dir, hub port.
 
 **Service names.** Every `rc-service` / `rc-update` name in the docs must
 exist as a file in `node/services/` or be created by a build script.
-Current set: `confettid-httpd`, `iperf3`, `confettid-smbd`, `confettid-smtpd`,
+Current set: `confettid-httpd`, `confettid-iperf3`, `confettid-smbd`, `confettid-smtpd`,
 `confettid-firstboot`, `confettid-hub`, `confettid-hub-firstboot`, plus
 stock `crond`, `dropbear`, `chronyd`, `open-vm-tools`, `lldpd` (both roles,
 always-on).

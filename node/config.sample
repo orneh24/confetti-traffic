@@ -88,6 +88,11 @@ ENABLE_IPERF=false
 # (the outer `timeout 15` in run_smb_test, fetching an 8 MB probe file).
 ENABLE_SMB=false
 
+# Share name and file every peer fetches. Must match smb.conf and the build;
+# change only as a mesh-wide edit.
+#SMB_SHARE=labshare
+#SMB_PROBE_FILE=probe.bin
+
 # Enable the SMTP probe test (true/false). Every node runs an OpenSMTPD
 # server (confettid-smtpd), and every peer holds a lightweight conversation
 # against it: banner -> EHLO -> MAIL FROM -> RCPT TO -> RSET -> QUIT. It

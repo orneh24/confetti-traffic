@@ -199,7 +199,7 @@ The first-boot service logs to `/var/log/confetti/firstboot.log`. With no
 keys set it does nothing, and the login prompt takes over. To run it again:
 
 ```sh
-rm /etc/confetti/.firstboot-done /etc/confetti/config
+rm /etc/confetti/.firstboot-done /etc/confetti/.setup-done /etc/confetti/config
 rc-service confettid-firstboot start
 ```
 
