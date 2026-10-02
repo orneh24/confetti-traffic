@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Production entrypoint for the pervium hub.
+"""Production entrypoint for the confetti hub.
 
 Reads HUB_PORT at runtime, so changing it in hub.env actually takes effect
 (OpenRC expands command_args at parse time, before the env file is loaded).
@@ -40,7 +40,7 @@ def main():
         app.run(host=host, port=port, threaded=True)
         return
 
-    sys.stderr.write(f"pervium hub listening on {host}:{port}\n")
+    sys.stderr.write(f"confetti hub listening on {host}:{port}\n")
     serve(app, host=host, port=port, threads=8)
 
 

@@ -1,4 +1,4 @@
-/* Pervium probe site - shared script. Fixed content: see index.html.
+/* Confetti Traffic probe site - shared script. Fixed content: see index.html.
  *
  * The HTTP test never runs this; it only checks that the file arrives
  * byte for byte. It exists so the fetch includes a real JavaScript file,

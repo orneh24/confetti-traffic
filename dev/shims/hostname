@@ -1,6 +1,6 @@
 #!/bin/sh
-# Dev shim so one workstation can simulate several distinct pervium
-# nodes: run-node-cycle.sh sets DEV_HOSTNAME per invocation. Falls back to
+# Dev shim so one workstation can simulate several distinct confetti
+# nodes: confettictl-run-node-cycle.sh sets DEV_HOSTNAME per invocation. Falls back to
 # the real `hostname` binary (found outside this shim directory, so it
 # can't call itself) when unset.
 if [ -n "${DEV_HOSTNAME:-}" ]; then

@@ -42,11 +42,11 @@ STATIC_ONLY = "--static" in sys.argv
 APP = "hub/app/app.py"
 SYSLOG = "hub/app/syslog_server.py"
 DASH = "hub/templates/dashboard.html"
-CYCLE = "node/scripts/test-cycle.sh"
-REGISTER = "node/scripts/register.sh"
-SETUP = "node/scripts/setup.sh"
-NODE_BUILD = "node/build-template.sh"
-HUB_BUILD = "hub/build-template.sh"
+CYCLE = "node/scripts/confettictl-test-cycle.sh"
+REGISTER = "node/scripts/confettictl-register.sh"
+SETUP = "node/scripts/confettictl-setup.sh"
+NODE_BUILD = "node/confettictl-build-template.sh"
+HUB_BUILD = "hub/confettictl-build-template.sh"
 
 TEST_TYPES = {"http", "ssh", "traceroute", "pmtu", "dns", "iperf3", "smb", "loss", "smtp"}
 WIRE_FIELDS = {"target_hostname", "target_ip", "test_type", "success",
@@ -165,8 +165,8 @@ def need(cond, msg, problems):
 def _():
     p = []
     need(grep(r"hostname +TEXT PRIMARY KEY", APP), "endpoints.hostname is not the PRIMARY KEY", p)
-    need(grep(r"pervium-template", NODE_BUILD), "template no longer ships as pervium-template", p)
-    need(grep(r"/etc/hostname", SETUP), "setup.sh no longer writes /etc/hostname", p)
+    need(grep(r"confetti-template", NODE_BUILD), "template no longer ships as confetti-template", p)
+    need(grep(r"/etc/hostname", SETUP), "confettictl-setup.sh no longer writes /etc/hostname", p)
     return p
 
 
@@ -191,7 +191,7 @@ def _():
 @check("R3", "mesh SSH key comes from the hub, restricted to `echo ok`")
 def _():
     p = []
-    trust = "node/scripts/trust-hub.sh"
+    trust = "node/scripts/confettictl-trust-hub.sh"
     need(grep(r"^\s*rm .*dropbear_.*host_key", NODE_BUILD), "cleanup no longer deletes dropbear host keys", p)
     # Every node must hold the same key; a per-build keygen breaks the SSH
     # test between nodes installed separately.
@@ -199,8 +199,8 @@ def _():
           for x in at(NODE_BUILD, [h for h in grep(r"ssh-keygen", NODE_BUILD) if not is_comment(h[1])])]
     # The private key is served over HTTP: only safe with the forced command.
     need(grep(r'command=\\"echo ok\\",no-pty,no-port-forwarding', trust),
-         "trust-hub.sh no longer restricts the mesh key to command=\"echo ok\"", p)
-    need(grep(r"echo ok", CYCLE), "test-cycle.sh's SSH test no longer runs `echo ok`", p)
+         "confettictl-trust-hub.sh no longer restricts the mesh key to command=\"echo ok\"", p)
+    need(grep(r"echo ok", CYCLE), "confettictl-test-cycle.sh's SSH test no longer runs `echo ok`", p)
     # The management key must never be served privately.
     p += ["hub serves the private management key: " + x
           for x in at(APP, grep(r'"id_hub"', APP))]
@@ -210,26 +210,26 @@ def _():
 @check("R3b", "hub management key is pinned on first use, never replaced by cron")
 def _():
     p = []
-    trust = "node/scripts/trust-hub.sh"
+    trust = "node/scripts/confettictl-trust-hub.sh"
     body = read(trust)
     need(re.search(r'MODE" = "auto" \] && \[ -f "\$PIN" \] && \[ "\$\(cat "\$PIN_URL"', body),
-         "trust-hub.sh --auto no longer keeps an existing pin for the same HUB_URL", p)
-    # register.sh runs every 5 minutes: it may only warn, or run --auto when
+         "confettictl-trust-hub.sh --auto no longer keeps an existing pin for the same HUB_URL", p)
+    # confettictl-register.sh runs every 5 minutes: it may only warn, or run --auto when
     # nothing is pinned yet.
     for n, l in grep(r"hub_key\.pub", REGISTER):
-        if re.search(r">\s*/etc/pervium/hub_key\.pub", l):
-            p.append("%s:%d register.sh writes the pin: %s" % (REGISTER, n, l.strip()))
+        if re.search(r">\s*/etc/confetti/hub_key\.pub", l):
+            p.append("%s:%d confettictl-register.sh writes the pin: %s" % (REGISTER, n, l.strip()))
     for n, l in grep(r"trust-hub\.sh", REGISTER):
         if not is_comment(l) and "--auto" not in l:
-            p.append("%s:%d register.sh runs trust-hub.sh without --auto: %s" % (REGISTER, n, l.strip()))
+            p.append("%s:%d confettictl-register.sh runs confettictl-trust-hub.sh without --auto: %s" % (REGISTER, n, l.strip()))
     return p
 
 
-@check("R28", "derived hostname is pv-<group>-<random NODE_ID>, not the IP")
+@check("R28", "derived hostname is ct-<group>-<random NODE_ID>, not the IP")
 def _():
     p = []
     need(grep(r'DESIRED_HOSTNAME="\$\{HOSTNAME_PREFIX\}-\$\{_slug\}-\$\{NODE_ID\}"', SETUP),
-         "setup.sh no longer derives <prefix>-<group>-<NODE_ID>", p)
+         "confettictl-setup.sh no longer derives <prefix>-<group>-<NODE_ID>", p)
     need(grep(r"tr -dc 'a-z' < /dev/urandom.*head -c 2", SETUP)
          and grep(r"tr -dc '0-9' < /dev/urandom.*head -c 4", SETUP),
          "NODE_ID is no longer 2 random letters + 4 random digits", p)
@@ -237,7 +237,7 @@ def _():
     return p
 
 
-@check("R4", "setup.sh never copies scripts onto themselves")
+@check("R4", "confettictl-setup.sh never copies scripts onto themselves")
 def _():
     guard = grep(r'if \[ "\$SRC_DIR" != "\$SCRIPT_DIR" \]', SETUP)
     cps = grep(r'cp -f "\$SRC_DIR/', SETUP)
@@ -248,20 +248,20 @@ def _():
     return []
 
 
-@check("R5", "web server is the pervium-httpd OpenRC service")
+@check("R5", "web server is the confettid-httpd OpenRC service")
 def _():
     p = []
     hits = []
     for f in git_files("node/"):
-        if os.path.isfile(f) and "rc-update add pervium-httpd" in read(f):
+        if os.path.isfile(f) and "rc-update add confettid-httpd" in read(f):
             hits.append(f)
-    need(hits, "nothing runs rc-update add pervium-httpd", p)
+    need(hits, "nothing runs rc-update add confettid-httpd", p)
     for f in git_files("node/scripts/"):
         p += at(f, grep(r"^[^#]*busybox httpd|^[^#]*\bhttpd -p", f))
     return p
 
 
-@check("R6", "test-cycle.sh takes a lock")
+@check("R6", "confettictl-test-cycle.sh takes a lock")
 def _():
     p = []
     mk = grep(r'mkdir "\$LOCK_DIR"', CYCLE)
@@ -327,26 +327,26 @@ def _():
     return p
 
 
-@check("R11", "register.sh does not exit 0 after registering")
+@check("R11", "confettictl-register.sh does not exit 0 after registering")
 def _():
     f, p = False, []
     for n, l in enumerate(lines(REGISTER), 1):
         if "Registration successful" in l:
             f = True
-        if 'update_script "test-cycle.sh"' in l:
+        if 'update_script "confettictl-test-cycle.sh"' in l:
             f = False
         if f and re.match(r"exit ", l):
             p.append("%s:%d unconditional exit before self-update: %s" % (REGISTER, n, l.strip()))
     return p
 
 
-@check("R12", "setup.sh merges root's crontab, never replaces it")
+@check("R12", "confettictl-setup.sh merges root's crontab, never replaces it")
 def _():
     body = read(SETUP)
     s = body[body.find("# Install crontab"):]
     p = []
     need(s and "crontab -l" in s, "crontab -l no longer read first", p)
-    need("grep -v '^# pervium'" in s, "prior pervium block no longer stripped", p)
+    need("grep -v '^# confetti'" in s, "prior confetti block no longer stripped", p)
     need('cat >> "$TMP_CRON"' in s, "new entries no longer appended to the merged copy", p)
     need("run-parts" in s, "surviving run-parts count no longer logged", p)
     if s and "crontab -l" in s and 'crontab "$TMP_CRON"' in s:
@@ -354,12 +354,12 @@ def _():
     return p
 
 
-@check("R13", "only test-cycle.sh auto-updates (release-blocking)")
+@check("R13", "only confettictl-test-cycle.sh auto-updates (release-blocking)")
 def _():
     calls = [(n, l) for n, l in grep(r'update_script "', REGISTER) if not is_comment(l)]
     names = [re.search(r'update_script "([^"]+)"', l).group(1) for _, l in calls]
-    if names != ["test-cycle.sh"]:
-        return ["update_script calls: %s (want exactly test-cycle.sh)" % names] + at(REGISTER, calls)
+    if names != ["confettictl-test-cycle.sh"]:
+        return ["update_script calls: %s (want exactly confettictl-test-cycle.sh)" % names] + at(REGISTER, calls)
     return []
 
 
@@ -422,12 +422,12 @@ def _():
 def _():
     f = "node/services/firstboot.initd"
     p = []
-    need(grep(r'_guestinfo "pervium\.hub_url"', f), "hub_url not checked", p)
-    need(grep(r'_guestinfo "pervium\.group"', f), "group not checked", p)
+    need(grep(r'_guestinfo "confetti\.hub_url"', f), "hub_url not checked", p)
+    need(grep(r'_guestinfo "confetti\.group"', f), "group not checked", p)
     for n, l in grep(r'"\$SETUP"', f):
         if "-x" in l or is_comment(l):
             continue
-        need("< /dev/null" in l, "%s:%d runs setup.sh without stdin from /dev/null" % (f, n), p)
+        need("< /dev/null" in l, "%s:%d runs confettictl-setup.sh without stdin from /dev/null" % (f, n), p)
     return p
 
 
@@ -486,7 +486,7 @@ def _():
 @check("R23", "login hook triple-guarded, both roles")
 def _():
     p = []
-    for f in ("node/services/login-setup.sh", "hub/services/login-setup.sh"):
+    for f in ("node/services/confettictl-login-setup.sh", "hub/services/confettictl-login-setup.sh"):
         for pat, what in ((r'case "\$-" in', 'case "$-"'), (r"\[ -t 0 \]", "[ -t 0 ]"), (r"\.setup-done", ".setup-done")):
             n = len(grep(pat, f))
             need(n == 1, "%s: %s guard appears %d times (want 1)" % (f, what, n), p)
@@ -497,8 +497,8 @@ def _():
 @check("R24", "every interactive read is EOF-guarded")
 def _():
     p = []
-    for f in (SETUP, "node/scripts/node-setup.sh", "hub/scripts/hub-setup.sh",
-              "node/scripts/trust-hub.sh", "update.sh"):
+    for f in (SETUP, "node/scripts/confettictl-node-setup.sh", "hub/scripts/confettictl-hub-setup.sh",
+              "node/scripts/confettictl-trust-hub.sh", "confettictl-update.sh"):
         for n, l in grep(r"\bread -r\b", f):
             if is_comment(l):
                 continue
@@ -511,15 +511,15 @@ def _():
 @check("R25", "golden-image cleanup clears the login stamp, both roles")
 def _():
     p = []
-    need(grep(r"^\s*rm -f .*/etc/pervium-hub/\.setup-done", HUB_BUILD), "hub cleanup no longer removes .setup-done", p)
+    need(grep(r"^\s*rm -f .*/etc/confetti-hub/\.setup-done", HUB_BUILD), "hub cleanup no longer removes .setup-done", p)
     body = read(NODE_BUILD)
-    m = re.search(r"rm -f /etc/pervium/config[^\n]*\\\n[^\n]*", body)
+    m = re.search(r"rm -f /etc/confetti/config[^\n]*\\\n[^\n]*", body)
     need(m and ".setup-done" in m.group(0), "node cleanup no longer removes .setup-done", p)
     need(m and "config.bak-*" in m.group(0), "node cleanup no longer removes config.bak-*", p)
     return p
 
 
-@check("R26", "build-template.sh --update exits before cleanup (release-blocking)")
+@check("R26", "confettictl-build-template.sh --update exits before cleanup (release-blocking)")
 def _():
     p = []
     for f in (HUB_BUILD, NODE_BUILD):
@@ -552,8 +552,8 @@ def _():
          "node placeholder index.html not guarded by UPDATE_MODE", p)
     p += at(NODE_BUILD, [h for h in grep(r'^[^#]*\bcp\b.*\$\{?INSTALL_DIR\}?/[\w-]+\.sh', NODE_BUILD)])
     for f in ("node/services/crontab", SETUP):
-        p += ["pervium-update scheduled (constraint 13): " + x
-              for x in at(f, [h for h in grep(r"update\.sh|pervium-update", f) if not is_comment(h[1])])]
+        p += ["confettictl-update scheduled (constraint 13): " + x
+              for x in at(f, [h for h in grep(r"update\.sh|confettictl-update", f) if not is_comment(h[1])])]
     return p
 
 
@@ -567,7 +567,7 @@ def _():
                 p.append("%s:%d apk without --no-progress" % (f, n))
     out = re.compile(r"^\s*(log|echo|printf|einfo|ewarn|eerror|ebegin|eend|die|sys\.stderr\.write|print)\b"
                      r"|^\s*[|+].*[|+]\s*$")
-    for f in git_files("install.sh", "update.sh", "hub", "node"):
+    for f in git_files("confettictl-install.sh", "confettictl-update.sh", "hub", "node"):
         if re.search(r"(\.sh|\.initd|\.py)$", f):
             for n, l in enumerate(lines(f), 1):
                 if out.search(l) and any(ord(c) > 127 for c in l):
@@ -579,8 +579,8 @@ def _():
 
 @check("T2-sh", "sh -n on every shell script and initd")
 def _():
-    targets = (["install.sh", "update.sh", HUB_BUILD, NODE_BUILD, "hub/run.sh",
-              "node/services/login-setup.sh", "hub/services/login-setup.sh"]
+    targets = (["confettictl-install.sh", "confettictl-update.sh", HUB_BUILD, NODE_BUILD, "hub/confettictl-run.sh",
+              "node/services/confettictl-login-setup.sh", "hub/services/confettictl-login-setup.sh"]
              + files("node/scripts/*.sh") + files("hub/scripts/*.sh")
              + files("node/services/*.initd") + files("hub/services/*.initd"))
     p = []
@@ -616,9 +616,9 @@ def _():
         f, l, msg, code = m.group(1).replace("\\", "/"), int(m.group(2)), m.group(3), m.group(4)
         if code == "SC2034" and re.search(r"/services/.*\.initd$", f):
             continue
-        if code in ("SC1113", "SC2096") and re.search(r"/services/login-.*\.sh$", f):
+        if code in ("SC1113", "SC2096") and re.search(r"/services/confettictl-login-.*\.sh$", f):
             continue
-        if code == "SC2163" and f == "hub/run.sh":
+        if code == "SC2163" and f == "hub/confettictl-run.sh":
             continue
         if code == "SC1010" and "-M do" in lines(f)[l - 1]:
             continue
@@ -659,7 +659,7 @@ def _():
     labels = set(re.findall(r"(\w+):", re.search(r"var TYPE_LABELS = \{([\s\S]*?)\}", dash).group(1)))
     coarse = set(re.findall(r"(\w+):", re.search(r"var COARSE_TIMING = \{([^}]*)\}", dash).group(1)))
     pair = set(re.findall(r'"(\w+)"', re.search(r"var PAIR_TEST_TYPES = \[([^\]]*)\]", dash).group(1)))
-    for name, s in (("test-cycle.sh", emitted), ("VALID_TESTS", valid), ("TYPE_LABELS", labels)):
+    for name, s in (("confettictl-test-cycle.sh", emitted), ("VALID_TESTS", valid), ("TYPE_LABELS", labels)):
         if s != TEST_TYPES:
             p.append("%s: %s (want %s)" % (name, sorted(s), sorted(TEST_TYPES)))
     need("loss" not in coarse, "loss must not be in COARSE_TIMING", p)
@@ -691,7 +691,7 @@ def free_port():
 
 
 def run_live():
-    tmp = tempfile.mkdtemp(prefix="pervium-regress-")
+    tmp = tempfile.mkdtemp(prefix="confetti-regress-")
     hub_dir = os.path.join(tmp, "hub")
     shutil.copytree("hub", hub_dir, ignore=shutil.ignore_patterns("__pycache__", "agent", "*.db*"))
     os.makedirs(os.path.join(hub_dir, "agent"))
@@ -762,10 +762,10 @@ def live_checks(base, db, tmp):
                     f.write(text)
             env = dict(os.environ, PATH=os.path.join(ROOT, "dev", "shims") + os.pathsep + os.environ["PATH"],
                        DEV_HOSTNAME=name, DEV_IP=ip, SNAPSHOT_FILE=nd + "/run/last-cycle.txt")
-            for script in ("register.sh", "register.sh", "test-cycle.sh"):
+            for script in ("confettictl-register.sh", "confettictl-register.sh", "confettictl-test-cycle.sh"):
                 r = subprocess.run(["sh", nd + "/" + script], env=env, capture_output=True, text=True, timeout=240)
-                if script == "test-cycle.sh" and r.returncode:
-                    p.append("%s test-cycle.sh exit %d: %s" % (name, r.returncode, (r.stdout + r.stderr)[-400:]))
+                if script == "confettictl-test-cycle.sh" and r.returncode:
+                    p.append("%s confettictl-test-cycle.sh exit %d: %s" % (name, r.returncode, (r.stdout + r.stderr)[-400:]))
         code, body = http("GET", base + "/api/results?minutes=10")
         rows = json.loads(body) if code == 200 else []
         for name in ("rt-node-a", "rt-node-b"):

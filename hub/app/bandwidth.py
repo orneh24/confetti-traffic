@@ -8,8 +8,8 @@ test running alongside would only measure the first):
   BW_PORT -- not 5201, so it never collides with the scheduled iperf3 test
   -- then runs the client on the source twice: forward (source sends) and
   reverse (-R, target sends). Both nodes must be managed.
-- browser: the dashboard's JavaScript talks to the node's /cgi-bin/pv-bw
-  directly (node/web/cgi-bin/pv-bw), so the path measured is the viewer's
+- browser: the dashboard's JavaScript talks to the node's /cgi-bin/confettictl-bw
+  directly (node/web/cgi-bin/confettictl-bw), so the path measured is the viewer's
   own. The hub only hands out the slot and stores what the browser reports.
 
 Results go in the bwtests table (last HISTORY_ROWS runs). "fwd" is always

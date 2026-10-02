@@ -1,4 +1,4 @@
-# Pervium — Network End-to-End Connectivity Testing
+# Confetti Traffic — Network End-to-End Connectivity Testing
 
 ## Project Overview
 A lightweight system for testing end-to-end connectivity between hosts —
@@ -21,15 +21,15 @@ Diagram: `docs/TOPOLOGY.md`.
 - Alpine Linux VM, ~192 MB RAM
 - NOT a test participant — purely infrastructure
 - Sits on a segment routable from all node subnets and the workstation
-- Static IP (helper: `set-static-ip <ip/cidr> <gateway> [dns] [hostname]`)
+- Static IP (helper: `confettictl-set-static-ip <ip/cidr> <gateway> [dns] [hostname]`)
 - Runs:
   - Flask API (registry + result collector) served by **waitress**, not the
     Flask dev server (which is single-threaded and would queue the mesh's
     simultaneous pushes)
-  - SQLite database (WAL mode) at `/var/lib/pervium/hub.db`
+  - SQLite database (WAL mode) at `/var/lib/confetti/hub.db`
   - Web dashboard on **port 80**
   - UDP syslog receiver on **port 514**, in a daemon thread (see Syslog below)
-- Installed to `/opt/pervium-hub/`, started by OpenRC service `pervium-hub`
+- Installed to `/opt/confetti-hub/`, started by OpenRC service `confettid-hub`
 - Entrypoint is `serve.py` — it reads `HUB_PORT` at runtime. Do not move the
   port into the init script's `command_args`: OpenRC expands that at parse
   time, before `start_pre` sources `hub.env`, so the setting would be ignored.
@@ -49,7 +49,7 @@ Diagram: `docs/TOPOLOGY.md`.
     commit (see Hub-managed nodes below)
   - `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub`
     — the hub's management public key and the mesh SSH-test keypair
-  - `GET /install.sh` — `node-install.sh` with this hub's URL filled in
+  - `GET /install.sh` — `confettictl-node-install.sh` with this hub's URL filled in
   - `POST /api/nodes/<hostname>/update`, `POST /api/nodes/update` — queue a
     push-update for one node / every eligible node
   - `GET /api/bw` — bandwidth test history (newest first, last 200);
@@ -69,7 +69,7 @@ Diagram: `docs/TOPOLOGY.md`.
     unparseable output) returns `chrony: null` with a `reason`
   - `GET /api/health` — hub self-health for the dashboard's "Hub Health"
     panel: OpenRC service status (`HUB_HEALTH_SERVICES`, default
-    `pervium-hub,chronyd,dropbear,open-vm-tools,lldpd`), syslog listener state,
+    `confettid-hub,chronyd,dropbear,open-vm-tools,lldpd`), syslog listener state,
     load average, memory, disk, uptime. Same never-500 discipline as
     `/api/time` — a check that can't run (e.g. `rc-service` missing) reports
     `null`/a reason rather than failing the page
@@ -97,10 +97,10 @@ firewalls and NAT gateways — masks unrecognised capability verbs (e.g.
 `STARTTLS`) with runs of `X`, so `250-XXXXXXXX` in the recorded `output`
 means an inspection engine is editing the session in flight, not blocking
 it. The probe never issues `DATA` — it holds a real envelope conversation
-(`EHLO` → `MAIL FROM:<>` → `RCPT TO:<probe@pervium.invalid>` → `RSET` → `QUIT`)
+(`EHLO` → `MAIL FROM:<>` → `RCPT TO:<probe@confetti.invalid>` → `RSET` → `QUIT`)
 and aborts before any message exists. `success` gates on the banner + `EHLO`
 response only, never on `RCPT`: a real relay correctly rejects
-`RCPT TO:<probe@pervium.invalid>` with `550`, and that must not paint a healthy
+`RCPT TO:<probe@confetti.invalid>` with `550`, and that must not paint a healthy
 relay red — the response codes are data in `output`, same philosophy as
 `loss`/`pmtu`. The static-target arm is deliberately **ungated** (unlike
 `smb`'s): registering a target is already an explicit opt-in, and the client
@@ -124,7 +124,7 @@ the test (so a dead peer costs one timeout) and is named in `output`
 (`report.html: content changed (30000 of 57653 bytes)`). This catches a
 device that passes web traffic but rewrites or truncates it, like `smtp`
 does for mail. The files are LF-pinned in `.gitattributes`: a CRLF copy
-would hash differently. A node without its own probe site (test-cycle.sh
+would hash differently. A node without its own probe site (confettictl-test-cycle.sh
 self-updated ahead of the bundle) falls back to the old status-only check
 of `/`, and static targets always use that check. Edit the probe files only
 as a mesh-wide change: until every node has the new copy, nodes on
@@ -152,9 +152,9 @@ does.
 Settings" panel and stored in the hub's `settings` table. Each is
 `true`/`false`/`null`; `null` (the default) means the hub has no opinion and
 each node's own `ENABLE_*` config stands, so a lab behaves as before until a
-switch is flipped. `test-cycle.sh` fetches `GET /settings` each cycle, lets a
+switch is flipped. `confettictl-test-cycle.sh` fetches `GET /settings` each cycle, lets a
 set value override its config, and starts/stops the matching server
-(`pervium-smbd`, `pervium-smtpd`, `iperf3`) to follow the flag. A node
+(`confettid-smbd`, `confettid-smtpd`, `confettid-iperf3`) to follow the flag. A node
 with `HUB_SETTINGS=false` ignores the hub. A separate route rather than a
 field on `/endpoints`, whose bare-array shape every deployed node parses. Any
 fetch failure falls back to local config — it must never fail a cycle, or
@@ -180,7 +180,7 @@ configured to log to the hub simply has an empty `/syslog`.
   thread. `start()` is idempotent and returns quietly if it cannot bind — the
   hub must keep serving results even with no syslog.
 - **Binding 514 needs root.** The OpenRC service runs as root, so this is only
-  a constraint for a manual `run.sh` or a test run; set `HUB_SYSLOG_PORT` above
+  a constraint for a manual `confettictl-run.sh` or a test run; set `HUB_SYSLOG_PORT` above
   1024 for those.
 - Parsing is best-effort and **never** discards. An unrecognised line is stored
   with its raw text and a null host/severity, because the line you cannot parse
@@ -216,7 +216,7 @@ configured to log to the hub simply has an empty `/syslog`.
 **A second writer, hub-authored.** `POST /results` also writes into `syslog`
 directly (`hub/app/pathchange.py`'s `_note_path_change`, not the UDP
 listener) when it detects a traceroute path change — tagged
-`host=pervium-hub`, `mnemonic=%PERVIUM-5-PATHCHANGE`, severity 5
+`host=confetti-hub`, `mnemonic=%CONFETTI-5-PATHCHANGE`, severity 5
 (notice: a path change is not inherently a fault), `source_ip=127.0.0.1`
 (literally true — written locally, never received over UDP). This is the one
 row in this table the hub itself can vouch for, and it gains no special
@@ -237,7 +237,7 @@ Off-switch: `HUB_PATH_CHANGE_ENABLED` (default true).
 each test card links to `/syslog` pinned to ±5 min around *that sample*, and
 the pair header links to the same window plus one link per group behind the
 pair. Group links filter on `host`, which is the name the device puts in its
-own messages — **not** `guestinfo.pervium.group`. Where those differ the filtered
+own messages — **not** `guestinfo.confetti.group`. Where those differ the filtered
 link comes back empty while the unfiltered window beside it still works, which
 is the intended failure: an empty view rather than a wrong one. The hub does
 not maintain an IP→device map.
@@ -252,63 +252,63 @@ Config: `HUB_SYSLOG_ENABLED`, `HUB_SYSLOG_BIND`, `HUB_SYSLOG_PORT`,
 `HUB_SYSLOG_MAX_ROWS`, `HUB_BUSY_TIMEOUT_MS`, `HUB_PATH_CHANGE_ENABLED`.
 
 ### Agent self-update
-The hub serves `test-cycle.sh` and `register.sh` from
-`/opt/pervium-hub/agent/`; nodes converge on their 5-minute registration run.
+The hub serves `confettictl-test-cycle.sh` and `confettictl-register.sh` from
+`/opt/confetti-hub/agent/`; nodes converge on their 5-minute registration run.
 Checksums are computed on demand, so editing a file there is the whole
 deploy — no rebuild step. Three gates before anything is trusted: sha256
-match, `sh -n`, and (for test-cycle.sh) a successful real run. The prior
+match, `sh -n`, and (for confettictl-test-cycle.sh) a successful real run. The prior
 version is kept as `.known-good` and restored if that run fails. Opt a node out
 with `AGENT_AUTOUPDATE=false`.
 
-`test-status.sh` and its login-banner hook are **not** in this manifest — the
-console-output table they render lives inside `test-cycle.sh` and self-updates
+`confettictl-status.sh` and its login-banner hook are **not** in this manifest — the
+console-output table they render lives inside `confettictl-test-cycle.sh` and self-updates
 with it, but the viewer command itself is a separate new file, same category
-as `register.sh` (constraint 13): push it deliberately (dashboard
-push-update or `pervium-update`) to nodes built before it existed. New
-clones get it from `build-template.sh`.
+as `confettictl-register.sh` (constraint 13): push it deliberately (dashboard
+push-update or `confettictl-update`) to nodes built before it existed. New
+clones get it from `confettictl-build-template.sh`.
 
 ### Hub-managed nodes
 By default the hub manages its nodes: it holds everything a node needs, and
 can push updates to them over SSH.
 
-- **Keys.** The hub owns two ed25519 keypairs in `/etc/pervium-hub/keys/`,
-  made by the `pervium-hub` service's `start_pre` if missing and deleted by
+- **Keys.** The hub owns two ed25519 keypairs in `/etc/confetti-hub/keys/`,
+  made by the `confettid-hub` service's `start_pre` if missing and deleted by
   the hub template's cleanup (so every hub has its own):
   - `id_hub` — management key, full root on nodes. A node pins it **on first
-    use** (`node/scripts/trust-hub.sh --auto`, run by `setup.sh`), and
-    re-pins only when `HUB_URL` changes. `register.sh` compares the served
-    key every 5 min and only **warns** on a mismatch. `pervium-trust-hub`
+    use** (`node/scripts/confettictl-trust-hub.sh --auto`, run by `confettictl-setup.sh`), and
+    re-pins only when `HUB_URL` changes. `confettictl-register.sh` compares the served
+    key every 5 min and only **warns** on a mismatch. `confettictl-trust-hub`
     re-pins on purpose. Only the public half is ever served.
-  - `id_pervium` — the mesh SSH-test key (constraint 3). Served privately
+  - `id_confetti` — the mesh SSH-test key (constraint 3). Served privately
     over HTTP on purpose: nodes install it as
     `command="echo ok",no-pty,no-port-forwarding,...`, so holding it proves
     reachability and nothing else.
   Both land in `authorized_keys` re-tagged with our own comment
-  (`pervium-hub`, `pervium-mesh`) so they can be found and replaced. If the
-  hub was down at setup, `register.sh` retries `trust-hub.sh --auto`.
+  (`confetti-hub`, `confetti-mesh`) so they can be found and replaced. If the
+  hub was down at setup, `confettictl-register.sh` retries `confettictl-trust-hub.sh --auto`.
 - **Opt-out:** `HUB_MANAGED=false` in the node config removes the pin; the
   node reports `managed:false` and the dashboard won't push to it.
-- **Node bundle.** `hub/build-template.sh` packs `node/`, `update.sh`,
-  `install.sh` and a `RELEASE` file (`commit=`) into
-  `/opt/pervium-hub/bundle/pervium-node.tar.gz`, top directory `pervium/`,
-  on every build and every hub update. The commit comes from update.sh
-  (`PERVIUM_UPDATE_COMMIT`), else `git rev-parse`, else `unknown`.
+- **Node bundle.** `hub/confettictl-build-template.sh` packs `node/`, `confettictl-update.sh`,
+  `confettictl-install.sh` and a `RELEASE` file (`commit=`) into
+  `/opt/confetti-hub/bundle/confetti-node.tar.gz`, top directory `confetti/`,
+  on every build and every hub update. The commit comes from confettictl-update.sh
+  (`CONFETTI_UPDATE_COMMIT`), else `git rev-parse`, else `unknown`.
 - **Install from the hub.** On a plain Alpine VM:
   `wget -O /tmp/i.sh http://<hub>/install.sh && sh /tmp/i.sh [group]`.
-  `hub/scripts/node-install.sh` downloads the bundle, runs
-  `node/build-template.sh --update` (install steps, no template cleanup),
-  writes `/etc/pervium-release`, then `setup.sh` with `HUB_URL` preset. Not
-  piped into sh: setup.sh's prompts need stdin. Golden templates still come
-  from the repo's `install.sh`.
-- **Build reporting.** `register.sh` adds `build` (commit from
-  `/etc/pervium-release`, else `unknown`) and `managed` to its POST; both
+  `hub/scripts/confettictl-node-install.sh` downloads the bundle, runs
+  `node/confettictl-build-template.sh --update` (install steps, no template cleanup),
+  writes `/etc/confetti-release`, then `confettictl-setup.sh` with `HUB_URL` preset. Not
+  piped into sh: confettictl-setup.sh's prompts need stdin. Golden templates still come
+  from the repo's `confettictl-install.sh`.
+- **Build reporting.** `confettictl-register.sh` adds `build` (commit from
+  `/etc/confetti-release`, else `unknown`) and `managed` to its POST; both
   optional hub-side, so older nodes still register. The dashboard shows it
   under each hostname (a second line, not a column: the sidebar has no
   room), yellow when it differs from `/node/release`.
 - **Push-update.** Per-row button and "update all" on the dashboard queue
   jobs; one background thread (`hub/app/nodemgmt.py`) runs them one at a
-  time: `ssh -i id_hub root@<ip> 'PATH=...; pervium-update -y'`, host keys
-  unchecked like test-cycle.sh's SSH test, `HUB_PUSH_TIMEOUT_S` (600) limit.
+  time: `ssh -i id_hub root@<ip> 'PATH=...; confettictl-update -y'`, host keys
+  unchecked like confettictl-test-cycle.sh's SSH test, `HUB_PUSH_TIMEOUT_S` (600) limit.
   Only nodes that report `managed:true` and were seen within
   `HUB_PUSH_SEEN_MINUTES` (10). State goes in `endpoints.update_state` /
   `update_msg` / `update_at`; a hub restart marks queued/running jobs failed.
@@ -331,7 +331,7 @@ table, last 200 rows; `fwd` is From→To, `rev` To→From.
   `pkill -f` matches the remote shell's own command line, so a command
   holding both the kill and the start kills itself.
 - **Node ↔ browser:** the dashboard's JS talks to the node's
-  `/cgi-bin/pv-bw` (`node/web/cgi-bin/pv-bw`, installed by the node build)
+  `/cgi-bin/confettictl-bw` (`node/web/cgi-bin/confettictl-bw`, installed by the node build)
   **directly**, so the path measured is the viewer's; the browser must be able
   to reach the node's IP. Download = a streamed GET of zeros (nothing on
   disk) read for the duration; upload = four parallel loops of 4 MB POSTs
@@ -343,16 +343,16 @@ table, last 200 rows; `fwd` is From→To, `rev` To→From.
 - **No authentication yet**, same as push-update: anyone who can reach the
   dashboard can saturate a path for up to 30 s per direction.
 
-### Code update (`pervium-update`)
-Everything else reaches an installed VM through `update.sh` (repo root),
-which both builds install as `/usr/local/bin/pervium-update`. Manual only
+### Code update (`confettictl-update`)
+Everything else reaches an installed VM through `confettictl-update.sh` (repo root),
+which both builds install as `/usr/local/bin/confettictl-update`. Manual only
 (a dashboard push runs it too). The hub downloads the GitHub main tarball;
 a node downloads **its hub's** node bundle (`${HUB_URL}/node/bundle.tar.gz`)
-and never GitHub. `PERVIUM_UPDATE_URL` overrides both. It then runs the
-downloaded `update.sh`, so the newest update logic always does the apply.
+and never GitHub. `CONFETTI_UPDATE_URL` overrides both. It then runs the
+downloaded `confettictl-update.sh`, so the newest update logic always does the apply.
 Run from an unpacked repo, it uses that tree instead.
 
-The apply is `<role>/build-template.sh --update`: the build's own install
+The apply is `<role>/confettictl-build-template.sh --update`: the build's own install
 steps, so there is no second file list to drift. `--update` skips the root
 password, `hub.env` (if present) and the node's placeholder identity page,
 and **exits before the cleanup section** — that section deletes `hub.db`,
@@ -362,19 +362,19 @@ below it if it only prepares a template. Scripts that cron may be running
 are installed via temp file + `mv`, never `cp` over the live file (sh reads
 a script as it runs).
 
-Afterwards the hub restarts; a configured node re-runs `setup.sh`. Update
+Afterwards the hub restarts; a configured node re-runs `confettictl-setup.sh`. Update
 the hub first, then push the nodes: they can only get what the hub's bundle
 holds, so a node can't get ahead of its hub.
-`/etc/pervium-release` records the commit, read from the tarball's pax
+`/etc/confetti-release` records the commit, read from the tarball's pax
 header (GitHub) or the bundle's `RELEASE` file (hub). An ssh command gets
 dropbear's minimal PATH, so the push's remote command sets PATH itself.
 
 ### Node (one per network segment under test)
 - Alpine Linux VM, ~128 MB RAM, DHCP on its interface
-- Installed to `/usr/local/bin/pervium/`, config at `/etc/pervium/config`
-- Servers: dropbear (SSH), busybox httpd via OpenRC service **`pervium-httpd`**,
-  iperf3, `smbd` via OpenRC service **`pervium-smbd`** (opt-in, `ENABLE_SMB`),
-  `smtpd` (OpenSMTPD) via OpenRC service **`pervium-smtpd`** (opt-in, `ENABLE_SMTP`)
+- Installed to `/usr/local/bin/confetti/`, config at `/etc/confetti/config`
+- Servers: dropbear (SSH), busybox httpd via OpenRC service **`confettid-httpd`**,
+  iperf3, `smbd` via OpenRC service **`confettid-smbd`** (opt-in, `ENABLE_SMB`),
+  `smtpd` (OpenSMTPD) via OpenRC service **`confettid-smtpd`** (opt-in, `ENABLE_SMTP`)
 - Clients: curl, ssh, traceroute, iperf3, smbclient, fping, `nc` (hand-rolled
   SMTP conversation — see below) — driven by cron every 60s
 - Cloned from a single golden template, or installed straight from the hub
@@ -382,7 +382,7 @@ dropbear's minimal PATH, so the push's remote command sets PATH itself.
 - Each cycle's results also render as a compact table (one row per target,
   one column per always-on test — H/S/M/L/T) to `/dev/console`
   (`CONSOLE_OUTPUT`, on by default), the cycle log, a snapshot at
-  `/run/pervium/last-cycle.txt`, and on demand via `test-status`
+  `/run/confetti/last-cycle.txt`, and on demand via `confettictl-status`
   (`-f` to follow, `-n N` for history) — the hub dashboard stays the source
   of truth, but this lets an operator at the node's own console or over SSH
   see whether *this* node's tests are passing without opening it. Shown
@@ -396,9 +396,9 @@ dropbear's minimal PATH, so the push's remote command sets PATH itself.
 
 ## Infrastructure
 - ESXi + vCenter, `open-vm-tools` on both roles
-- Two separate golden templates, each built by its own `build-template.sh`
+- Two separate golden templates, each built by its own `confettictl-build-template.sh`
 - Default credentials: **root / lab123** (isolated lab only) — override with
-  `PERVIUM_ROOT_PASSWORD` when running either `build-template.sh`
+  `CONFETTI_ROOT_PASSWORD` when running either `confettictl-build-template.sh`
 - `chrony` on all VMs — the hub's clock is the mesh reference
 - `lldpd` on both roles, always-on, not gated by any `ENABLE_*` flag — LLDP
   neighbor discovery for troubleshooting (e.g. `lldpcli show neighbors` to
@@ -411,18 +411,18 @@ keys set on the VM are read in-guest via `vmware-rpctool "info-get <key>"`:
 
 | Key | Example |
 |-----|---------|
-| `guestinfo.pervium.hub_url` | `http://10.0.0.100` |
-| `guestinfo.pervium.group` | `site-a` |
-| `guestinfo.pervium.subnet` | `10.1.1.0/24` (optional; derived from the DHCP lease if omitted) |
-| `guestinfo.pervium.hostname` | `pv-site-a` (optional) |
-| `guestinfo.pervium.dns_server` | `10.0.0.53` (optional; unset skips the DNS test) |
-| `guestinfo.pervium.dns_query` | `example.com` (optional) |
+| `guestinfo.confetti.hub_url` | `http://10.0.0.100` |
+| `guestinfo.confetti.group` | `site-a` |
+| `guestinfo.confetti.subnet` | `10.1.1.0/24` (optional; derived from the DHCP lease if omitted) |
+| `guestinfo.confetti.hostname` | `ct-site-a` (optional) |
+| `guestinfo.confetti.dns_server` | `10.0.0.53` (optional; unset skips the DNS test) |
+| `guestinfo.confetti.dns_query` | `example.com` (optional) |
 
-Precedence in `setup.sh`: **guestinfo → environment → prompt**, except
+Precedence in `confettictl-setup.sh`: **guestinfo → environment → prompt**, except
 `subnet`, which has one extra fallback before the prompt: derived from the
 interface's own DHCP lease (address + prefix already give you the network).
 If hostname is omitted it is derived as `<HOSTNAME_PREFIX>-<group-slug>-<NODE_ID>`
-(e.g. `pv-site-a-xd2311`), where `NODE_ID` is two random letters and
+(e.g. `ct-site-a-xd2311`), where `NODE_ID` is two random letters and
 four random digits, generated once and stored in the config — so two nodes in one
 group never collide (constraint 1), and an IP change never renames a node.
 Template cleanup deletes the config, so every clone draws its own.
@@ -431,87 +431,87 @@ dashboard and filters syslog by sender; it carries no network-topology
 meaning to the hub.
 
 **Changing a key after the node is built applies at the next reboot.**
-`/etc/pervium/config` is written once, so on every later boot
-`pervium-firstboot` compares all six keys with it (`_guestinfo_changed`) and
-re-runs `setup.sh` if a *set* key differs. An unset key never counts, so a
-DHCP-derived `subnet` stays put. `setup.sh` writes the new values into the
+`/etc/confetti/config` is written once, so on every later boot
+`confettid-firstboot` compares all six keys with it (`_guestinfo_changed`) and
+re-runs `confettictl-setup.sh` if a *set* key differs. An unset key never counts, so a
+DHCP-derived `subnet` stays put. `confettictl-setup.sh` writes the new values into the
 existing config, renames the node if its hostname changes, and after the new
 name registers, `DELETE`s the old name from the hub, so the dashboard doesn't
-show both. Deliberately not done from `register.sh`'s 5-minute run:
-constraint 13 keeps register.sh minimal. Limit: when `hub_url` changes along
+show both. Deliberately not done from `confettictl-register.sh`'s 5-minute run:
+constraint 13 keeps confettictl-register.sh minimal. Limit: when `hub_url` changes along
 with the name, the delete goes to the new hub, and the old hub's entry ages
 out (`HUB_STALE_ENDPOINT_HOURS`).
 
 The table above is read by the nodes. The **hub** has its own, smaller
-set, read by `pervium-hub-firstboot` (`hub/services/firstboot.initd`) and
+set, read by `confettid-hub-firstboot` (`hub/services/firstboot.initd`) and
 set on the hub's own VM object, not the nodes':
 
 | Key | Example |
 |-----|---------|
 | `guestinfo.hub.ip` | `10.0.0.100/24` |
 | `guestinfo.hub.gateway` | `10.0.0.1` |
-| `guestinfo.hub.dns` | `10.0.0.53` (optional; without it the hub resolves nothing and `pervium-update` can't download) |
-| `guestinfo.hub.hostname` | `pervium-hub` (optional; unset keeps the current hostname; re-read every boot) |
+| `guestinfo.hub.dns` | `10.0.0.53` (optional; without it the hub resolves nothing and `confettictl-update` can't download) |
+| `guestinfo.hub.hostname` | `confetti-hub` (optional; unset keeps the current hostname; re-read every boot) |
 
 On first boot, `dns` and `hostname` are applied only together with `ip` and
-`gateway` (all four go to `set-static-ip`). After that the network keys are
+`gateway` (all four go to `confettictl-set-static-ip`). After that the network keys are
 never read again (a wrong IP applied at boot would cut the hub off), but
 `hostname` is re-read on every boot and applied if set and different, so a
 hub rename in vCenter takes effect at the next reboot, as it does for nodes.
-A set key also overrides a name typed into `hub-setup.sh` at the next boot. `hub-setup.sh` asks for the same four, with DNS
+A set key also overrides a name typed into `confettictl-hub-setup.sh` at the next boot. `confettictl-hub-setup.sh` asks for the same four, with DNS
 and hostname optional. It re-asks for the IP until it has a `/prefix`, and
 offers the subnet's first address (network + 1) as the gateway default, which
-the user can override. `setup.sh`'s no-DHCP fallback does the same; both use
+the user can override. `confettictl-setup.sh`'s no-DHCP fallback does the same; both use
 an identical `first_host()` helper.
 All optional — with ip/gateway absent, the firstboot service stands down
 (same reasoning as the nodes: no reliable tty inside an OpenRC `start()`
-to prompt from) and `hub-setup.sh` prompts interactively at first login
-instead (`hub/scripts/hub-setup.sh`, invited by `hub/services/login-setup.sh`).
-Nodes have the same login-prompt fallback: `node-setup.sh`, invited by
-`node/services/login-setup.sh`, asks whether to configure now and delegates
-to `setup.sh` for the actual values — it collects nothing itself, since
-`firstboot.initd` calls only `setup.sh` and any value-collecting logic added
+to prompt from) and `confettictl-hub-setup.sh` prompts interactively at first login
+instead (`hub/scripts/confettictl-hub-setup.sh`, invited by `hub/services/confettictl-login-setup.sh`).
+Nodes have the same login-prompt fallback: `confettictl-node-setup.sh`, invited by
+`node/services/confettictl-login-setup.sh`, asks whether to configure now and delegates
+to `confettictl-setup.sh` for the actual values — it collects nothing itself, since
+`firstboot.initd` calls only `confettictl-setup.sh` and any value-collecting logic added
 to the wizard instead would be invisible on the zero-touch path. A fresh
-Alpine base VM starts with `install.sh` (repo root), which asks whether the
-VM becomes a hub or a node and runs the matching `build-template.sh`.
+Alpine base VM starts with `confettictl-install.sh` (repo root), which asks whether the
+VM becomes a hub or a node and runs the matching `confettictl-build-template.sh`.
 
 ## Project Structure
 ```
-install.sh             — repo-root entry point: asks hub or node, runs the
-                          matching build-template.sh
-update.sh              — updates an installed hub (from GitHub) or node (from
-                          its hub); installed as /usr/local/bin/pervium-update
+confettictl-install.sh             — repo-root entry point: asks hub or node, runs the
+                          matching confettictl-build-template.sh
+confettictl-update.sh              — updates an installed hub (from GitHub) or node (from
+                          its hub); installed as /usr/local/bin/confettictl-update
 hub/
-  build-template.sh   — builds the hub golden template
+  confettictl-build-template.sh   — builds the hub golden template
   serve.py            — production entrypoint (reads HUB_PORT at runtime)
-  run.sh              — foreground launcher for debugging
+  confettictl-run.sh              — foreground launcher for debugging
   app/                — Flask API (app.py, config.py, pathchange.py,
                         syslog_server.py, nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
   templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light, Nord, Dracula,
                         Solarized Dark, Monokai, High Contrast, Terminal green) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
-                        localStorage key pervium-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, pervium-theme-shuffle, so all pages stay in step. Adding or changing a theme means
+                        localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. Adding or changing a theme means
                         editing all three pages. syslog.html and timeline.html use the smaller
                         variable set (--row-line, and --gray is a text grey there, not a fill).
   static/
   agent/              — scripts served to nodes (created at build time)
   bundle/             — node bundle + RELEASE (created at build time)
-  services/           — firstboot.initd, login-setup.sh
-  scripts/            — hub-setup.sh, node-install.sh (served as /install.sh)
+  services/           — firstboot.initd, confettictl-login-setup.sh
+  scripts/            — confettictl-hub-setup.sh, confettictl-node-install.sh (served as /confettictl-install.sh)
 node/
-  build-template.sh   — builds the node golden template
+  confettictl-build-template.sh   — builds the node golden template
   web/probe/          — fixed site the HTTP test fetches and hashes
-  web/cgi-bin/pv-bw   — node end of the browser bandwidth test
-  scripts/            — register.sh, test-cycle.sh, setup.sh, node-setup.sh,
-                        test-status.sh (console/SSH results viewer),
-                        trust-hub.sh (hub keys; pervium-trust-hub)
-  services/           — httpd.initd (pervium-httpd), iperf3.initd,
-                        smbd.initd (pervium-smbd), smb.conf,
-                        smtpd.initd (pervium-smtpd), smtpd.conf, crontab,
-                        pervium-httpd.conf, logrotate.conf,
-                        firstboot.initd (pervium-firstboot),
-                        login-setup.sh, login-status.sh
+  web/cgi-bin/confettictl-bw   — node end of the browser bandwidth test
+  scripts/            — confettictl-register.sh, confettictl-test-cycle.sh, confettictl-setup.sh, confettictl-node-setup.sh,
+                        confettictl-status.sh (console/SSH results viewer),
+                        confettictl-trust-hub.sh (hub keys; confettictl-trust-hub)
+  services/           — httpd.initd (confettid-httpd), iperf3.initd (confettid-iperf3),
+                        smbd.initd (confettid-smbd), smb.conf,
+                        smtpd.initd (confettid-smtpd), smtpd.conf, crontab,
+                        confettid-httpd.conf, logrotate.conf,
+                        firstboot.initd (confettid-firstboot),
+                        confettictl-login-setup.sh, confettictl-login-status.sh
   config.sample
 docs/BUILD_GUIDE.md
 ```
@@ -537,9 +537,9 @@ These were live bugs that a review caught; each has a comment at the site.
 
 1. **Hostnames must be unique per clone.** `endpoints.hostname` is the PRIMARY
    KEY, so duplicate names make clones overwrite each other and the mesh
-   collapses to one entry — which every node then skips as "self". `setup.sh`
-   sets the hostname (`pv-<group>-<NODE_ID>`, random, stored in the config);
-   the template ships as `pervium-template` and its cleanup deletes the config,
+   collapses to one entry — which every node then skips as "self". `confettictl-setup.sh`
+   sets the hostname (`ct-<group>-<NODE_ID>`, random, stored in the config);
+   the template ships as `confetti-template` and its cleanup deletes the config,
    so no two clones share a `NODE_ID`.
 2. **Timestamps: the hub stamps `received_at` and filters on that.** Nodes
    send ISO-8601 (`2026-09-09T08:00:00Z`); SQLite's `datetime('now', ...)`
@@ -550,18 +550,18 @@ These were live bugs that a review caught; each has a comment at the site.
 3. **The SSH test needs one mesh keypair on every node, from the hub.** It runs
    `BatchMode=yes` (key auth only). Nodes installed straight from the hub share
    no template, so the key can't be generated at build time: the hub owns it
-   and every node fetches it (`trust-hub.sh`). That means a private key served
+   and every node fetches it (`confettictl-trust-hub.sh`). That means a private key served
    over plain HTTP, which is only safe because nodes trust it solely as
    `command="echo ok",no-pty,no-port-forwarding,...` — exactly what the SSH
    test runs. Never install it unrestricted, and never serve the hub's
    management key (`id_hub`) privately.
-4. **`setup.sh` must not copy scripts onto themselves.** Source and destination
-   both resolve to `/usr/local/bin/pervium/` when run in place; `cp` exits 1
+4. **`confettictl-setup.sh` must not copy scripts onto themselves.** Source and destination
+   both resolve to `/usr/local/bin/confetti/` when run in place; `cp` exits 1
    and `set -e` aborts the script. It compares the paths first.
-5. **The web server is an OpenRC service (`pervium-httpd`).** Launching busybox
+5. **The web server is an OpenRC service (`confettid-httpd`).** Launching busybox
    httpd by hand does not survive a reboot, which silently breaks every HTTP
    test in the mesh.
-6. **`test-cycle.sh` takes a lock.** Traceroutes can outrun the 60s cron
+6. **`confettictl-test-cycle.sh` takes a lock.** Traceroutes can outrun the 60s cron
    interval; overlapping cycles skew every reported timing.
 7. **iperf3 serves one client at a time.** Contention is retried once, then
    reported as skipped rather than failed — and a skipped run emits no JSON,
@@ -578,23 +578,23 @@ These were live bugs that a review caught; each has a comment at the site.
    target has just failed. At the old settings (3 probes, 15 hops, 2s wait) a
    black-holed path cost 90s per target and, tested serially, overran the 60s
    cycle — the tool slowed down exactly when the lab broke.
-11. **`register.sh` must not `exit 0` on successful registration.** Self-update
+11. **`confettictl-register.sh` must not `exit 0` on successful registration.** Self-update
    and the identity-page refresh run after it; an early exit silently skips
    both.
-12. **`setup.sh` merges into root's crontab, never replaces it.** `crontab
+12. **`confettictl-setup.sh` merges into root's crontab, never replaces it.** `crontab
    FILE` overwrites wholesale, and Alpine's crontab carries the run-parts
    entries that drive `/etc/periodic/*` — including the daily logrotate run.
    Replacing it left log rotation installed but never triggered, so the disk
-   still filled. It now strips any prior pervium block, appends, and
+   still filled. It now strips any prior confetti block, appends, and
    reports how many periodic entries survived.
-13. **Only `test-cycle.sh` auto-updates.** register.sh is the updater; a copy
+13. **Only `confettictl-test-cycle.sh` auto-updates.** confettictl-register.sh is the updater; a copy
    of it that parses but fails at runtime would stop registration *and*
    disable the mechanism that would repair it, bricking every node at once.
-   There is also no non-circular way to verify it. Push register.sh changes
-   deliberately — the dashboard's push-update, or `pervium-update` run by
+   There is also no non-circular way to verify it. Push confettictl-register.sh changes
+   deliberately — the dashboard's push-update, or `confettictl-update` run by
    hand, is that path. **Never put either on cron or trigger it
    automatically** (e.g. on a build mismatch): that would turn it into
-   exactly the unattended register.sh update this constraint forbids.
+   exactly the unattended confettictl-register.sh update this constraint forbids.
 14. **Package selection on Alpine is load-bearing** (verified against the
    Alpine package index, not assumed):
    - `iputils-ping`, not `iputils`. The ping binary lives in the subpackage;
@@ -602,10 +602,10 @@ These were live bugs that a review caught; each has a comment at the site.
      installs to `/bin/ping`, the *same path* BusyBox uses, so this is a
      package replacement rather than a PATH-ordering question. The PMTU
      probe needs its `-M do`, which BusyBox ping does not implement —
-     `build-template.sh` checks this at build time and warns.
+     `confettictl-build-template.sh` checks this at build time and warns.
    - `openssh-client` is a virtual provided by `openssh-client-default`,
      which installs `/usr/bin/ssh` and already depends on `openssh-keygen`
-     (so that needs no separate entry). `test-cycle.sh` passes `-o` flags
+     (so that needs no separate entry). `confettictl-test-cycle.sh` passes `-o` flags
      that dropbear's `dbclient` rejects, so OpenSSH is required.
    - Never add the `dropbear-ssh` subpackage. It installs its own
      `/usr/bin/ssh` symlink to `dbclient` and collides with
@@ -619,18 +619,18 @@ These were live bugs that a review caught; each has a comment at the site.
      service name is bare `smtpd` — as generic and collision-prone as
      `httpd` was — and would let an operator `rc-update add smtpd` by
      accident, bypassing `ENABLE_SMTP` and every safety guard in our own
-     `smtpd.conf`. We ship our own `pervium-smtpd` initd instead. `opensmtpd`
+     `smtpd.conf`. We ship our own `confettid-smtpd` initd instead. `opensmtpd`
      also claims `/usr/sbin/sendmail`/`mailq`/`newaliases`; harmless alone,
      but a hard collision if `postfix`/`ssmtp`/`msmtp` are ever added later.
 15. **Agent definitions use `tools:` as a comma-separated string**, not a
    YAML array — `tools: Read, Grep, Bash`. Per the Claude Code subagent
    docs; only `name` and `description` are required. Project-level
    `.claude/agents/` overrides `~/.claude/agents/` on a name collision.
-16. **The first-boot service stands down without guestinfo.** `setup.sh`
+16. **The first-boot service stands down without guestinfo.** `confettictl-setup.sh`
    prompts interactively, so auto-running it with no keys present would block
-   the boot forever waiting on input. It checks for `pervium.hub_url` and
-   `pervium.group` first and redirects to `/dev/null`. The interactive
-   counterpart — `hub-setup.sh` / `node-setup.sh`, invited at login — has its
+   the boot forever waiting on input. It checks for `confetti.hub_url` and
+   `confetti.group` first and redirects to `/dev/null`. The interactive
+   counterpart — `confettictl-hub-setup.sh` / `confettictl-node-setup.sh`, invited at login — has its
    own guard: `case "$-" in *i*)` (interactive shell only) plus `[ -t 0 ]`
    (real tty), so it never fires for `ssh host cmd` or scp/rsync's
    non-interactive shell either.
@@ -659,7 +659,7 @@ These were live bugs that a review caught; each has a comment at the site.
 20. **The syslog listener must NOT set `allow_reuse_address`.** `SO_REUSEADDR`
    on a UDP socket does not reliably reject a duplicate bind on Linux: two
    sockets that both set it can hold the same port, and the kernel then hands
-   each datagram to only one of them. Running `run.sh` while the service is up
+   each datagram to only one of them. Running `confettictl-run.sh` while the service is up
    would split incoming device messages between two processes writing to two
    databases — a log with silent holes, which is worse than a listener that
    refuses to start. Leaving it off makes the second bind fail with
@@ -669,7 +669,7 @@ These were live bugs that a review caught; each has a comment at the site.
    structural guarantees the daemon has no configured path off the host, not
    policy settings. The Alpine package's default config *does* ship a relay
    action, so the `cp -f` that installs our own config in
-   `build-template.sh` is load-bearing; a build-time `grep` for a `relay`
+   `confettictl-build-template.sh` is load-bearing; a build-time `grep` for a `relay`
    action is the safety net if that copy ever silently fails. This isn't
    theoretical: a node may sit behind NAT with a real default route to the
    internet, so "it's an isolated lab" is not a valid defence for this one.

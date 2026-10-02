@@ -13,7 +13,7 @@ venv/
 # Local env overrides (see dev/README.md "Running the hub by hand")
 hub.env
 
-# Generated at build time by hub/build-template.sh — not source
+# Generated at build time by hub/confettictl-build-template.sh — not source
 hub/agent/
 
 # Local drift-checker marker (see .claude/settings.json Stop hook)

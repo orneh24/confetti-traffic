@@ -4,13 +4,13 @@
 # Without this the web server had to be started by hand and did not come
 # back after a reboot, which silently broke every HTTP test in the mesh.
 
-name="pervium-httpd"
-description="pervium identity web server (busybox httpd)"
+name="confettid-httpd"
+description="confetti identity web server (busybox httpd)"
 
 command="/usr/sbin/httpd"
 command_args="-f -p 80 -h /var/www/localhost/htdocs -c /etc/httpd.conf"
 command_background="yes"
-pidfile="/run/pervium-httpd.pid"
+pidfile="/run/confettid-httpd.pid"
 
 depend() {
     need net

@@ -1,4 +1,4 @@
-# Pervium — Roadmap and Open Items
+# Confetti Traffic — Roadmap and Open Items
 
 What is designed but not built, what is still unverified, and what was
 decided against. History lives in git; architecture in `CLAUDE.md`.
@@ -9,21 +9,18 @@ Nothing here works today. Checked against the code 2026-09-27.
 
 - **Hub as the lab's NTP source.** `chronyd` runs on the hub and `/api/time`
   reports its state, but no `chrony.conf` is written, there is no access list,
-  and `node/scripts/setup.sh` does not point nodes at the hub. The hub keeps
-  its own clock and serves time to nobody. If built, it belongs in `setup.sh`
+  and `node/scripts/confettictl-setup.sh` does not point nodes at the hub. The hub keeps
+  its own clock and serves time to nobody. If built, it belongs in `confettictl-setup.sh`
   beside the other config writes.
 - **Node clock state.** chrony is installed on nodes, but nothing checks or
   reports whether they are synced. Tolerable because the hub stamps
   `received_at` itself (constraint 2).
-- **`set-static-ip` per interface.** It takes no interface argument, so
+- **`confettictl-set-static-ip` per interface.** It takes no interface argument, so
   configuring a second NIC overwrites the first.
 - **`net.ipv4.ip_forward=0` pinned in `/etc/sysctl.d/`.** Alpine defaults to
   0, but the build does not assert it.
 - **Time-based syslog pruning.** Syslog is row-capped only
   (`HUB_SYSLOG_MAX_ROWS`). Results do have time-based retention (constraint 8).
-- **TODO: rename "Connectivity Matrix" to "Confetti Packet Matrix".** The
-  panel title in `hub/templates/dashboard.html`; check docs and README for
-  the old name too.
 - **TODO: make the connectivity check configurable instead of always
   full-mesh.** Today every node tests every other node (http, ssh, pmtu,
   loss, plus the opt-in tests). Allow choosing which pairs or groups test

@@ -1,4 +1,4 @@
-# Pervium — Deployment Checklist
+# Confetti Traffic — Deployment Checklist
 
 The build order, with a check after each stage. Commands only:
 [README quick start](../README.md#quick-start). Detail: `BUILD_GUIDE.md`.
@@ -34,26 +34,26 @@ Build the hub first, so you can test the first node against it.
 - [ ] On the hub clone, run the download command from the README quick start
       and pick **hub**. (No GitHub access? See BUILD_GUIDE §8.)
 - [ ] Set the static IP, one of:
-      - **At login:** log out and back in. `hub-setup.sh` asks for the IP
+      - **At login:** log out and back in. `confettictl-hub-setup.sh` asks for the IP
         (with its prefix, e.g. `/24`) and a gateway that defaults to the
         subnet's first address, plus an optional DNS server and hostname.
         Then it restarts networking and starts the hub.
-      - **By hand:** `set-static-ip <ip/cidr> <gateway>`,
-        `rc-service networking restart`, `rc-service pervium-hub start`.
+      - **By hand:** `confettictl-set-static-ip <ip/cidr> <gateway>`,
+        `rc-service networking restart`, `rc-service confettid-hub start`.
         The helper rewrites all of `/etc/network/interfaces` for one
         interface.
       - **guestinfo:** set `guestinfo.hub.ip` and `guestinfo.hub.gateway`
         (optionally `guestinfo.hub.dns` and `guestinfo.hub.hostname`) on the
         VM and reboot.
-- [ ] Optional: edit `/opt/pervium-hub/hub.env` (each key is commented),
-      then `rc-service pervium-hub restart`
+- [ ] Optional: edit `/opt/confetti-hub/hub.env` (each key is commented),
+      then `rc-service confettid-hub restart`
 - [ ] Optional: set a real NTP server in `/etc/chrony/chrony.conf`. The build
       enables chrony but doesn't configure it.
 
 Check:
 
 - [ ] `http://<hub-ip>/` loads
-- [ ] `grep syslog /var/log/pervium-hub.log` shows
+- [ ] `grep syslog /var/log/confetti-hub.log` shows
       `[syslog] listening on <bind>:514`
 - [ ] `curl http://<hub-ip>/api/syslog?minutes=5` returns JSON (`[]` is fine)
 - [ ] `curl http://<hub-ip>/api/health` and `/api/time` return 200
@@ -70,12 +70,12 @@ server.
 ## 3. Node template
 
 - [ ] On the node clone, run the download command and pick **node**
-- [ ] Optional: `rm -rf /root/pervium`
+- [ ] Optional: `rm -rf /root/confetti`
 - [ ] `poweroff`, then convert the VM to a template in vCenter
 
 **Don't configure or test the template.** The build ends by clearing the
 config, hostname, login stamp and SSH host keys so each clone starts fresh.
-Running `setup.sh` here puts them back, and every clone would inherit them.
+Running `confettictl-setup.sh` here puts them back, and every clone would inherit them.
 Test on the first clone instead (stage 4).
 
 ---
@@ -86,22 +86,22 @@ For each network segment:
 
 - [ ] Clone the template and set its NIC to that segment's port group
 - [ ] Configure it, one of:
-      - **guestinfo:** set `guestinfo.pervium.hub_url` and
-        `guestinfo.pervium.group` before first boot. It configures itself.
-      - **At login:** boot, log in, and answer the `node-setup.sh` prompt.
+      - **guestinfo:** set `guestinfo.confetti.hub_url` and
+        `guestinfo.confetti.group` before first boot. It configures itself.
+      - **At login:** boot, log in, and answer the `confettictl-node-setup.sh` prompt.
 - [ ] The node shows in `http://<hub-ip>/endpoints` with a recent `last_seen`
 
 On the first clone, also check:
 
-- [ ] `test-status` shows passing tests after a minute
-- [ ] `rc-service dropbear status`, `pervium-httpd`, `crond`, `lldpd` and
-      `open-vm-tools` are running, plus `iperf3` / `pervium-smbd` /
-      `pervium-smtpd` for any `ENABLE_*` flag you set
+- [ ] `confettictl-status` shows passing tests after a minute
+- [ ] `rc-service dropbear status`, `confettid-httpd`, `crond`, `lldpd` and
+      `open-vm-tools` are running, plus `iperf3` / `confettid-smbd` /
+      `confettid-smtpd` for any `ENABLE_*` flag you set
 - [ ] With `ENABLE_SMTP=true`: `grep -n relay /etc/smtpd/smtpd.conf` shows
       only comments
 
-The hostname is set automatically (`pv-<group>-<ab1234>`), so clones don't
-collide. If you set `guestinfo.pervium.hostname` yourself, make it unique:
+The hostname is set automatically (`ct-<group>-<ab1234>`), so clones don't
+collide. If you set `guestinfo.confetti.hostname` yourself, make it unique:
 two nodes with one name overwrite each other on the hub.
 
 ---

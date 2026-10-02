@@ -1,19 +1,19 @@
-# pervium node configuration
-# Copy this file to /etc/pervium/config and edit as needed.
+# confetti node configuration
+# Copy this file to /etc/confetti/config and edit as needed.
 #
-# In normal use you do not edit this by hand: setup.sh writes the file from
+# In normal use you do not edit this by hand: confettictl-setup.sh writes the file from
 # VMware guestinfo keys set on the node's VM in vCenter. Precedence for each
 # value is guestinfo -> environment variable -> interactive prompt, except
-# SUBNET, which gets one extra fallback before the prompt: setup.sh derives
+# SUBNET, which gets one extra fallback before the prompt: confettictl-setup.sh derives
 # it from the interface's own DHCP lease (address + prefix already give you
 # the network), so it's normally left unset entirely.
 #
-#   guestinfo.pervium.hub_url    ->  HUB_URL
-#   guestinfo.pervium.group      ->  GROUP_NAME
-#   guestinfo.pervium.subnet     ->  SUBNET         (optional — see above)
-#   guestinfo.pervium.hostname   ->  NODE_HOSTNAME   (optional)
-#   guestinfo.pervium.dns_server ->  DNS_SERVER     (optional)
-#   guestinfo.pervium.dns_query  ->  DNS_QUERY      (optional)
+#   guestinfo.confetti.hub_url    ->  HUB_URL
+#   guestinfo.confetti.group      ->  GROUP_NAME
+#   guestinfo.confetti.subnet     ->  SUBNET         (optional — see above)
+#   guestinfo.confetti.hostname   ->  NODE_HOSTNAME   (optional)
+#   guestinfo.confetti.dns_server ->  DNS_SERVER     (optional)
+#   guestinfo.confetti.dns_query  ->  DNS_QUERY      (optional)
 
 # URL of the hub (no trailing slash)
 # Example: http://10.0.0.100
@@ -23,7 +23,7 @@ HUB_URL=http://10.0.0.100
 # dashboard and to filter syslog by sender. Example: site-a, site-b, rack1.
 GROUP_NAME=site-a
 
-# Subnet of this node's interface (CIDR notation). Leave empty -- setup.sh
+# Subnet of this node's interface (CIDR notation). Leave empty -- confettictl-setup.sh
 # derives it from the current DHCP lease's own address + prefix. Set it
 # explicitly only to override that (e.g. the lease's actual prefix doesn't
 # match what you want recorded).
@@ -35,16 +35,16 @@ SUBNET=
 # ---------------------------------------------------------------------
 
 # Explicit hostname for this node. Leave empty to derive it as
-# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. pv-site-a-xd2311.
+# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. ct-site-a-xd2311.
 #
 # It must be unique across the lab: the hub keys its endpoint table by
 # hostname, so two nodes sharing a name overwrite each other and the mesh
 # collapses to a single entry.
 NODE_HOSTNAME=
 
-HOSTNAME_PREFIX=pv
+HOSTNAME_PREFIX=ct
 
-# Two random letters and four random digits, e.g. xd2311. setup.sh generates it once if empty; keep it
+# Two random letters and four random digits, e.g. xd2311. confettictl-setup.sh generates it once if empty; keep it
 # and the derived hostname never changes.
 NODE_ID=
 
@@ -78,7 +78,7 @@ PMTU_SIZE=1472
 ENABLE_IPERF=false
 
 # Enable the SMB probe test (true/false). Every node runs a Samba server
-# (pervium-smbd) exporting one small read-only share, and every peer fetches a
+# (confettid-smbd) exporting one small read-only share, and every peer fetches a
 # fixed probe file from it. SMB is chatty and session-oriented, so it is the
 # test most likely to catch an inspection policy or a NAT/MTU problem that
 # HTTP, SSH and iperf3 miss.
@@ -89,7 +89,7 @@ ENABLE_IPERF=false
 ENABLE_SMB=false
 
 # Enable the SMTP probe test (true/false). Every node runs an OpenSMTPD
-# server (pervium-smtpd), and every peer holds a lightweight conversation
+# server (confettid-smtpd), and every peer holds a lightweight conversation
 # against it: banner -> EHLO -> MAIL FROM -> RCPT TO -> RSET -> QUIT. It
 # catches SMTP ALG / ESMTP inspection — common on firewalls and NAT gateways
 # — masking unrecognised capability verbs (e.g. STARTTLS) with runs of X —
@@ -97,11 +97,11 @@ ENABLE_SMB=false
 # here would notice.
 #
 # Safety: the probe never issues DATA — it aborts the transaction with RSET
-# right after the envelope. pervium-smtpd's own config has no relay action, so
+# right after the envelope. confettid-smtpd's own config has no relay action, so
 # even a real client that completed DATA against it could not have that
 # message forwarded anywhere. This cannot send mail, including against a
 # real external relay registered as a static target (that arm is
-# intentionally ungated — see test-cycle.sh's static-target case).
+# intentionally ungated — see confettictl-test-cycle.sh's static-target case).
 #
 # Costs on a 128 MB node: OpenSMTPD is multi-process (parent, lka, queue,
 # scheduler, dispatcher, control, ca — roughly 7 privileged-separation
@@ -116,8 +116,8 @@ ENABLE_SMTP=false
 # The three ENABLE_* switches above can also be set mesh-wide from the hub
 # dashboard's "Mesh Settings" panel. A switch set there overrides the value
 # here; one left on "node config" leaves this file in charge. Either way,
-# test-cycle.sh starts or stops the matching server (pervium-smbd,
-# pervium-smtpd, iperf3) to follow the flag within one cycle.
+# confettictl-test-cycle.sh starts or stops the matching server (confettid-smbd,
+# confettid-smtpd, iperf3) to follow the flag within one cycle.
 #
 # Set to false to ignore the hub's settings on this node, e.g. one without
 # the RAM to spare for smbd.
@@ -128,7 +128,7 @@ HUB_SETTINGS=true
 #SMTP_PORT=25
 #SMTP_HELO=
 #SMTP_MAIL_FROM=
-#SMTP_RCPT=probe@pervium.invalid
+#SMTP_RCPT=probe@confetti.invalid
 #SMTP_TIMEOUT=20
 
 # Loss/jitter probe (fping) tuning — always on, no ENABLE_* flag. Defaults
@@ -154,8 +154,8 @@ DNS_QUERY=example.com
 # dashboard is still the source of truth; this is for an operator at the
 # node's own VM console, or SSH'd in, who wants to see whether THIS node's
 # tests are passing without opening the dashboard. Same table also lands in
-# /var/log/pervium/test-cycle.log and is available on demand via
-# `test-status` (see also /run/pervium/last-cycle.txt, and the summary
+# /var/log/confetti/test-cycle.log and is available on demand via
+# `confettictl-status` (see also /run/confetti/last-cycle.txt, and the summary
 # shown at interactive login).
 CONSOLE_OUTPUT=true
 
@@ -171,13 +171,13 @@ CONSOLE_DEVICE=/dev/console
 # minutes), so scripts are edited in one place rather than on every node.
 #
 # An update is only accepted if it matches the hub's published sha256, parses
-# as valid shell, and (for test-cycle.sh) runs successfully. The previous
+# as valid shell, and (for confettictl-test-cycle.sh) runs successfully. The previous
 # version is kept as .known-good and restored if that run fails.
 #
 # Set to false to pin this node to whatever it currently has.
 AGENT_AUTOUPDATE=true
 
-# Let the hub manage this node: setup.sh pins the hub's management SSH key
-# (trust on first use, see pervium-trust-hub) so the dashboard can push
+# Let the hub manage this node: confettictl-setup.sh pins the hub's management SSH key
+# (trust on first use, see confettictl-trust-hub) so the dashboard can push
 # updates. false removes the key; the node then only updates by hand.
 HUB_MANAGED=true

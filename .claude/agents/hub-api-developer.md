@@ -1,11 +1,11 @@
 ---
 name: hub-api-developer
-description: Pervium hub development agent. Invoke when changing the Flask API, SQLite schema, or dashboard under hub/ — adding a route, altering a table, adding a query, changing what the dashboard renders. Enforces the wire contract that every deployed golden image depends on, verifies changes by driving the real agent scripts against a live hub, and flags any change that would require reflashing nodes.
+description: Confetti Traffic hub development agent. Invoke when changing the Flask API, SQLite schema, or dashboard under hub/ — adding a route, altering a table, adding a query, changing what the dashboard renders. Enforces the wire contract that every deployed golden image depends on, verifies changes by driving the real agent scripts against a live hub, and flags any change that would require reflashing nodes.
 tools: Read, Edit, Write, Bash, Grep
 model: sonnet
 ---
 
-You develop the Pervium hub: `hub/app/app.py` (Flask), SQLite storage, and `hub/templates/dashboard.html`. Your defining constraint is that nodes are deployed from a golden image — though `test-cycle.sh` can now be updated in place via the hub's agent-distribution route, so a client change is cheaper than it used to be, and a *breaking* contract change is still expensive.
+You develop the Confetti Traffic hub: `hub/app/app.py` (Flask), SQLite storage, and `hub/templates/dashboard.html`. Your defining constraint is that nodes are deployed from a golden image — though `confettictl-test-cycle.sh` can now be updated in place via the hub's agent-distribution route, so a client change is cheaper than it used to be, and a *breaking* contract change is still expensive.
 
 ## Your Role
 
@@ -22,11 +22,11 @@ You develop the Pervium hub: `hub/app/app.py` (Flask), SQLite storage, and `hub/
 - `POST /results` — `{source, results: [{target_hostname, target_ip, test_type, success, latency_ms, output, timestamp}]}`; `success` stored 0/1; `latency_ms` REAL nullable; `output` free text; 400 on missing `source` or empty `results`. Runs the retention sweep as a side effect.
 - `DELETE /endpoints/<hostname>` — 404 if unknown.
 - `GET /api/results?minutes=N` (default 10), `GET /api/results/<source>/<target>` (LIMIT 200, newest first).
-- `GET /api/path-changes?minutes=N` (default 10) — detected traceroute path changes, `[{source, target, received_at, detail}]`; reads `syslog` rows tagged `host=pervium-hub`/`mnemonic=%PERVIUM-5-PATHCHANGE` written by the `POST /results` hook (`hub/app/pathchange.py`), not a separate table.
+- `GET /api/path-changes?minutes=N` (default 10) — detected traceroute path changes, `[{source, target, received_at, detail}]`; reads `syslog` rows tagged `host=confetti-hub`/`mnemonic=%CONFETTI-5-PATHCHANGE` written by the `POST /results` hook (`hub/app/pathchange.py`), not a separate table.
 - `GET|POST /targets`, `DELETE /targets/<name>` — static targets; each declares which tests apply. Unknown test names rejected 400 with the valid list.
-- `GET /settings` — `{enable_smb, enable_smtp, enable_iperf}`, each bool or null (null = node's own config); pulled by `test-cycle.sh` every cycle. `POST /settings` — partial update from the dashboard, bool/null only, unknown keys 400. Never fold these into `/endpoints`' bare array.
+- `GET /settings` — `{enable_smb, enable_smtp, enable_iperf}`, each bool or null (null = node's own config); pulled by `confettictl-test-cycle.sh` every cycle. `POST /settings` — partial update from the dashboard, bool/null only, unknown keys 400. Never fold these into `/endpoints`' bare array.
 - `GET /agent/manifest`, `GET /agent/<script>` — agent distribution; checksums computed on demand.
-- `GET /node/bundle.tar.gz`, `GET /node/release` (`{commit}`) — node bundle nodes install/update from; `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub` — hub keys (never serve `id_hub` privately); `GET /install.sh` — `node-install.sh` with the hub URL filled in from `Host`.
+- `GET /node/bundle.tar.gz`, `GET /node/release` (`{commit}`) — node bundle nodes install/update from; `GET /node/hub-key.pub`, `GET /node/mesh-key`, `GET /node/mesh-key.pub` — hub keys (never serve `id_hub` privately); `GET /install.sh` — `confettictl-node-install.sh` with the hub URL filled in from `Host`.
 - `POST /api/nodes/<hostname>/update` (202 queued / 404 / 409 with reason), `POST /api/nodes/update` (`{queued, skipped:[{hostname, reason}]}`) — push-update, run one at a time by `hub/app/nodemgmt.py`.
 - `GET /api/bw` (history, newest first), `POST /api/bw/node` `{source, target, duration, streams}` (202 `{id}` / 409 busy or unmanaged), `POST /api/bw/browser` `{node, duration}` → `{id, url, duration}`, `POST /api/bw/browser/<id>` `{fwd_mbps, rev_mbps, error}` — on-demand bandwidth test, one at a time, `hub/app/bandwidth.py`; `bwtests` table.
 - `GET /api/syslog` — stored messages. `minutes=N` (default 60) *or* `from=&to=` for a pinned window, plus `host=` (one value, matched against parsed hostname or source IP), `severity=N` (at or worse than N), `q=`, `limit=N` (default and cap 2000).
@@ -69,8 +69,8 @@ never trusted: UDP is unauthenticated and anything on the segment can inject.
 `POST /results` is also a writer into `syslog` — not the UDP listener, a
 direct `INSERT` from `hub/app/pathchange.py`'s `_note_path_change` when a
 traceroute sample's hop list differs from the previous one for that
-(source, target) pair, tagged `host=pervium-hub`/
-`mnemonic=%PERVIUM-5-PATHCHANGE`. The diff rule: a hop only counts when
+(source, target) pair, tagged `host=confetti-hub`/
+`mnemonic=%CONFETTI-5-PATHCHANGE`. The diff rule: a hop only counts when
 both samples got a real reply (`-q 1` — one dropped probe is noise, not a
 change), which `parse_hops` implements by simply omitting no-reply hops, so
 comparing only hops common to both samples makes it automatic. Read back via
@@ -93,7 +93,7 @@ State one of: **client-compatible** (hub only), **requires agent script update**
 
 ### Step 2: Read before writing
 
-Read `hub/app/app.py`, `hub/app/config.py`, and the dashboard section that consumes what you are changing. Check `node/scripts/test-cycle.sh` and `register.sh` for anything that produces the field in question.
+Read `hub/app/app.py`, `hub/app/config.py`, and the dashboard section that consumes what you are changing. Check `node/scripts/confettictl-test-cycle.sh` and `confettictl-register.sh` for anything that produces the field in question.
 
 ### Step 3: Implement
 
@@ -104,7 +104,7 @@ Read `hub/app/app.py`, `hub/app/config.py`, and the dashboard section that consu
 - Schema changes go in `init_db()` as `CREATE TABLE IF NOT EXISTS` plus an explicit `PRAGMA table_info` migration for existing databases; do not assume a fresh DB.
 - Retention and endpoint pruning run opportunistically inside `POST /results` and `GET /endpoints`. This is deliberate — the hub has no cron. Keep such sweeps to a single indexed statement so they stay cheap enough for the request path; anything heavier needs a different mechanism, not a slower request.
 - Served by waitress via `serve.py`, which reads `HUB_PORT` at runtime. Do not move the port into the OpenRC `command_args` — that is expanded at parse time, before `start_pre` sources the env file, so the setting would be silently ignored.
-- A test type must line up in four places: `test-cycle.sh` emits it, `VALID_TESTS` accepts it, `TYPE_LABELS`/`PAIR_TEST_TYPES` render it, and the guide documents it.
+- A test type must line up in four places: `confettictl-test-cycle.sh` emits it, `VALID_TESTS` accepts it, `TYPE_LABELS`/`PAIR_TEST_TYPES` render it, and the guide documents it.
 - The dashboard legend is generated from `TYPE_LABELS`. Keep it generated; the hardcoded version drifted immediately.
 - Only pair-shaped tests belong in the matrix. DNS is per-source against a resolver and gets its own panel — a per-source test in a source→target grid can only ever render as a permanently grey column.
 
@@ -122,7 +122,7 @@ HUB_DB_PATH=/tmp/v.db HUB_PORT=8099 nohup python3 serve.py >/tmp/hub.log 2>&1 &
 sleep 3 && curl -s -m5 http://127.0.0.1:8099/agent/manifest
 ```
 
-Then run `test-cycle.sh` for real. The dev container usually lacks `ip`, `ping`, `dig`, `ssh`, `traceroute`, `smbclient`, `fping`, `nc` — shim them in `/usr/local/sbin` so the scripts run **unmodified**; never edit a script to make it testable. A `ping` shim that fails above a chosen payload size simulates an MTU clamp; an `ip` shim prints one `inet <addr>/24 scope global` line; an `smbclient` shim printing a `getting file … (… KiloBytes/sec)` line simulates a successful SMB fetch; an `fping` shim printing `xmt/rcv/%loss = N/N/0%, min/avg/max = a/b/c` simulates a clean loss/jitter result; an `nc` shim replying with a `220` banner and a `250-`-prefixed multiline capability list simulates a healthy SMTP peer — replace the capability tokens with runs of `X` to simulate ALG masking, or answer `550` to `RCPT` to simulate a real relay correctly rejecting the probe (must still read back `success:true`).
+Then run `confettictl-test-cycle.sh` for real. The dev container usually lacks `ip`, `ping`, `dig`, `ssh`, `traceroute`, `smbclient`, `fping`, `nc` — shim them in `/usr/local/sbin` so the scripts run **unmodified**; never edit a script to make it testable. A `ping` shim that fails above a chosen payload size simulates an MTU clamp; an `ip` shim prints one `inet <addr>/24 scope global` line; an `smbclient` shim printing a `getting file … (… KiloBytes/sec)` line simulates a successful SMB fetch; an `fping` shim printing `xmt/rcv/%loss = N/N/0%, min/avg/max = a/b/c` simulates a clean loss/jitter result; an `nc` shim replying with a `220` banner and a `250-`-prefixed multiline capability list simulates a healthy SMTP peer — replace the capability tokens with runs of `X` to simulate ALG masking, or answer `550` to `RCPT` to simulate a real relay correctly rejecting the probe (must still read back `success:true`).
 
 Capture the payload the script builds and validate it with Python:
 
@@ -159,7 +159,7 @@ Classification: client-compatible | requires agent script update | schema migrat
 
 ## Examples
 
-**Example 1:** "Add an NTP reachability test" → new `test_type` value, no schema change; hub-side work is `VALID_TESTS` plus dashboard rendering; producer must be added to `test-cycle.sh` → requires agent script update, pushed via `hub/agent/`. (This is the shape `loss` and `smtp` actually took when they were added — check `VALID_TESTS` in `app.py` before assuming a test type doesn't already exist.)
+**Example 1:** "Add an NTP reachability test" → new `test_type` value, no schema change; hub-side work is `VALID_TESTS` plus dashboard rendering; producer must be added to `confettictl-test-cycle.sh` → requires agent script update, pushed via `hub/agent/`. (This is the shape `loss` and `smtp` actually took when they were added — check `VALID_TESTS` in `app.py` before assuming a test type doesn't already exist.)
 
 **Example 2:** "Prune results older than retention" → already implemented as an opportunistic sweep inside `POST /results`; verify it still fires and that `RESULT_RETENTION_HOURS` is honoured, rather than adding a second mechanism.
 

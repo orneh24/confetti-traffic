@@ -23,7 +23,7 @@ var THEMES = [
 // "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
 // and moves to a different one every 5-10 minutes. The saved choice is
 // 'shuffle'; the palette on screen and when it next changes live under
-// pervium-theme-shuffle, so all pages show the same one and a reload does
+// confetti-theme-shuffle, so all pages show the same one and a reload does
 // not reshuffle early.
 var SHUFFLE_MIN_MS = 5 * 60 * 1000;
 var SHUFFLE_MAX_MS = 10 * 60 * 1000;
@@ -43,20 +43,20 @@ function currentTheme() {
 function shuffleStep() {
     var now = Date.now();
     var st = null;
-    try { st = JSON.parse(localStorage.getItem('pervium-theme-shuffle')); } catch (e) {}
+    try { st = JSON.parse(localStorage.getItem('confetti-theme-shuffle')); } catch (e) {}
     if (!st || !themeKnown(st.theme) || !(st.until > now)) {
         var avoid = st && themeKnown(st.theme) ? st.theme : currentTheme();
         var pick;
         do { pick = THEMES[Math.floor(Math.random() * THEMES.length)][0]; } while (pick === avoid);
         st = { theme: pick, until: now + SHUFFLE_MIN_MS + Math.random() * (SHUFFLE_MAX_MS - SHUFFLE_MIN_MS) };
-        try { localStorage.setItem('pervium-theme-shuffle', JSON.stringify(st)); } catch (e) {}
+        try { localStorage.setItem('confetti-theme-shuffle', JSON.stringify(st)); } catch (e) {}
     }
     applyTheme(st.theme);
     clearTimeout(shuffleTimer);
     shuffleTimer = setTimeout(function () { if (shuffling) shuffleStep(); }, Math.max(1000, st.until - now));
 }
 try {
-    var savedTheme = localStorage.getItem('pervium-theme');
+    var savedTheme = localStorage.getItem('confetti-theme');
     if (savedTheme === 'shuffle') { shuffling = true; shuffleStep(); }
     else applyTheme(savedTheme);
 } catch (e) {}
@@ -65,12 +65,12 @@ function setTheme(name) {
     shuffling = (name === 'shuffle');
     if (shuffling) {
         // A fresh pick now, not the tail of an earlier shuffle.
-        try { localStorage.removeItem('pervium-theme-shuffle'); } catch (e) {}
+        try { localStorage.removeItem('confetti-theme-shuffle'); } catch (e) {}
         shuffleStep();
     } else {
         applyTheme(name);
     }
-    try { localStorage.setItem('pervium-theme', shuffling ? 'shuffle' : currentTheme()); } catch (e) {}
+    try { localStorage.setItem('confetti-theme', shuffling ? 'shuffle' : currentTheme()); } catch (e) {}
     syncThemeSelect();
 }
 function syncThemeSelect() {
@@ -648,7 +648,7 @@ a:hover { text-decoration: underline; }
 .ep-table .btn-push:hover { opacity: 1; }
 .ep-table .btn-push:disabled { color: var(--text-dim); opacity: 0.3; cursor: default; }
 .ep-table .ep-build { font-size: 10px; color: var(--text-dim); }
-/* The sidebar is a fixed ~380px; with the update button and pv-<group>-<id>
+/* The sidebar is a fixed ~380px; with the update button and ct-<group>-<id>
    names the endpoints table needs tighter cells to fit without scrolling. */
 #ep-table th, #ep-table td { padding-left: 5px; padding-right: 5px; }
 #ep-table td:last-child { padding-left: 0; padding-right: 2px; }
@@ -851,7 +851,7 @@ a:hover { text-decoration: underline; }
     <div class="main-col">
         <div class="section">
             <div class="section-header">
-                <span>Connectivity Matrix</span>
+                <span>Confetti traffic matrix</span>
                 <div class="legend">
                     <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Pass</div>
                     <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Slow</div>
@@ -1000,7 +1000,7 @@ a:hover { text-decoration: underline; }
 
         <!-- On-demand bandwidth test (hub/app/bandwidth.py). Node to node: the
              hub runs iperf3 on both over SSH. Node to browser: this page
-             talks to the node's /cgi-bin/pv-bw directly. One at a time. -->
+             talks to the node's /cgi-bin/confettictl-bw directly. One at a time. -->
         <div class="section" id="bw-section">
             <div class="section-header">
                 <span>Bandwidth Test</span>
@@ -1798,7 +1798,7 @@ a:hover { text-decoration: underline; }
         var html = "";
         for (var j = 0; j < rows.length; j++) {
             var d = rows[j];
-            // test-cycle.sh labels the configured-resolver test "dns:<ip>";
+            // confettictl-test-cycle.sh labels the configured-resolver test "dns:<ip>";
             // show the address rather than that internal marker.
             var resolver = d.target_hostname.indexOf("dns:") === 0
                          ? d.target_hostname.slice(4) : d.target_hostname;
@@ -1863,7 +1863,7 @@ a:hover { text-decoration: underline; }
         for (var p = 0; p < pushBtns.length; p++) {
             pushBtns[p].addEventListener("click", function(e) {
                 var host = e.currentTarget.getAttribute("data-host");
-                if (!confirm("Push this hub's node build to " + host + "? It runs pervium-update there and re-runs setup.sh.")) return;
+                if (!confirm("Push this hub's node build to " + host + "? It runs confettictl-update there and re-runs confettictl-setup.sh.")) return;
                 fetch("/api/nodes/" + encodeURIComponent(host) + "/update", {method: "POST"})
                     .then(function(r) { return r.json().then(function(body) { return {ok: r.ok, body: body}; }); })
                     .then(function(res) {
@@ -1932,7 +1932,7 @@ a:hover { text-decoration: underline; }
 
     // The groups behind a pair, for a sender-filtered link. Best effort by
     // design: syslog identifies a device by the hostname it puts in its own
-    // messages, which is not necessarily guestinfo.pervium.group. An unmatched
+    // messages, which is not necessarily guestinfo.confetti.group. An unmatched
     // name yields an empty view rather than a wrong one, and the unfiltered
     // window link beside it always works.
     function pairGroups(src, dst) {
@@ -2323,7 +2323,7 @@ a:hover { text-decoration: underline; }
     document.getElementById("btn-update-all-endpoints").addEventListener("click", function() {
         if (endpoints.length === 0) return;
         if (!confirm("Push this hub's node build to every managed node? They are updated one at a " +
-                     "time; each runs pervium-update and re-runs setup.sh.")) {
+                     "time; each runs confettictl-update and re-runs confettictl-setup.sh.")) {
             return;
         }
         fetch("/api/nodes/update", {method: "POST"})
@@ -2443,7 +2443,7 @@ a:hover { text-decoration: underline; }
     // ---------------------------------------------------------------
     // Collapse/Expand for panels that carry a .collapse-toggle button.
     // Remembered per browser; storage can be unavailable, so it's optional.
-    var COLLAPSE_KEY = "pervium-collapsed";
+    var COLLAPSE_KEY = "confetti-collapsed";
     function readCollapsed() {
         try { return JSON.parse(localStorage.getItem(COLLAPSE_KEY)) || []; } catch (e) { return []; }
     }

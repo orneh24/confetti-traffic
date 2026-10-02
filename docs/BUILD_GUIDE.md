@@ -1,11 +1,11 @@
-# Pervium — Build Guide
+# Confetti Traffic — Build Guide
 
 Detail behind each step of the [README quick start](../README.md#quick-start)
 and the `DEPLOYMENT.md` checklist. You build one Alpine base VM, clone it,
 turn one clone into the hub and one into the node template, then clone the
 template once per network segment.
 
-`install.sh` and the two `build-template.sh` scripts do all the package,
+`confettictl-install.sh` and the two `confettictl-build-template.sh` scripts do all the package,
 service and file setup. This guide covers what they can't: the VM itself,
 the Alpine install, and configuring the clones.
 
@@ -61,7 +61,7 @@ Boot the ISO, log in as `root` (no password) and run `setup-alpine`:
 | Prompt | Answer |
 |---|---|
 | Keyboard layout | your layout |
-| Hostname | `pervium` (each clone renames itself) |
+| Hostname | `confetti` (each clone renames itself) |
 | Network interface | `eth0`, `dhcp` |
 | Root password | anything; the build sets it to `lab123` (see below) |
 | Timezone | `UTC` or your lab's timezone |
@@ -81,7 +81,7 @@ ping -c 2 alpinelinux.org
 ```
 
 The build scripts set the root password to `lab123`. To use your own, run
-the build with `PERVIUM_ROOT_PASSWORD=<password>` set.
+the build with `CONFETTI_ROOT_PASSWORD=<password>` set.
 
 Now clone the VM twice (hub and node template).
 
@@ -92,7 +92,7 @@ Now clone the VM twice (hub and node template).
 On each clone, run as root:
 
 ```sh
-wget -O- https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/pervium-main /root/pervium && sh /root/pervium/install.sh
+wget -O- https://github.com/orneh24/confetti-traffic/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/confetti-traffic-main /root/confetti && sh /root/confetti/confettictl-install.sh
 ```
 
 Pick **hub** on one clone and **node** on the other. The build enables the
@@ -102,48 +102,48 @@ the slow part.
 
 Some package choices matter (for example, `iputils-ping` instead of
 BusyBox ping, which the PMTU test needs). `CLAUDE.md` constraint 14 explains
-them. `node/build-template.sh` checks the important ones and warns if they
+them. `node/confettictl-build-template.sh` checks the important ones and warns if they
 are wrong.
 
 ### 4.1 Hub
 
-Log out and back in. `hub-setup.sh` asks for the static IP and gateway, plus
+Log out and back in. `confettictl-hub-setup.sh` asks for the static IP and gateway, plus
 an optional DNS server and hostname. Then it restarts networking and starts
 the hub. Type the IP with its prefix (e.g. `10.0.0.100/24`); the gateway
 then defaults to the subnet's first address (`10.0.0.1`), and you can type
 another one instead. Give it a DNS server if you can: without one the hub can't resolve
-names, so `pervium-update` can't download. To do it by hand instead:
+names, so `confettictl-update` can't download. To do it by hand instead:
 
 ```sh
-set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
+confettictl-set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
 rc-service networking restart
-rc-service pervium-hub start
+rc-service confettid-hub start
 ```
 
 Or set `guestinfo.hub.ip` (e.g. `10.0.0.100/24`) and `guestinfo.hub.gateway`
 on the VM, plus optionally `guestinfo.hub.dns` and `guestinfo.hub.hostname`,
-and reboot. The `pervium-hub-firstboot` service applies them. It uses the
+and reboot. The `confettid-hub-firstboot` service applies them. It uses the
 network keys only once, but re-reads `guestinfo.hub.hostname` on every boot:
 to rename the hub later, change that key and reboot.
 
 Open `http://<hub-ip>/` to check. Settings live in
-`/opt/pervium-hub/hub.env`; restart the hub after editing it.
+`/opt/confetti-hub/hub.env`; restart the hub after editing it.
 
 A lab normally has one hub, so you don't need to make it a template.
 
 ### 4.2 Node template
 
-The build leaves the node clean: no config, hostname `pervium-template`,
+The build leaves the node clean: no config, hostname `confetti-template`,
 no SSH host keys, no login stamp. Shut it down and convert it to a template:
 
 ```sh
-rm -rf /root/pervium   # optional
+rm -rf /root/confetti   # optional
 poweroff
 ```
 
-Name the template something like `pervium-node-template-v1`.
+Name the template something like `confetti-node-template-v1`.
 
-**Don't run `setup.sh` or answer the login prompt on the template.** That
+**Don't run `confettictl-setup.sh` or answer the login prompt on the template.** That
 writes a config, hostname, SSH host keys and login stamp, and every clone
 would inherit them. Test on the first clone instead.
 
@@ -161,7 +161,7 @@ would inherit them. Test on the first clone instead.
 ### 5.2 Configure: guestinfo (recommended)
 
 Set the keys on the VM before first boot. On boot, the
-`pervium-firstboot` service runs `setup.sh` with them, and the node
+`confettid-firstboot` service runs `confettictl-setup.sh` with them, and the node
 configures and registers itself with no console session.
 
 The keys are listed in the [README](../README.md#vmware-guestinfo-keys).
@@ -172,71 +172,71 @@ add one row per key.
 With PowerCLI:
 
 ```powershell
-$vm = Get-VM "pv-site-a"
-$vm | New-AdvancedSetting -Name guestinfo.pervium.hub_url -Value "http://10.0.0.100" -Confirm:$false
-$vm | New-AdvancedSetting -Name guestinfo.pervium.group   -Value "site-a"            -Confirm:$false
+$vm = Get-VM "ct-site-a"
+$vm | New-AdvancedSetting -Name guestinfo.confetti.hub_url -Value "http://10.0.0.100" -Confirm:$false
+$vm | New-AdvancedSetting -Name guestinfo.confetti.group   -Value "site-a"            -Confirm:$false
 ```
 
 To change a key later, use `Get-AdvancedSetting | Set-AdvancedSetting`;
 `New-AdvancedSetting` fails if the key exists. Then reboot the node: at boot,
-`pervium-firstboot` compares the keys with `/etc/pervium/config` and, if any
-differ, re-runs `setup.sh`. A new `group` renames the node (`pv-<group>-<ab1234>`),
+`confettid-firstboot` compares the keys with `/etc/confetti/config` and, if any
+differ, re-runs `confettictl-setup.sh`. A new `group` renames the node (`ct-<group>-<ab1234>`),
 and the old name is removed from the hub. To deploy a whole lab at once,
-use `deploy/Deploy-Pervium.ps1` (see `deploy/README.md`).
+use `deploy/Deploy-Confetti.ps1` (see `deploy/README.md`).
 
 With govc:
 
 ```sh
-govc vm.change -vm pv-site-a \
-  -e guestinfo.pervium.hub_url=http://10.0.0.100 \
-  -e guestinfo.pervium.group=site-a
+govc vm.change -vm ct-site-a \
+  -e guestinfo.confetti.hub_url=http://10.0.0.100 \
+  -e guestinfo.confetti.group=site-a
 ```
 
-To check from inside the guest: `vmware-rpctool "info-get guestinfo.pervium.group"`.
+To check from inside the guest: `vmware-rpctool "info-get guestinfo.confetti.group"`.
 `No value found` just means the key isn't set.
 
-The first-boot service logs to `/var/log/pervium/firstboot.log`. With no
+The first-boot service logs to `/var/log/confetti/firstboot.log`. With no
 keys set it does nothing, and the login prompt takes over. To run it again:
 
 ```sh
-rm /etc/pervium/.firstboot-done /etc/pervium/config
-rc-service pervium-firstboot start
+rm /etc/confetti/.firstboot-done /etc/confetti/config
+rc-service confettid-firstboot start
 ```
 
 ### 5.3 Configure: at login
 
-Boot the clone and log in. `node-setup.sh` asks
-`Configure this node now? [Y/n]` and runs `setup.sh`, which asks for anything
-not already set. You can also run `/usr/local/bin/pervium/setup.sh`
+Boot the clone and log in. `confettictl-node-setup.sh` asks
+`Configure this node now? [Y/n]` and runs `confettictl-setup.sh`, which asks for anything
+not already set. You can also run `/usr/local/bin/confetti/confettictl-setup.sh`
 yourself at any time.
 
 The prompt appears only in an interactive login on a real terminal, never
 for `ssh host cmd` or scp. If you decline, you can choose not to be asked
-again; `node-setup.sh --force` asks again later.
+again; `confettictl-node-setup.sh --force` asks again later.
 
 Each value comes from guestinfo first, then an environment variable, then a
 prompt. `SUBNET` is taken from the DHCP lease before prompting. The hostname
-is `pv-<group>-<ab1234>` (e.g. `pv-site-a-xd2311`) unless you set one. The
+is `ct-<group>-<ab1234>` (e.g. `ct-site-a-xd2311`) unless you set one. The
 random part is generated once and kept in the config as `NODE_ID`, so the
 name never changes on reboot or a new DHCP lease.
 
-### 5.4 What `setup.sh` does
+### 5.4 What `confettictl-setup.sh` does
 
-It writes `/etc/pervium/config`, sets the hostname, starts the services,
+It writes `/etc/confetti/config`, sets the hostname, starts the services,
 adds the cron jobs (every 60 s for tests, every 5 min for registration),
 fetches the SSH keys from the hub and registers with the hub. It is safe to
 re-run: it keeps an existing config.
 
-**SSH keys from the hub** (`trust-hub.sh`):
+**SSH keys from the hub** (`confettictl-trust-hub.sh`):
 
 - The mesh test key is used by every node's SSH test. The node trusts it only
   to run `echo ok`, so it's harmless even though it travels over plain HTTP.
 - The hub's management key lets the hub log in as root to push updates. It
   is pinned the first time, and never replaced automatically after that. If
   the hub is rebuilt, `register.log` warns that the key changed. Run
-  `pervium-trust-hub` on the node to trust the new one, after checking the
+  `confettictl-trust-hub` on the node to trust the new one, after checking the
   fingerprint it shows against the hub's
-  (`ssh-keygen -lf /etc/pervium-hub/keys/id_hub.pub` on the hub).
+  (`ssh-keygen -lf /etc/confetti-hub/keys/id_hub.pub` on the hub).
 
 `HUB_MANAGED=false` in the config removes the management key, and the hub
 then won't push to that node.
@@ -251,7 +251,7 @@ wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
 ```
 
 It downloads the node bundle from the hub, installs the packages and scripts,
-and runs `setup.sh` with the hub URL already filled in. It asks only for what
+and runs `confettictl-setup.sh` with the hub URL already filled in. It asks only for what
 is still missing, such as the group if you didn't pass it. Don't pipe it into
 `sh`, because the prompts need the terminal.
 
@@ -261,9 +261,9 @@ The node appears on the dashboard within seconds, and results within a
 minute. On the node:
 
 ```sh
-hostname                                   # e.g. pv-site-a-xd2311
-test-status                                # last cycle's results (-f to follow)
-tail -f /var/log/pervium/test-cycle.log
+hostname                                   # e.g. ct-site-a-xd2311
+confettictl-status                                # last cycle's results (-f to follow)
+tail -f /var/log/confetti/test-cycle.log
 ```
 
 ---
@@ -352,7 +352,7 @@ name gets a 400.
 **1. The hub, from GitHub.** Run as root on the hub:
 
 ```sh
-pervium-update          # asks before changing anything; -y skips that
+confettictl-update          # asks before changing anything; -y skips that
 ```
 
 It downloads the repo, shows the installed and new commit, and runs the
@@ -360,14 +360,14 @@ build again in `--update` mode: new packages, new code and service files,
 with none of the build's cleanup. It keeps `hub.env`, the database, the
 hub's SSH keys and the root password, then restarts the hub. It also
 rebuilds the node bundle the hub serves at `/node/bundle.tar.gz`.
-A hub update overwrites any hand edits in `/opt/pervium-hub/agent/`.
+A hub update overwrites any hand edits in `/opt/confetti-hub/agent/`.
 
 **2. The nodes, from the hub.** On the dashboard, use the update button on a
 node's row, or **update all** in the endpoints header. The hub logs in to
 each node with its management key, one at a time, and runs
-`pervium-update -y`. The node downloads the bundle from the hub, never from
-GitHub, and then re-runs `setup.sh`. That registers with the hub, so you see
-straight away whether the new `register.sh` works.
+`confettictl-update -y`. The node downloads the bundle from the hub, never from
+GitHub, and then re-runs `confettictl-setup.sh`. That registers with the hub, so you see
+straight away whether the new `confettictl-register.sh` works.
 
 - **Build:** the small line under each node's name shows the commit it runs.
   It is yellow when the node differs from what the hub serves.
@@ -378,31 +378,31 @@ straight away whether the new `register.sh` works.
 - **Never automate it:** push by hand only, never on a schedule
   (constraint 13 in CLAUDE.md).
 
-`pervium-update` run by hand on a node does the same download from its hub.
-`cat /etc/pervium-release` shows the commit a VM is on.
+`confettictl-update` run by hand on a node does the same download from its hub.
+`cat /etc/confetti-release` shows the commit a VM is on.
 
 The dashboard's push buttons have no password yet: anyone who can reach the
 dashboard can push. Keep the hub on a management segment.
 
 The hub's download needs DNS and a route to GitHub. A hub set up without a DNS
 server has an empty `/etc/resolv.conf` (the build clears it). This includes
-hubs set up before `hub-setup.sh` asked for one. Add one first:
+hubs set up before `confettictl-hub-setup.sh` asked for one. Add one first:
 `echo 'nameserver <dns-ip>' > /etc/resolv.conf`. No GitHub access at all:
 see §8.
 
 Don't update the node *template* in place. Booting it creates SSH host keys
 that every later clone would share; rebuild it instead (§4).
 
-**Only `test-cycle.sh`, between updates.** The hub serves `test-cycle.sh`
-from `/opt/pervium-hub/agent/`. Edit it there, and every node picks it up
+**Only `confettictl-test-cycle.sh`, between updates.** The hub serves `confettictl-test-cycle.sh`
+from `/opt/confetti-hub/agent/`. Edit it there, and every node picks it up
 at its next registration (within 5 minutes). A node only accepts the new
 version if its checksum matches, it passes `sh -n`, and a real test cycle
 succeeds. Otherwise it keeps the old one. Watch
-`/var/log/pervium/register.log`. To stop a node updating, set
+`/var/log/confetti/register.log`. To stop a node updating, set
 `AGENT_AUTOUPDATE=false` in its config.
 
-Only `test-cycle.sh` updates itself. `register.sh`, `setup.sh` and
-`test-status.sh` change only through `pervium-update`, run by hand
+Only `confettictl-test-cycle.sh` updates itself. `confettictl-register.sh`, `confettictl-setup.sh` and
+`confettictl-status.sh` change only through `confettictl-update`, run by hand
 (`CLAUDE.md` constraint 13).
 
 > **The hub API has no authentication.** Anyone who can reach it can post
@@ -427,7 +427,7 @@ python3 -c "import socket; socket.socket(socket.AF_INET, socket.SOCK_DGRAM).send
 curl -s 'http://localhost/api/syslog?minutes=5'
 ```
 
-You should get one row with host `SW-TEST`. If `/var/log/pervium-hub.log`
+You should get one row with host `SW-TEST`. If `/var/log/confetti-hub.log`
 doesn't show `[syslog] listening on ...:514`, the port was taken or the hub
 isn't running as root. The hub keeps collecting results either way.
 
@@ -467,7 +467,7 @@ curl -v http://<hub-ip>/ 2>&1 | head -20
 ```
 
 Usual causes: wrong port group, no route between the subnets, or the hub
-isn't running (`rc-service pervium-hub status` on the hub).
+isn't running (`rc-service confettid-hub status` on the hub).
 
 ### No DHCP address
 
@@ -477,7 +477,7 @@ cat /etc/network/interfaces
 ```
 
 Usual causes: no DHCP pool on the subnet, or wrong port group. If the subnet
-really has no DHCP, run `setup.sh` at the console: it asks for a static IP (with its prefix), and
+really has no DHCP, run `confettictl-setup.sh` at the console: it asks for a static IP (with its prefix), and
 offers the subnet's first address as the gateway.
 The zero-touch path can't ask, so it leaves the node unconfigured.
 
@@ -486,9 +486,9 @@ The zero-touch path can't ask, so it leaves the node unconfigured.
 Run a cycle by hand, or test one service against a peer:
 
 ```sh
-/usr/local/bin/pervium/test-cycle.sh
+/usr/local/bin/confetti/confettictl-test-cycle.sh
 curl -s http://<peer-ip>/
-ssh -i /etc/pervium/id_pervium root@<peer-ip> echo ok
+ssh -i /etc/confetti/id_confetti root@<peer-ip> echo ok
 iperf3 -c <peer-ip> -t 2
 smbclient -N //<peer-ip>/labshare -c 'get probe.bin /dev/null'
 fping -c 5 <peer-ip>
@@ -497,10 +497,10 @@ traceroute <peer-ip>
 ```
 
 Usual causes: the service isn't running on the peer (dropbear,
-`pervium-httpd`, `iperf3`, `pervium-smbd`, `pervium-smtpd`), or a
+`confettid-httpd`, `iperf3`, `confettid-smbd`, `confettid-smtpd`), or a
 firewall on the path blocks the port. If only SSH fails everywhere, check
-that the node has the mesh key (`ls /etc/pervium/id_pervium`). It comes
-from the hub at setup, and `register.sh` retries every 5 minutes if the hub
+that the node has the mesh key (`ls /etc/confetti/id_confetti`). It comes
+from the hub at setup, and `confettictl-register.sh` retries every 5 minutes if the hub
 was down.
 
 ### Push-update fails
@@ -509,22 +509,22 @@ Hover over the red mark next to the node's build (under its name on the
 dashboard) to see the output.
 "SSH ... failed" usually means the node hasn't pinned this hub's key:
 
-- On the node: `ls /etc/pervium/hub_key.pub`, and look for key warnings in
-  `/var/log/pervium/register.log`.
-- To trust the hub's current key: `pervium-trust-hub` on the node.
+- On the node: `ls /etc/confetti/hub_key.pub`, and look for key warnings in
+  `/var/log/confetti/register.log`.
+- To trust the hub's current key: `confettictl-trust-hub` on the node.
 
 ### Dashboard doesn't load
 
 On the hub:
 
 ```sh
-rc-service pervium-hub status
-tail -50 /var/log/pervium-hub.log
+rc-service confettid-hub status
+tail -50 /var/log/confetti-hub.log
 netstat -tlnp | grep ':80 '
 ```
 
 To see startup errors directly, stop the service and run it in the
-foreground: `rc-service pervium-hub stop; cd /opt/pervium-hub && sh run.sh`.
+foreground: `rc-service confettid-hub stop; cd /opt/confetti-hub && sh confettictl-run.sh`.
 
 If the log warns that waitress is missing, the hub fell back to Flask's
 single-threaded server and will be slow. Install it with
@@ -565,11 +565,11 @@ Then copy from your workstation with `scp -O`. The `-O` matters: modern scp
 uses SFTP by default, and dropbear has no SFTP server.
 
 ```sh
-scp -O -r pervium root@<vm-ip>:/root/
+scp -O -r confetti root@<vm-ip>:/root/
 ```
 
-Then run `sh /root/pervium/install.sh` on the VM.
+Then run `sh /root/confetti/confettictl-install.sh` on the VM.
 
 To update an installed VM the same way, copy the repo over and run
-`sh /root/pervium/update.sh`. It uses the copy instead of downloading.
-Remove any older `/root/pervium` first, or scp puts the new copy inside it.
+`sh /root/confetti/confettictl-update.sh`. It uses the copy instead of downloading.
+Remove any older `/root/confetti` first, or scp puts the new copy inside it.

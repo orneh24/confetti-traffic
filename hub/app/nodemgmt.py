@@ -1,4 +1,4 @@
-"""Push-update: run pervium-update on nodes over SSH, one at a time.
+"""Push-update: run confettictl-update on nodes over SSH, one at a time.
 
 The dashboard queues a node (or all of them); a single background thread
 works through the queue, so "update all" goes one node after another and a
@@ -6,15 +6,15 @@ slow node never has two updates running at once. State lives in the
 endpoints table (update_state / update_msg / update_at) so the dashboard
 just reads /endpoints to show progress.
 
-The node side is update.sh: it downloads this hub's node bundle, applies it
-and re-runs setup.sh. The SSH login uses the hub's management key, which
-nodes pin on first use (node/scripts/trust-hub.sh).
+The node side is confettictl-update.sh: it downloads this hub's node bundle, applies it
+and re-runs confettictl-setup.sh. The SSH login uses the hub's management key, which
+nodes pin on first use (node/scripts/confettictl-trust-hub.sh).
 
-Host keys are not checked (StrictHostKeyChecking=no, like test-cycle.sh's
+Host keys are not checked (StrictHostKeyChecking=no, like confettictl-test-cycle.sh's
 SSH test): nodes are DHCP and get rebuilt, so a known_hosts file would
 churn into failures. An impostor at a node's address gains nothing from
 the connection -- key auth never exposes the private key -- beyond being
-told to run pervium-update.
+told to run confettictl-update.
 """
 
 import os
@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from . import config
 
 REMOTE_CMD = ("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; "
-              "export PATH; pervium-update -y")
+              "export PATH; confettictl-update -y")
 
 _queue = queue.Queue()
 _lock = threading.Lock()

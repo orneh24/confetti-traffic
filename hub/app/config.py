@@ -1,4 +1,4 @@
-"""Configuration for the pervium hub."""
+"""Configuration for the confetti hub."""
 
 import os
 
@@ -38,7 +38,7 @@ BUSY_TIMEOUT_MS = int(os.environ.get("HUB_BUSY_TIMEOUT_MS", "5000"))
 # "unknown" rather than failing the whole endpoint.
 HEALTH_SERVICES = [
     s.strip() for s in os.environ.get(
-        "HUB_HEALTH_SERVICES", "pervium-hub,chronyd,dropbear,open-vm-tools,lldpd"
+        "HUB_HEALTH_SERVICES", "confettid-hub,chronyd,dropbear,open-vm-tools,lldpd"
     ).split(",") if s.strip()
 ]
 HEALTH_SERVICE_TIMEOUT_S = int(os.environ.get("HUB_HEALTH_SERVICE_TIMEOUT_S", "3"))
@@ -53,14 +53,14 @@ PATH_CHANGE_ENABLED = os.environ.get("HUB_PATH_CHANGE_ENABLED", "true").lower() 
 # ---------------------------------------------------------------------------
 # Node management
 # ---------------------------------------------------------------------------
-# The hub's SSH keypairs, made by the pervium-hub service's start_pre:
-# id_hub (management, pinned by nodes) and id_pervium (mesh SSH test).
-KEY_DIR = os.environ.get("HUB_KEY_DIR", "/etc/pervium-hub/keys")
-# Node bundle (pervium-node.tar.gz + RELEASE), built by build-template.sh.
+# The hub's SSH keypairs, made by the confettid-hub service's start_pre:
+# id_hub (management, pinned by nodes) and id_confetti (mesh SSH test).
+KEY_DIR = os.environ.get("HUB_KEY_DIR", "/etc/confetti-hub/keys")
+# Node bundle (confetti-node.tar.gz + RELEASE), built by confettictl-build-template.sh.
 BUNDLE_DIR = os.environ.get(
     "HUB_BUNDLE_DIR", os.path.join(os.path.dirname(__file__), "..", "bundle"))
-# A push-update runs pervium-update on the node over SSH; it re-runs
-# setup.sh and may install packages, so it gets a generous limit.
+# A push-update runs confettictl-update on the node over SSH; it re-runs
+# confettictl-setup.sh and may install packages, so it gets a generous limit.
 PUSH_TIMEOUT_S = int(os.environ.get("HUB_PUSH_TIMEOUT_S", "600"))
 # Push only to nodes seen within this many minutes (registration is every 5).
 PUSH_SEEN_MINUTES = int(os.environ.get("HUB_PUSH_SEEN_MINUTES", "10"))

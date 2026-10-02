@@ -1,4 +1,4 @@
-"""Pervium hub — collects registrations and test results, serves dashboard."""
+"""Confetti Traffic hub — collects registrations and test results, serves dashboard."""
 
 import sqlite3
 import os
@@ -198,7 +198,7 @@ def prune_stale_endpoints(db):
 #
 # A hub-authored syslog row is, honestly, the one row in this table that IS
 # trustworthy — and gains no special protection from that: anything on the
-# segment can send UDP claiming host=pervium-hub with the matching
+# segment can send UDP claiming host=confetti-hub with the matching
 # mnemonic, and /api/path-changes would serve it. The tag is a label, not a
 # boundary. Blast radius is bounded (a spurious marker + a syslog link; no
 # result row is ever altered or lost).
@@ -587,12 +587,12 @@ def delete_target(name):
 # Mesh-wide settings
 #
 # Switches for the opt-in tests, set from the dashboard and pulled by every
-# node's test-cycle.sh. Mesh-wide on purpose: smb/smtp/iperf3 each need a
+# node's confettictl-test-cycle.sh. Mesh-wide on purpose: smb/smtp/iperf3 each need a
 # server on every peer, so enabling one on only some nodes just paints the
 # others red.
 #
 # Each key is true, false or null. null (never set, or cleared) means the hub
-# has no opinion and each node keeps its own /etc/pervium/config value — so
+# has no opinion and each node keeps its own /etc/confetti/config value — so
 # an existing lab behaves exactly as before until someone flips a switch.
 # A separate route rather than a field on /endpoints: that response is a bare
 # array every deployed node parses, and changing its shape would break them.
@@ -1088,12 +1088,12 @@ def api_health():
 #
 # The hub is the single place agent scripts are edited; nodes pull updates
 # on their 5-minute registration run. Checksums are published so a node can
-# verify a download before trusting it — see register.sh, which additionally
+# verify a download before trusting it — see confettictl-register.sh, which additionally
 # syntax-checks and keeps a known-good copy before swapping anything in.
 # ---------------------------------------------------------------------------
 
 AGENT_DIR = os.path.join(os.path.dirname(__file__), "..", "agent")
-AGENT_SCRIPTS = ("test-cycle.sh", "register.sh")
+AGENT_SCRIPTS = ("confettictl-test-cycle.sh", "confettictl-register.sh")
 
 
 def _agent_path(name):
@@ -1139,7 +1139,7 @@ def agent_script(name):
 # Everything a node needs from its hub: the node bundle (install and
 # update), the build it carries, and the two SSH public keys plus the mesh
 # private key. Served over plain HTTP like everything else here; see
-# node/scripts/trust-hub.sh for why each key is safe to fetch that way.
+# node/scripts/confettictl-trust-hub.sh for why each key is safe to fetch that way.
 # ---------------------------------------------------------------------------
 
 def _hub_file(directory, name):
@@ -1167,7 +1167,7 @@ def bundle_commit():
 
 @app.route("/node/bundle.tar.gz", methods=["GET"])
 def node_bundle():
-    path = _hub_file(config.BUNDLE_DIR, "pervium-node.tar.gz")
+    path = _hub_file(config.BUNDLE_DIR, "confetti-node.tar.gz")
     if not path:
         return jsonify({"error": "no node bundle on this hub"}), 404
     return send_file(os.path.abspath(path), mimetype="application/gzip")
@@ -1186,28 +1186,28 @@ def node_hub_key():
 
 @app.route("/node/mesh-key.pub", methods=["GET"])
 def node_mesh_key_pub():
-    return _text_file(_hub_file(config.KEY_DIR, "id_pervium.pub"))
+    return _text_file(_hub_file(config.KEY_DIR, "id_confetti.pub"))
 
 
 @app.route("/node/mesh-key", methods=["GET"])
 def node_mesh_key():
     # A private key over HTTP, on purpose: nodes only accept it with a forced
-    # `echo ok` command (trust-hub.sh), so it proves reachability and nothing
+    # `echo ok` command (confettictl-trust-hub.sh), so it proves reachability and nothing
     # else. Never serve id_hub this way.
-    return _text_file(_hub_file(config.KEY_DIR, "id_pervium"))
+    return _text_file(_hub_file(config.KEY_DIR, "id_confetti"))
 
 
 @app.route("/install.sh", methods=["GET"])
 def node_install_script():
-    """node-install.sh with this hub's URL filled in.
+    """confettictl-node-install.sh with this hub's URL filled in.
 
     The URL comes from the request's Host header -- the address the operator
     just used to reach the hub, which is the one the node should use too.
     Restricted to host[:port] characters, since it lands in a shell script.
     """
     here = os.path.dirname(__file__)
-    path = (_hub_file(os.path.join(here, ".."), "node-install.sh")
-            or _hub_file(os.path.join(here, "..", "scripts"), "node-install.sh"))
+    path = (_hub_file(os.path.join(here, ".."), "confettictl-node-install.sh")
+            or _hub_file(os.path.join(here, "..", "scripts"), "confettictl-node-install.sh"))
     if not path:
         return jsonify({"error": "not found"}), 404
     host = request.host
@@ -1231,7 +1231,7 @@ def _push_candidates(db, hostname=None):
 
 @app.route("/api/nodes/<hostname>/update", methods=["POST"])
 def push_update_one(hostname):
-    """Queue a push-update for one node (runs pervium-update on it over SSH)."""
+    """Queue a push-update for one node (runs confettictl-update on it over SSH)."""
     db = get_db()
     rows = _push_candidates(db, hostname)
     if not rows:
@@ -1324,7 +1324,7 @@ def bw_browser_start():
     test_id = bandwidth.claim(db, "browser", data["node"], client, duration, 1)
     if test_id is None:
         return jsonify({"error": "another bandwidth test is running"}), 409
-    return jsonify({"id": test_id, "url": "http://{}/cgi-bin/pv-bw".format(row["ip"]),
+    return jsonify({"id": test_id, "url": "http://{}/cgi-bin/confettictl-bw".format(row["ip"]),
                     "duration": duration})
 
 

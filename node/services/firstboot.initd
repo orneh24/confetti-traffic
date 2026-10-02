@@ -1,28 +1,28 @@
 #!/sbin/openrc-run
-# OpenRC service: run setup.sh automatically on first boot.
+# OpenRC service: run confettictl-setup.sh automatically on first boot.
 #
 # Makes a clone genuinely zero-touch — set the guestinfo keys in vCenter,
 # power on, and the VM configures and registers itself with no console
 # session at all.
 #
-# On later boots it re-runs setup.sh only if a guestinfo key was changed in
-# vCenter since (see _guestinfo_changed): changing guestinfo.pervium.group,
+# On later boots it re-runs confettictl-setup.sh only if a guestinfo key was changed in
+# vCenter since (see _guestinfo_changed): changing guestinfo.confetti.group,
 # for example, then applies on the next reboot and renames the node.
 #
 # It only auto-runs when guestinfo actually carries the required keys. With
-# no keys present, setup.sh would block on its interactive prompts with
+# no keys present, confettictl-setup.sh would block on its interactive prompts with
 # nobody attached, so the service stands down and leaves the MOTD
-# instructions for a human instead (or the node-setup.sh login prompt --
-# see services/login-setup.sh).
+# instructions for a human instead (or the confettictl-node-setup.sh login prompt --
+# see services/confettictl-login-setup.sh).
 #
 # Two stamps, two owners, on purpose. STAMP is this service's own re-entry
-# guard and nothing else reads it. SETUP_STAMP is shared with node-setup.sh
-# and login-setup.sh so a zero-touch node doesn't get nagged for config it
+# guard and nothing else reads it. SETUP_STAMP is shared with confettictl-node-setup.sh
+# and confettictl-login-setup.sh so a zero-touch node doesn't get nagged for config it
 # already has -- writing "configured (guestinfo)" here rather than reusing
-# node-setup.sh's own words keeps the provenance visible in one `cat`.
+# confettictl-node-setup.sh's own words keeps the provenance visible in one `cat`.
 
-name="pervium-firstboot"
-description="Configure pervium on first boot from VMware guestinfo"
+name="confettid-firstboot"
+description="Configure confetti on first boot from VMware guestinfo"
 
 depend() {
     need net
@@ -31,10 +31,10 @@ depend() {
 
 command_background="no"
 
-STAMP="/etc/pervium/.firstboot-done"
-SETUP_STAMP="/etc/pervium/.setup-done"
-SETUP="/usr/local/bin/pervium/setup.sh"
-CONFIG="/etc/pervium/config"
+STAMP="/etc/confetti/.firstboot-done"
+SETUP_STAMP="/etc/confetti/.setup-done"
+SETUP="/usr/local/bin/confetti/confettictl-setup.sh"
+CONFIG="/etc/confetti/config"
 
 _guestinfo() {
     if command -v vmware-rpctool >/dev/null 2>&1; then
@@ -44,15 +44,15 @@ _guestinfo() {
     fi
 }
 
-# True when any guestinfo key is set AND differs from /etc/pervium/config.
-# setup.sh writes the config once; this is what lets a key changed in
+# True when any guestinfo key is set AND differs from /etc/confetti/config.
+# confettictl-setup.sh writes the config once; this is what lets a key changed in
 # vCenter later reach the node, on its next boot. An unset key never counts
 # as a change (a DHCP-derived SUBNET stays put).
 _guestinfo_changed() {
     [ -f "$CONFIG" ] || return 1
     for _pair in hub_url:HUB_URL group:GROUP_NAME subnet:SUBNET \
                  hostname:NODE_HOSTNAME dns_server:DNS_SERVER dns_query:DNS_QUERY; do
-        _gi=$(_guestinfo "pervium.${_pair%%:*}")
+        _gi=$(_guestinfo "confetti.${_pair%%:*}")
         case "$_gi" in *"No value found"*) _gi="" ;; esac
         [ -n "$_gi" ] || continue
         _cur=$(sed -n "s/^${_pair#*:}=//p" "$CONFIG" | head -n 1)
@@ -64,46 +64,46 @@ _guestinfo_changed() {
 start() {
     if [ -f "$STAMP" ]; then
         if _guestinfo_changed; then
-            # setup.sh applies the new values, renames the node if its
+            # confettictl-setup.sh applies the new values, renames the node if its
             # hostname changes, re-registers, and removes the old name from
             # the hub. Same /dev/null stdin as the first run: never prompt.
             ebegin "guestinfo changed since setup; re-applying"
-            "$SETUP" < /dev/null >> /var/log/pervium/firstboot.log 2>&1
-            eend $? "setup failed -- see /var/log/pervium/firstboot.log"
+            "$SETUP" < /dev/null >> /var/log/confetti/firstboot.log 2>&1
+            eend $? "setup failed -- see /var/log/confetti/firstboot.log"
         else
-            einfo "pervium already configured; guestinfo unchanged"
+            einfo "confetti already configured; guestinfo unchanged"
         fi
         return 0
     fi
 
     if [ ! -x "$SETUP" ]; then
-        eerror "setup.sh not found at $SETUP"
+        eerror "confettictl-setup.sh not found at $SETUP"
         return 0
     fi
 
-    _hub=$(_guestinfo "pervium.hub_url")
-    _group=$(_guestinfo "pervium.group")
+    _hub=$(_guestinfo "confetti.hub_url")
+    _group=$(_guestinfo "confetti.group")
 
     case "$_hub" in *"No value found"*) _hub="" ;; esac
     case "$_group" in *"No value found"*) _group="" ;; esac
 
     if [ -z "$_hub" ] || [ -z "$_group" ]; then
-        ewarn "guestinfo.pervium.hub_url / guestinfo.pervium.group not set"
+        ewarn "guestinfo.confetti.hub_url / guestinfo.confetti.group not set"
         ewarn "skipping auto-setup -- run $SETUP by hand to configure"
         return 0
     fi
 
-    ebegin "Configuring pervium from guestinfo"
+    ebegin "Configuring confetti from guestinfo"
 
     # stdin from /dev/null so any unexpected prompt fails fast rather than
     # hanging the boot waiting for input that will never come.
-    if "$SETUP" < /dev/null >> /var/log/pervium/firstboot.log 2>&1; then
-        mkdir -p /etc/pervium
+    if "$SETUP" < /dev/null >> /var/log/confetti/firstboot.log 2>&1; then
+        mkdir -p /etc/confetti
         date -u '+%Y-%m-%dT%H:%M:%SZ' > "$STAMP"
         date -u '+%Y-%m-%dT%H:%M:%SZ configured (guestinfo)' > "$SETUP_STAMP"
         eend 0
     else
-        eend 1 "setup failed -- see /var/log/pervium/firstboot.log"
+        eend 1 "setup failed -- see /var/log/confetti/firstboot.log"
     fi
 
     return 0

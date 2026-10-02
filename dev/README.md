@@ -8,32 +8,32 @@ VM; see `CLAUDE.md` for the actual project.
 ## 1. Start the hub
 
 ```sh
-dev/hub-start.sh          # http://127.0.0.1:8099, backgrounded, pidfile
-dev/hub-stop.sh
+dev/confettictl-hub-start.sh          # http://127.0.0.1:8099, backgrounded, pidfile
+dev/confettictl-hub-stop.sh
 ```
 
 Populates `hub/agent/` from `node/scripts/{register,test-cycle}.sh` (gitignored,
-build-time-only in production — this just mirrors what `build-template.sh`
+build-time-only in production — this just mirrors what `confettictl-build-template.sh`
 does) and runs `hub/serve.py` with `HUB_DB_PATH`/`HUB_PORT`/`HUB_SYSLOG_PORT`
 pointed at `dev/run/`. Override any of those env vars before calling it.
 Log and db land in `dev/run/`, gitignored.
 
-`test-status.sh` is deliberately **not** copied into `hub/agent/` — it isn't
+`confettictl-status.sh` is deliberately **not** copied into `hub/agent/` — it isn't
 in the hub's `AGENT_SCRIPTS` manifest and never self-updates (see CLAUDE.md,
 "Agent self-update").
 
 ## 2. Run simulated nodes — the real scripts, unmodified logic
 
 ```sh
-dev/run-node-cycle.sh dev-node-a 10.99.1.11 site-a
-dev/run-node-cycle.sh dev-node-b 10.99.1.12 site-a
-dev/run-node-cycle.sh dev-node-c 10.99.1.13 site-b
+dev/confettictl-run-node-cycle.sh dev-node-a 10.99.1.11 site-a
+dev/confettictl-run-node-cycle.sh dev-node-b 10.99.1.12 site-a
+dev/confettictl-run-node-cycle.sh dev-node-c 10.99.1.13 site-b
 ```
 
-Each call runs the actual `register.sh` then `test-cycle.sh` against the
+Each call runs the actual `confettictl-register.sh` then `confettictl-test-cycle.sh` against the
 local hub, so this is the tool to reach for when you've changed either
 script and want to see it work end to end — including the console table,
-`/run/pervium/last-cycle.txt`-equivalent snapshot, and `test-status.sh`,
+`/run/confetti/last-cycle.txt`-equivalent snapshot, and `confettictl-status.sh`,
 all exercised for real.
 
 One workstation plays many nodes: identity comes from a `hostname` shim
@@ -42,8 +42,8 @@ node scripts call — nothing about the scripts themselves changes.
 
 Two edits, and only two, are made to scratch copies before running (same
 precedent `dev/regress.py` uses for its own live-hub runs):
-`CONFIG` in both scripts, and — `test-cycle.sh` only — `LOCK_DIR` and
-`TRACEROUTE_STAMP`. All three are OS-root paths (`/etc/pervium/...`,
+`CONFIG` in both scripts, and — `confettictl-test-cycle.sh` only — `LOCK_DIR` and
+`TRACEROUTE_STAMP`. All three are OS-root paths (`/etc/confetti/...`,
 `/run/...`) that don't exist off a real Alpine node. `SNAPSHOT_FILE` needs no
 edit — it already honors an env override, which this also happens to prove.
 
@@ -67,13 +67,13 @@ traceroute, SMB, SMTP, iperf3, DNS) is genuinely exercised through the real
 script logic and reads OK.
 
 `DEV_FAIL_HOSTS` (comma-separated IP substrings, exported before calling
-`run-node-cycle.sh`) makes the ssh/ping/fping shims report failure for a
+`confettictl-run-node-cycle.sh`) makes the ssh/ping/fping shims report failure for a
 matching target — the one knob for putting a deliberately broken path (red
 cells, a failure-triggered traceroute, a losing loss/jitter row) into the
 demo mesh:
 
 ```sh
-DEV_FAIL_HOSTS=10.99.1.13 dev/run-node-cycle.sh dev-node-a 10.99.1.11 site-a
+DEV_FAIL_HOSTS=10.99.1.13 dev/confettictl-run-node-cycle.sh dev-node-a 10.99.1.11 site-a
 ```
 
 ## 3. Look at it
@@ -85,12 +85,12 @@ by deleting `dev/run/` and starting over.
 
 ## Running the hub by hand
 
-`dev/hub-start.sh` is the easy path. For the manual `serve.py` command, see
-the main README, "Running the hub locally". `hub/run.sh` does the same and
+`dev/confettictl-hub-start.sh` is the easy path. For the manual `serve.py` command, see
+the main README, "Running the hub locally". `hub/confettictl-run.sh` does the same and
 also loads `hub/hub.env` if present.
 
 In the Claude desktop app, `.claude/launch.json` defines the same dev hub as
-`pervium-hub` (port 8099, same DB and syslog port as `dev/hub-start.sh`) for
+`confetti-hub` (port 8099, same DB and syslog port as `dev/confettictl-hub-start.sh`) for
 its preview pane, run in the foreground under Git Bash's `sh.exe`.
 
 Importing `app.app` runs `init_db()` at import time, so any script that
@@ -99,9 +99,9 @@ set. Set it.
 
 ## When to use which
 
-- **Changed the hub API, schema, or dashboard?** `dev/hub-start.sh`, then
-  `dev/run-node-cycle.sh` a couple of nodes to get real data on screen.
-- **Changed `register.sh` or `test-cycle.sh`?** `dev/run-node-cycle.sh` is
+- **Changed the hub API, schema, or dashboard?** `dev/confettictl-hub-start.sh`, then
+  `dev/confettictl-run-node-cycle.sh` a couple of nodes to get real data on screen.
+- **Changed `confettictl-register.sh` or `confettictl-test-cycle.sh`?** `dev/confettictl-run-node-cycle.sh` is
   the point — it's the real script, so a syntax slip or a wire-contract
   break shows up exactly as it would on a real node.
 - **Verifying a change before handing it off?** Run `python3 dev/regress.py`

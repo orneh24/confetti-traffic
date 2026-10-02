@@ -1,4 +1,4 @@
-# Pervium
+# Confetti Traffic
 
 > **AI disclaimer:** This project was created using [Claude Code](https://claude.com/claude-code).
 
@@ -39,7 +39,7 @@ passed, yellow slow, red failed, grey no data.
 "When enabled" tests are switched on per node in its config, or for the
 whole mesh from the dashboard's Mesh Settings panel.
 
-**Static targets** are addresses that run no Pervium software, such as a
+**Static targets** are addresses that run no Confetti Traffic software, such as a
 gateway, a switch loopback or an outside server. You add them once on the
 hub, choose which of the tests above apply to each, and every node tests
 them too.
@@ -60,22 +60,22 @@ by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
 1. **Base VM.** Install Alpine on a new VM (`setup-alpine`). Put it on a
    segment that every node subnet and your workstation can reach.
 2. **Run the installer** as root. It downloads the repo and starts
-   `install.sh`, which asks whether the VM becomes a hub or a node. Pick
+   `confettictl-install.sh`, which asks whether the VM becomes a hub or a node. Pick
    *hub*:
 
    ```sh
-   wget -O- https://github.com/orneh24/pervium/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/pervium-main /root/pervium && sh /root/pervium/install.sh
+   wget -O- https://github.com/orneh24/confetti-traffic/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/confetti-traffic-main /root/confetti && sh /root/confetti/confettictl-install.sh
    ```
 
-3. **Set the network.** Log out and back in: `hub-setup.sh` asks for the
+3. **Set the network.** Log out and back in: `confettictl-hub-setup.sh` asks for the
    static IP (with prefix, e.g. `/24`) and the gateway, which defaults to the
    subnet's `.1`. It also asks for an optional DNS server and hostname, then
    restarts networking and starts the hub. Or do the same by hand:
 
    ```sh
-   set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
+   confettictl-set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
    rc-service networking restart
-   rc-service pervium-hub start
+   rc-service confettid-hub start
    ```
 
    Or set `guestinfo.hub.ip`, `guestinfo.hub.gateway` (and optionally
@@ -87,7 +87,7 @@ by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
 
 There are two ways. Both give the same result: a node that registers with the
 hub and shows up at `http://<hub-ip>/endpoints`. The hostname is set
-automatically (`pv-<group>-<ab1234>`, e.g. `pv-site-a-xd2311`).
+automatically (`ct-<group>-<ab1234>`, e.g. `ct-site-a-xd2311`).
 
 **Option A: straight from the hub (one line).** On a plain Alpine VM with
 network access to the hub, as root. No template, no GitHub access needed:
@@ -108,38 +108,38 @@ cloned.
    it first: that undoes the cleanup. Test on the first clone instead.
 3. Clone the template once per network segment and put each clone on its
    segment's port group.
-4. Before first boot, set `guestinfo.pervium.hub_url` and
-   `guestinfo.pervium.group` on each clone (all keys are listed under
+4. Before first boot, set `guestinfo.confetti.hub_url` and
+   `guestinfo.confetti.group` on each clone (all keys are listed under
    [VMware guestinfo keys](#vmware-guestinfo-keys)). It then configures
-   itself. Without them, log in and answer the `node-setup.sh` prompt.
+   itself. Without them, log in and answer the `confettictl-node-setup.sh` prompt.
 
 Every node fetches its SSH keys from the hub at setup. The hub's management
 key is trusted on first use and lets the hub push updates from the dashboard.
 Set `HUB_MANAGED=false` in a node's config to opt it out.
 
-`install.sh` refuses to run on a VM that is already a hub or node, because
+`confettictl-install.sh` refuses to run on a VM that is already a hub or node, because
 re-running a build wipes its config or the hub's database. Pass `hub` or
 `node` to skip the menu, and `-y` to skip the confirmation.
 
 **Single VM, no cloning.** Run the installer on a fresh Alpine VM, then
 finish in place: for a hub, step 3 above; for a node, log out and back in and
-answer the `node-setup.sh` prompt (or run `/usr/local/bin/pervium/setup.sh`).
+answer the `confettictl-node-setup.sh` prompt (or run `/usr/local/bin/confetti/confettictl-setup.sh`).
 Ignore the node build's "convert to template" message. Fresh VM only: an
-existing `/root/pervium` makes the `mv` put the new copy inside it.
+existing `/root/confetti` makes the `mv` put the new copy inside it.
 
 ### Updating
 
-Update the hub first: run `pervium-update` on it as root. It downloads the
+Update the hub first: run `confettictl-update` on it as root. It downloads the
 latest code from GitHub, asks before changing anything, and keeps hub.env,
 the database and the root password. It also rebuilds the node bundle the hub
 serves.
 
 Then update the nodes from the dashboard: the update button on a node's
-row, or **update all**. The hub runs `pervium-update` on each node over SSH,
+row, or **update all**. The hub runs `confettictl-update` on each node over SSH,
 one at a time, and the node downloads the new code from the hub. Each node's
 build shows under its name, in yellow when it differs from what the hub
 serves.
-`pervium-update` run on a node by hand does the same thing.
+`confettictl-update` run on a node by hand does the same thing.
 
 Details: [BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
 
@@ -151,16 +151,16 @@ two marked keys are required.
 
 | Key | Role | Example | Notes |
 |---|---|---|---|
-| `guestinfo.pervium.hub_url` | node | `http://10.0.0.100` | **required** |
-| `guestinfo.pervium.group` | node | `site-a` | **required**; groups nodes on the dashboard |
-| `guestinfo.pervium.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
-| `guestinfo.pervium.hostname` | node | `pv-site-a` | `pv-<group>-<ab1234>` if unset; must be unique |
-| `guestinfo.pervium.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
-| `guestinfo.pervium.dns_query` | node | `example.com` | name the DNS test looks up |
-| `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `hub-setup.sh` asks at login |
+| `guestinfo.confetti.hub_url` | node | `http://10.0.0.100` | **required** |
+| `guestinfo.confetti.group` | node | `site-a` | **required**; groups nodes on the dashboard |
+| `guestinfo.confetti.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
+| `guestinfo.confetti.hostname` | node | `ct-site-a` | `ct-<group>-<ab1234>` if unset; must be unique |
+| `guestinfo.confetti.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
+| `guestinfo.confetti.dns_query` | node | `example.com` | name the DNS test looks up |
+| `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `confettictl-hub-setup.sh` asks at login |
 | `guestinfo.hub.gateway` | hub | `10.0.0.1` | |
-| `guestinfo.hub.dns` | hub | `10.0.0.53` | optional; without it the hub can't resolve names, so `pervium-update` can't download |
-| `guestinfo.hub.hostname` | hub | `pervium-hub` | optional; unset keeps the template's hostname. Re-read at every boot, so a change applies at the next reboot |
+| `guestinfo.hub.dns` | hub | `10.0.0.53` | optional; without it the hub can't resolve names, so `confettictl-update` can't download |
+| `guestinfo.hub.hostname` | hub | `confetti-hub` | optional; unset keeps the template's hostname. Re-read at every boot, so a change applies at the next reboot |
 
 More: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) (reference tables) and
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (checklist with verification).

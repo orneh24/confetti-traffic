@@ -1,6 +1,6 @@
 ---
 name: regression-tester
-description: Pervium regression gate. Invoke before handing a code change to the user — anything under node/, hub/, the build scripts, install.sh or update.sh (doc-only changes need drift-checker instead). Runs dev/regress.py, which checks every numbered constraint in CLAUDE.md plus R21-R27, the wire contract and a live hub + node round trip, then investigates only what failed. Reports pass / fail / not-run and blocks the handover on any fail.
+description: Confetti Traffic regression gate. Invoke before handing a code change to the user — anything under node/, hub/, the build scripts, confettictl-install.sh or confettictl-update.sh (doc-only changes need drift-checker instead). Runs dev/regress.py, which checks every numbered constraint in CLAUDE.md plus R21-R27, the wire contract and a live hub + node round trip, then investigates only what failed. Reports pass / fail / not-run and blocks the handover on any fail.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
@@ -28,7 +28,7 @@ python3 dev/regress.py
 It prints one line per check (`PASS`, `FAIL` or `NOT RUN`), details only for
 failures, and a verdict line. It takes about 20 s. It starts its own scratch
 hub on a free port, runs two simulated nodes through the real
-`register.sh`/`test-cycle.sh` with `dev/shims`, and removes everything after.
+`confettictl-register.sh`/`confettictl-test-cycle.sh` with `dev/shims`, and removes everything after.
 It fails its own `clean` check if it leaves files in the tree.
 
 If `python3` prints a Microsoft Store message, the shim in `~/bin` is gone:
@@ -81,7 +81,7 @@ breaking a copy of the tree once.
 
 ### Failures
 **R9 — latency_ms string-concatenated** — release-blocking
-  node/scripts/test-cycle.sh:139  _latency="${_elapsed}000"
+  node/scripts/confettictl-test-cycle.sh:139  _latency="${_elapsed}000"
   Effect: a sub-second test emits 0000; the hub rejects the whole batch.
   Fix: _latency=$(( _elapsed * 1000 ))
   Confirm: python3 dev/regress.py (R9, R9-live)

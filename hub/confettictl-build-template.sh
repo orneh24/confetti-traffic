@@ -1,0 +1,575 @@
+#!/bin/sh
+# confettictl-build-template.sh — Build the hub golden template on a fresh Alpine install.
+# Run as root after booting the Alpine ISO and completing setup-alpine.
+#
+# This script:
+#   1. Enables the community repo
+#   2. Installs all required packages (Python, Flask, etc.)
+#   3. Copies the hub application into place
+#   4. Creates an OpenRC service for the hub
+#   5. Cleans up for template conversion
+#
+# Usage:
+#   1. Put the whole repo on the Alpine VM (README quick start, or scp)
+#      -- not just hub/: the build also installs ../node/scripts and ../confettictl-update.sh
+#   2. Run: sh /root/confetti/confettictl-install.sh (or this script directly)
+#   3. Shutdown and convert to template in vCenter
+#
+# After cloning:
+#   1. Set a static IP (or a DHCP reservation)
+#   2. Boot — the hub dashboard starts automatically on port 80
+#
+# --update: refresh packages and files on an already-configured hub, as run
+# by confettictl-update.sh (confettictl-update). Skips the root password, keeps hub.env,
+# and skips the whole template cleanup, which would delete the results
+# database and empty resolv.conf.
+
+set -eu
+
+UPDATE_MODE="no"
+[ "${1:-}" = "--update" ] && UPDATE_MODE="yes"
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+HUB_INSTALL_DIR="/opt/confetti-hub"
+DB_DIR="/var/lib/confetti"
+CONFETTI_ROOT_PASSWORD="${CONFETTI_ROOT_PASSWORD:-lab123}"
+
+# -------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------
+log() {
+    printf '[build-template] %s\n' "$1"
+}
+
+die() {
+    printf '[build-template] FATAL: %s\n' "$1" >&2
+    exit 1
+}
+
+# -------------------------------------------------------------------
+# Sanity checks
+# -------------------------------------------------------------------
+[ "$(id -u)" -eq 0 ] || die "Must run as root"
+
+if [ "$UPDATE_MODE" = "yes" ]; then
+    log "=== confetti hub update (hub.env and database kept) ==="
+else
+    log "=== confetti hub template builder ==="
+fi
+
+# -------------------------------------------------------------------
+# 1. Enable community repository
+# -------------------------------------------------------------------
+log "Enabling community repository"
+ALPINE_VERSION=$(cat /etc/alpine-release | cut -d. -f1,2)
+if ! grep -q "^[^#].*community" /etc/apk/repositories; then
+    echo "http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/community" >> /etc/apk/repositories
+    log "Community repo added"
+else
+    log "Community repo already enabled"
+fi
+
+# -------------------------------------------------------------------
+# 2. Install packages
+# -------------------------------------------------------------------
+# A failed apk step is fatal for a build, but only a warning for --update:
+# the new code still goes in rather than leaving the hub half-updated.
+apk_step() {
+    if ! "$@"; then
+        [ "$UPDATE_MODE" = "yes" ] || die "'$*' failed"
+        log "WARNING: '$1 $2' failed (mirror unreachable?) -- updating the code anyway"
+    fi
+}
+
+log "Updating package index"
+apk_step apk update --no-progress
+
+log "Installing packages"
+apk_step apk add --no-cache --no-progress \
+    python3 \
+    py3-pip \
+    py3-flask \
+    sqlite \
+    curl \
+    open-vm-tools \
+    chrony \
+    lldpd \
+    openssh-client
+
+log "Packages installed"
+
+# Enable open-vm-tools on boot
+rc-update add open-vm-tools default
+
+# The hub stamps every result with its own receipt time, so its clock is the
+# reference for the whole mesh. Keep it disciplined.
+rc-update add chronyd default
+
+# LLDP neighbor discovery, for troubleshooting and network discovery — not a
+# test participant, just always-on infrastructure like chrony.
+rc-update add lldpd default
+
+# -------------------------------------------------------------------
+# 2b. Set default lab credentials
+# -------------------------------------------------------------------
+# Not on --update: the operator may have changed it since the build.
+if [ "$UPDATE_MODE" = "yes" ]; then
+    log "Keeping the current root password"
+else
+    log "Setting root password"
+    echo "root:${CONFETTI_ROOT_PASSWORD}" | chpasswd
+
+    log "Credentials: root / ${CONFETTI_ROOT_PASSWORD}"
+fi
+
+# -------------------------------------------------------------------
+# 3. Create directories
+# -------------------------------------------------------------------
+log "Creating directories"
+mkdir -p "$HUB_INSTALL_DIR" "$DB_DIR"
+
+# -------------------------------------------------------------------
+# 4. Copy hub application
+# -------------------------------------------------------------------
+log "Installing hub application to $HUB_INSTALL_DIR"
+
+# Copy app directory
+cp -r "${SCRIPT_DIR}/app" "$HUB_INSTALL_DIR/"
+
+# Copy templates
+cp -r "${SCRIPT_DIR}/templates" "$HUB_INSTALL_DIR/"
+
+# Copy static (even if empty — the app references it)
+mkdir -p "$HUB_INSTALL_DIR/static"
+if [ -d "${SCRIPT_DIR}/static" ]; then
+    cp -r "${SCRIPT_DIR}/static/"* "$HUB_INSTALL_DIR/static/" 2>/dev/null || true
+fi
+
+# Copy requirements, entrypoint and run script
+cp -f "${SCRIPT_DIR}/requirements.txt" "$HUB_INSTALL_DIR/"
+cp -f "${SCRIPT_DIR}/serve.py" "$HUB_INSTALL_DIR/"
+cp -f "${SCRIPT_DIR}/confettictl-run.sh" "$HUB_INSTALL_DIR/"
+cp -f "${SCRIPT_DIR}/scripts/confettictl-hub-setup.sh" "$HUB_INSTALL_DIR/"
+# Served at /confettictl-install.sh: installs a plain Alpine VM as a node from this hub.
+cp -f "${SCRIPT_DIR}/scripts/confettictl-node-install.sh" "$HUB_INSTALL_DIR/"
+chmod +x "$HUB_INSTALL_DIR/confettictl-run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/confettictl-hub-setup.sh"
+ln -sf "$HUB_INSTALL_DIR/confettictl-hub-setup.sh" /usr/local/bin/confettictl-hub-setup.sh
+# Replaced by the dashboard's push-update (hub management key, no sshpass).
+rm -f "$HUB_INSTALL_DIR/confettictl-push-node-update.sh" /usr/local/bin/confettictl-push-node-update.sh
+
+# The code updater (repo-root confettictl-update.sh). Copied, not linked: the repo copy
+# this build ran from is usually deleted afterwards. Via a temp name and mv,
+# never cp over it: on --update the installed copy is the script running this
+# build, and sh reads a script as it goes -- overwriting it in place would
+# feed that running copy the new file's bytes at the old offset.
+if [ -f "${SCRIPT_DIR}/../confettictl-update.sh" ]; then
+    cp -f "${SCRIPT_DIR}/../confettictl-update.sh" /usr/local/bin/confettictl-update.new
+    chmod +x /usr/local/bin/confettictl-update.new
+    mv -f /usr/local/bin/confettictl-update.new /usr/local/bin/confettictl-update
+else
+    log "  WARNING: ../confettictl-update.sh not found -- confettictl-update not installed"
+fi
+
+# -------------------------------------------------------------------
+# Agent scripts served to nodes.
+#
+# This is the single place agent scripts are edited: drop a new version in
+# /opt/confetti-hub/agent/ and every node picks it up within 5 minutes.
+# Checksums are computed on demand, so no rebuild step is needed after an
+# edit — just save the file.
+# -------------------------------------------------------------------
+log "Installing agent scripts for distribution"
+mkdir -p "$HUB_INSTALL_DIR/agent"
+
+# Prefer a sibling node/ tree (the usual layout when the whole project is
+# copied across); fall back to an agent/ directory shipped alongside hub/.
+if [ -d "${SCRIPT_DIR}/../node/scripts" ]; then
+    cp -f "${SCRIPT_DIR}/../node/scripts/confettictl-test-cycle.sh" "$HUB_INSTALL_DIR/agent/"
+    cp -f "${SCRIPT_DIR}/../node/scripts/confettictl-register.sh"   "$HUB_INSTALL_DIR/agent/"
+    log "  agent scripts copied from ../node/scripts"
+elif [ -d "${SCRIPT_DIR}/agent" ]; then
+    cp -f "${SCRIPT_DIR}/agent/"*.sh "$HUB_INSTALL_DIR/agent/" 2>/dev/null || true
+    log "  agent scripts copied from ./agent"
+else
+    log "  WARNING: no agent scripts found -- self-update will be unavailable"
+    log "  copy confettictl-test-cycle.sh and confettictl-register.sh into $HUB_INSTALL_DIR/agent/ later"
+fi
+
+# -------------------------------------------------------------------
+# Node bundle: everything a node needs to be installed or updated from this
+# hub (node/, confettictl-update.sh, confettictl-install.sh), served at /node/bundle.tar.gz. Nodes
+# update only from here, never from GitHub, so they can't get ahead of
+# their hub. Rebuilt on every hub update, from the same code the hub itself
+# was just updated to.
+#
+# The top directory is confetti/ with confettictl-update.sh in it, which is what
+# confettictl-update.sh's own download path looks for. RELEASE carries the commit: this
+# tarball has no GitHub pax header to read it from.
+# -------------------------------------------------------------------
+log "Building node bundle"
+mkdir -p "$HUB_INSTALL_DIR/bundle"
+if [ -d "${SCRIPT_DIR}/../node" ] && [ -f "${SCRIPT_DIR}/../confettictl-update.sh" ]; then
+    _commit="${CONFETTI_UPDATE_COMMIT:-unknown}"
+    if [ "$_commit" = "unknown" ] && command -v git >/dev/null 2>&1; then
+        _commit=$(git -C "${SCRIPT_DIR}/.." rev-parse HEAD 2>/dev/null) || _commit="unknown"
+    fi
+    _stage=$(mktemp -d /tmp/confetti-bundle.XXXXXX)
+    mkdir "$_stage/confetti"
+    cp -r "${SCRIPT_DIR}/../node" "$_stage/confetti/"
+    cp -f "${SCRIPT_DIR}/../confettictl-update.sh" "$_stage/confetti/"
+    cp -f "${SCRIPT_DIR}/../confettictl-install.sh" "$_stage/confetti/" 2>/dev/null || true
+    printf 'commit=%s\n' "$_commit" > "$_stage/confetti/RELEASE"
+    tar -czf "$HUB_INSTALL_DIR/bundle/confetti-node.tar.gz.new" -C "$_stage" confetti
+    mv -f "$HUB_INSTALL_DIR/bundle/confetti-node.tar.gz.new" "$HUB_INSTALL_DIR/bundle/confetti-node.tar.gz"
+    printf 'commit=%s\n' "$_commit" > "$HUB_INSTALL_DIR/bundle/RELEASE"
+    rm -rf "$_stage"
+    log "  node bundle built (commit $_commit)"
+else
+    log "  WARNING: no ../node tree -- nodes cannot install or update from this hub"
+fi
+
+# -------------------------------------------------------------------
+# 5. Install Python dependencies (if not covered by apk)
+# -------------------------------------------------------------------
+log "Checking Python dependencies"
+if ! python3 -c "import flask" 2>/dev/null; then
+    log "Installing Flask via pip"
+    pip3 install --break-system-packages flask
+fi
+
+# Waitress serves the dashboard instead of Flask's development server, which
+# is single-threaded: with every node POSTing results on the same tick and
+# the dashboard polling every 30s, requests would queue behind each other.
+log "Installing waitress WSGI server"
+if ! python3 -c "import waitress" 2>/dev/null; then
+    apk add --no-cache --no-progress py3-waitress 2>/dev/null || \
+        pip3 install --break-system-packages waitress
+fi
+
+# -------------------------------------------------------------------
+# 6. Create hub configuration file
+# -------------------------------------------------------------------
+# Not on --update when one exists: it holds the operator's settings. Keys
+# added here later fall back to config.py's defaults on an older hub.env.
+if [ "$UPDATE_MODE" = "yes" ] && [ -f "$HUB_INSTALL_DIR/hub.env" ]; then
+    log "Keeping existing hub.env"
+else
+log "Creating hub configuration"
+cat > "$HUB_INSTALL_DIR/hub.env" <<'ENVEOF'
+# Hub environment configuration
+# Edit these values after cloning if needed.
+
+# Path to the SQLite database
+HUB_DB_PATH=/var/lib/confetti/hub.db
+
+# How long to keep test results (hours).
+# The hub prunes older rows on each result push; without this the results
+# table grows by roughly 100k rows a day at 5 nodes.
+HUB_RESULT_RETENTION_HOURS=24
+
+# Drop endpoints that have not re-registered within this many hours.
+# Nodes re-register every 5 minutes.
+HUB_STALE_ENDPOINT_HOURS=6
+
+# Port to listen on
+HUB_PORT=80
+
+# --- Syslog receiver -------------------------------------------------
+# Set false to disable the UDP listener entirely.
+HUB_SYSLOG_ENABLED=true
+
+# Bind address. 0.0.0.0 accepts syslog from every reachable segment; set this
+# to the management IP to accept it only there.
+HUB_SYSLOG_BIND=0.0.0.0
+
+# 514 is privileged — the service runs as root, so this only needs raising for
+# a non-root manual run.
+HUB_SYSLOG_PORT=514
+
+# Row cap, not a time window: a network device at debug level outpaces any
+# retention period, so rows are what must be bounded.
+HUB_SYSLOG_MAX_ROWS=300000
+
+# The syslog listener is a second writer against the same SQLite file. Without
+# this, a message burst makes a concurrent result push fail with "database is
+# locked" instead of waiting its turn.
+HUB_BUSY_TIMEOUT_MS=5000
+
+# --- Hub self-health (/api/health) ------------------------------------
+# OpenRC services to report on, comma-separated. Queried with
+# `rc-service <name> status`; a missing binary, timeout, or non-zero exit
+# degrades to a per-service "unknown" rather than failing the endpoint.
+HUB_HEALTH_SERVICES=confettid-hub,chronyd,dropbear,open-vm-tools,lldpd
+
+# Timeout for each rc-service check, in seconds.
+HUB_HEALTH_SERVICE_TIMEOUT_S=3
+
+# --- Traceroute path-change detection ---------------------------------
+# Set false to stop logging a hub-authored row to syslog when a traceroute's
+# hop path changes between samples. Detection itself always runs; this only
+# gates whether a change gets written.
+HUB_PATH_CHANGE_ENABLED=true
+
+# --- Push-update (dashboard) -------------------------------------------
+# Time limit for one node's update (it re-runs confettictl-setup.sh and may install
+# packages), and how recently a node must have registered to be pushed to.
+HUB_PUSH_TIMEOUT_S=600
+HUB_PUSH_SEEN_MINUTES=10
+ENVEOF
+fi
+
+# -------------------------------------------------------------------
+# 7. Create OpenRC init script
+# -------------------------------------------------------------------
+log "Creating OpenRC init script"
+cat > /etc/init.d/confettid-hub <<'INITEOF'
+#!/sbin/openrc-run
+
+name="confettid-hub"
+description="Confetti Traffic hub dashboard and API"
+
+directory="/opt/confetti-hub"
+command="/usr/bin/python3"
+command_args="/opt/confetti-hub/serve.py"
+command_background="yes"
+pidfile="/run/confettid-hub.pid"
+output_log="/var/log/confetti-hub.log"
+error_log="/var/log/confetti-hub.log"
+
+# Load environment from hub.env.
+#
+# Note: command_args is expanded when this script is parsed, before start_pre
+# runs. An earlier version interpolated ${HUB_PORT} there, so changing the
+# port in hub.env had no effect. serve.py now reads the port itself at
+# runtime, which is why it exists rather than invoking flask/waitress
+# directly from this line.
+start_pre() {
+    if [ -f /opt/confetti-hub/hub.env ]; then
+        while IFS= read -r line; do
+            case "$line" in
+                \#*|"") continue ;;
+                *=*) export "$line" ;;
+            esac
+        done < /opt/confetti-hub/hub.env
+    fi
+
+    checkpath --directory --mode 0755 /var/lib/confetti
+
+    # The hub's two SSH keypairs, created on first start so every hub (and
+    # every clone of the hub template) has its own. id_hub is the management
+    # key nodes pin; id_confetti is the mesh SSH-test key nodes install with
+    # a forced `echo ok` command.
+    checkpath --directory --mode 0700 /etc/confetti-hub/keys
+    [ -f /etc/confetti-hub/keys/id_hub ] || \
+        ssh-keygen -q -t ed25519 -N '' -C confetti-hub -f /etc/confetti-hub/keys/id_hub
+    [ -f /etc/confetti-hub/keys/id_confetti ] || \
+        ssh-keygen -q -t ed25519 -N '' -C confetti-mesh -f /etc/confetti-hub/keys/id_confetti
+}
+
+depend() {
+    need net
+    after firewall confettid-hub-firstboot
+}
+INITEOF
+
+chmod +x /etc/init.d/confettid-hub
+
+# First-boot autoconfiguration from guestinfo -- mirrors the node image's
+# confettid-firstboot. Stands down when guestinfo.hub.ip/gateway are absent
+# rather than blocking on a prompt nobody is there to answer; the interactive
+# path is confettictl-login-setup.sh below instead.
+cp -f "${SCRIPT_DIR}/services/firstboot.initd" /etc/init.d/confettid-hub-firstboot
+chmod +x /etc/init.d/confettid-hub-firstboot
+
+# Invite an unconfigured hub to run confettictl-hub-setup.sh at first interactive login,
+# where a real tty is guaranteed (unlike an OpenRC start()).
+cp -f "${SCRIPT_DIR}/services/confettictl-login-setup.sh" /etc/profile.d/confettictl-login-setup.sh
+
+# -------------------------------------------------------------------
+# 8. Enable services
+# -------------------------------------------------------------------
+log "Enabling services"
+
+# Hub service starts on boot
+rc-update add confettid-hub default
+
+# First-boot autoconfiguration from guestinfo
+rc-update add confettid-hub-firstboot default
+
+# SSH access for management
+apk_step apk add --no-cache --no-progress dropbear
+rc-update add dropbear default
+
+log "Services enabled"
+
+# -------------------------------------------------------------------
+# 9. Create first-boot helper
+# -------------------------------------------------------------------
+log "Creating first-boot instructions"
+cat > /etc/motd <<'MOTDEOF'
+
+  +--------------------------------------------------------+
+  |                    confetti hub VM                      |
+  |                                                        |
+  |   Dashboard: http://<this-vm-ip>/                      |
+  |   Config:    /opt/confetti-hub/hub.env                  |
+  |   DB:        /var/lib/confetti/hub.db                   |
+  |   Logs:      rc-service confettid-hub status             |
+  |                                                        |
+  |   Not configured yet? Log in and run:                  |
+  |     confettictl-hub-setup.sh                                       |
+  |   (runs automatically at first login if the            |
+  |    static IP hasn't been set)                          |
+  |                                                        |
+  |   If IP needs changing later:                          |
+  |     confettictl-set-static-ip <ip/cidr> <gateway> [dns] [hostname] |
+  |     rc-service networking restart                      |
+  +--------------------------------------------------------+
+
+MOTDEOF
+
+# -------------------------------------------------------------------
+# 10. Create static IP configuration helper script
+# -------------------------------------------------------------------
+log "Creating static IP helper script"
+cat > /usr/local/bin/confettictl-set-static-ip <<'SIPEOF'
+#!/bin/sh
+# Helper to configure a static IP on the hub VM.
+# Usage: confettictl-set-static-ip <ip/cidr> <gateway> [dns] [hostname]
+# Example: confettictl-set-static-ip 10.0.0.100/24 10.0.0.1 10.0.0.53 confetti-hub
+
+set -eu
+
+if [ $# -lt 2 ]; then
+    echo "Usage: confettictl-set-static-ip <ip/cidr> <gateway> [dns] [hostname]"
+    echo "Example: confettictl-set-static-ip 10.0.0.100/24 10.0.0.1 10.0.0.53 confetti-hub"
+    exit 1
+fi
+
+IP_CIDR="$1"
+GATEWAY="$2"
+DNS="${3:-}"
+NEW_HOSTNAME="${4:-}"
+
+# Detect the primary interface
+IFACE=$(ip -o link show | awk -F': ' '!/lo/{print $2; exit}')
+
+cat > /etc/network/interfaces <<EOF
+auto lo
+iface lo inet loopback
+
+auto ${IFACE}
+iface ${IFACE} inet static
+    address ${IP_CIDR}
+    gateway ${GATEWAY}
+EOF
+
+echo "Static IP configured on ${IFACE}: ${IP_CIDR} via ${GATEWAY}"
+echo "Restart networking: rc-service networking restart"
+
+if [ -n "$DNS" ]; then
+    printf 'nameserver %s\n' "$DNS" > /etc/resolv.conf
+    echo "DNS configured: ${DNS} (written to /etc/resolv.conf)"
+else
+    echo "DNS is not configured -- pass a third argument, or edit"
+    echo "/etc/resolv.conf by hand, if the hub needs outbound resolution"
+    echo "(e.g. a chrony NTP pool hostname)."
+fi
+
+if [ -n "$NEW_HOSTNAME" ]; then
+    CURRENT_HOSTNAME=$(hostname)
+    if [ "$CURRENT_HOSTNAME" != "$NEW_HOSTNAME" ]; then
+        printf '%s\n' "$NEW_HOSTNAME" > /etc/hostname
+        hostname "$NEW_HOSTNAME"
+        if grep -q "127.0.1.1" /etc/hosts 2>/dev/null; then
+            sed -i "s/^127\.0\.1\.1.*/127.0.1.1\t${NEW_HOSTNAME}/" /etc/hosts
+        else
+            printf '127.0.1.1\t%s\n' "$NEW_HOSTNAME" >> /etc/hosts
+        fi
+        echo "Hostname set: ${CURRENT_HOSTNAME} -> ${NEW_HOSTNAME}"
+    fi
+fi
+SIPEOF
+
+chmod +x /usr/local/bin/confettictl-set-static-ip
+
+# --update stops here. Everything below prepares a template: it deletes the
+# results database and empties resolv.conf, and must never run on a live hub.
+if [ "$UPDATE_MODE" = "yes" ]; then
+    log "=== Hub files updated ==="
+    exit 0
+fi
+
+# -------------------------------------------------------------------
+# 11. Clean up for template conversion
+# -------------------------------------------------------------------
+log "Cleaning up for template conversion"
+
+# Remove SSH host keys (regenerated on boot)
+rm -f /etc/dropbear/dropbear_*_host_key
+
+# Remove the hub's management and mesh keypairs, if the service ran during
+# the build. confettid-hub's start_pre makes new ones, so two hubs cloned from
+# this template never share the key their nodes pin.
+rm -rf /etc/confetti-hub/keys
+
+# Clear machine-id
+: > /etc/machine-id 2>/dev/null || true
+
+# Clear resolv.conf. DHCP wrote this during the build's own internet access,
+# but once the hub goes static (confettictl-set-static-ip / confettictl-hub-setup.sh), nothing ever
+# refreshes it again -- left alone, a clone would silently keep resolving
+# through whatever DNS server the build network happened to hand out.
+: > /etc/resolv.conf 2>/dev/null || true
+
+# Clear logs
+find /var/log -type f -exec truncate -s 0 {} \; 2>/dev/null || true
+
+# Clear shell history
+: > /root/.ash_history 2>/dev/null || true
+
+# Clear apk cache
+apk cache clean 2>/dev/null || true
+rm -rf /var/cache/apk/*
+
+# Remove the DB if it was created during testing
+rm -f "$DB_DIR/hub.db"
+
+# Remove any setup stamp left from build-time testing, or the template would
+# consider itself already configured and skip confettictl-hub-setup.sh on every clone.
+rm -f /etc/confetti-hub/.setup-done
+
+# Remove this build script (not needed on clones)
+rm -f "${SCRIPT_DIR}/confettictl-build-template.sh"
+
+# Zero free space for thin provisioning
+log "Zeroing free space for thin provisioning (this may take a minute)..."
+dd if=/dev/zero of=/zero.fill bs=1M 2>/dev/null || true
+rm -f /zero.fill
+sync
+
+log ""
+log "=== Hub build complete ==="
+log ""
+log "A lab normally has exactly one hub, so converting this VM to a vCenter"
+log "template is optional (BUILD_GUIDE.md Sec 4.1) -- most labs can just"
+log "finish configuring it in place, right here:"
+log ""
+log "  (or log in again and let confettictl-hub-setup.sh do all three steps)"
+log "  confettictl-set-static-ip <ip/cidr> <gateway> [dns] [hostname]"
+log "  rc-service networking restart"
+log "  rc-service confettid-hub start"
+log "  Dashboard: http://<this-vm-ip>/"
+log ""
+log "Only convert to a template if you expect to redeploy the hub more than"
+log "once (e.g. separate labs):"
+log "  1. Shutdown:   poweroff"
+log "  2. In vCenter: right-click VM -> Template -> Convert to Template"
+log "  3. Clone it, then either set guestinfo keys on the clone before boot"
+log "     (zero-touch):"
+log "       guestinfo.hub.ip       10.0.0.100/24"
+log "       guestinfo.hub.gateway  10.0.0.1"
+log "       guestinfo.hub.dns      10.0.0.53    (optional)"
+log "       guestinfo.hub.hostname confetti-hub  (optional)"
+log "     or log in (root / ${CONFETTI_ROOT_PASSWORD}) and let confettictl-hub-setup.sh"
+log "     prompt for the same values (manual)"

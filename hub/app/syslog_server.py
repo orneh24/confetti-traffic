@@ -1,4 +1,4 @@
-"""UDP syslog receiver for the pervium hub.
+"""UDP syslog receiver for the confetti hub.
 
 Listens on UDP/514 in a daemon thread and stores parsed messages in the same
 SQLite database as the test results, so the dashboard can link a failing pair
@@ -207,7 +207,7 @@ class _Server(socketserver.UDPServer):
     # Deliberately NOT allow_reuse_address. SO_REUSEADDR on a UDP socket does
     # not reliably reject a duplicate bind on Linux: two sockets that both set
     # it can hold the same port, after which the kernel hands each datagram to
-    # only one of them. Running run.sh while the service is up would then split
+    # only one of them. Running confettictl-run.sh while the service is up would then split
     # the devices' messages between two processes writing to two databases, and
     # the dashboard would show a log with silent holes in it — far worse than a
     # clean failure to start. Leaving the flag off makes the second bind fail

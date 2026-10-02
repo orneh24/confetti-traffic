@@ -1,7 +1,7 @@
 #!/sbin/openrc-run
 # OpenRC init script for iperf3 server
 
-name="iperf3"
+name="confettid-iperf3"
 description="iperf3 network performance measurement server"
 command="/usr/bin/iperf3"
 command_args="-s -D"

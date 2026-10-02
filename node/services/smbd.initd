@@ -1,14 +1,14 @@
 #!/sbin/openrc-run
-# OpenRC init script for the pervium SMB probe server (Samba smbd).
+# OpenRC init script for the confetti SMB probe server (Samba smbd).
 #
-# Named pervium-smbd, not smbd/samba, for the same reason pervium-httpd isn't named
+# Named confettid-smbd, not smbd/samba, for the same reason confettid-httpd isn't named
 # httpd: this is our service definition, not Alpine's samba-server *-openrc
-# subpackage (which is deliberately not installed — see build-template.sh's
-# package notes). Only enabled by setup.sh when ENABLE_SMB=true; not added
+# subpackage (which is deliberately not installed — see confettictl-build-template.sh's
+# package notes). Only enabled by confettictl-setup.sh when ENABLE_SMB=true; not added
 # to any runlevel at image build time.
 
-name="pervium-smbd"
-description="pervium SMB probe server (Samba smbd)"
+name="confettid-smbd"
+description="confetti SMB probe server (Samba smbd)"
 
 command="/usr/sbin/smbd"
 command_args="-F"

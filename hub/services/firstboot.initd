@@ -2,28 +2,28 @@
 # OpenRC service: auto-configure the hub's static IP from guestinfo on
 # first boot.
 #
-# Mirrors node's pervium-firstboot: only acts when guestinfo actually
+# Mirrors node's confettid-firstboot: only acts when guestinfo actually
 # carries both required keys. With neither present, this stands down rather
 # than prompting -- an OpenRC start() has no reliable attached tty to read
 # from, so it must never be the thing that blocks the boot. The interactive
-# path lives in hub-setup.sh instead, invited at first login by
-# login-setup.sh, where a real tty is guaranteed.
+# path lives in confettictl-hub-setup.sh instead, invited at first login by
+# confettictl-login-setup.sh, where a real tty is guaranteed.
 #
 # After that, every boot re-reads guestinfo.hub.hostname (see
 # _apply_hostname); the network keys are used only once.
 
-name="pervium-hub-firstboot"
+name="confettid-hub-firstboot"
 description="Configure hub static IP from VMware guestinfo on first boot"
 
 depend() {
     need net
     after open-vm-tools
-    before pervium-hub
+    before confettid-hub
 }
 
 command_background="no"
 
-CONF_DIR="/etc/pervium-hub"
+CONF_DIR="/etc/confetti-hub"
 STAMP="${CONF_DIR}/.setup-done"
 
 _guestinfo() {
@@ -38,7 +38,7 @@ _guestinfo() {
 # the current name, so a rename in vCenter takes effect at the next reboot
 # (as it does for nodes). Only the hostname: the network keys stay one-shot,
 # since a wrong IP applied at boot would cut the hub off. Same steps as
-# set-static-ip's hostname part.
+# confettictl-set-static-ip's hostname part.
 _apply_hostname() {
     _hn=$(_guestinfo "hub.hostname")
     case "$_hn" in *"No value found"*) _hn="" ;; esac
@@ -70,8 +70,8 @@ start() {
     _ip=$(_guestinfo "hub.ip")
     _gw=$(_guestinfo "hub.gateway")
 
-    # Optional, like hub-setup.sh's prompts. Empty is passed through and
-    # set-static-ip skips it.
+    # Optional, like confettictl-hub-setup.sh's prompts. Empty is passed through and
+    # confettictl-set-static-ip skips it.
     _dns=$(_guestinfo "hub.dns")
     _hn=$(_guestinfo "hub.hostname")
 
@@ -82,13 +82,13 @@ start() {
 
     if [ -z "$_ip" ] || [ -z "$_gw" ]; then
         ewarn "guestinfo.hub.ip / guestinfo.hub.gateway not set"
-        ewarn "skipping auto-setup -- log in and run: hub-setup.sh"
+        ewarn "skipping auto-setup -- log in and run: confettictl-hub-setup.sh"
         return 0
     fi
 
     ebegin "Configuring hub static IP from guestinfo"
     mkdir -p "$CONF_DIR"
-    if set-static-ip "$_ip" "$_gw" "$_dns" "$_hn" && rc-service networking restart; then
+    if confettictl-set-static-ip "$_ip" "$_gw" "$_dns" "$_hn" && rc-service networking restart; then
         date -u '+%Y-%m-%dT%H:%M:%SZ configured (guestinfo)' > "$STAMP"
         eend 0
     else
