@@ -489,7 +489,7 @@ hub/
                         syslog_server.py, nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
   templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light, Nord, Dracula,
-                        Solarized Dark, Monokai, High Contrast, Terminal green) are inline in ALL THREE pages: a THEMES list in the
+                        Solarized Dark, Monokai, High Contrast, Terminal green, Confetti Night, Neon Streamers) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
                         localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. Adding or changing a theme means
                         editing all three pages. syslog.html and timeline.html use the smaller

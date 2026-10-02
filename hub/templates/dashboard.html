@@ -19,6 +19,8 @@ var THEMES = [
     ['monokai', 'Monokai'],
     ['contrast', 'High Contrast'],
     ['terminal', 'Terminal green'],
+    ['confetti-night', 'Confetti Night'],
+    ['neon', 'Neon Streamers'],
 ];
 // "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
 // and moves to a different one every 5-10 minutes. The saved choice is
@@ -277,6 +279,79 @@ function syncThemeSelect() {
     --gray:      #1f4a1f;
     --blue:      #00e676;
     --cyan:      #7dffb0;
+}
+/* Confetti Night — navy with a gold accent; confetti dots in the header */
+:root[data-theme="confetti-night"] {
+    --bg:        #0f1222;
+    --bg-card:   #171c34;
+    --bg-hover:  #1e2442;
+    --bg-muted:  #20264a;
+    --bg-code:   #0a0d1a;
+    --stripe:    #12162a;
+    --border:    #2b3256;
+    --border-soft: #20264a;
+    --badge-bg:  #1d2346;
+    --badge-border: #333b6b;
+    --text:      #e8eaf6;
+    --text-dim:  #a3a9cf;
+    --green:     #2fbf71;
+    --green-bg:  #0f2d20;
+    --red:       #ff5d73;
+    --red-bg:    #3a1420;
+    --yellow:    #ffb347;
+    --yellow-bg: #33240f;
+    --gray:      #3a4170;
+    --blue:      #4cc9f0;
+    --cyan:      #ffd166;
+}
+/* Neon Streamers — near-black with neon accents; glowing streaks in the header */
+:root[data-theme="neon"] {
+    --bg:        #07060c;
+    --bg-card:   #110e1c;
+    --bg-hover:  #1a1530;
+    --bg-muted:  #1c1730;
+    --bg-code:   #040308;
+    --stripe:    #0c0a15;
+    --border:    #2a2342;
+    --border-soft: #1c1730;
+    --badge-bg:  #1d1236;
+    --badge-border: #4a3d73;
+    --text:      #f4f1ff;
+    --text-dim:  #a59fc4;
+    --green:     #39ff88;
+    --green-bg:  #0b2a18;
+    --red:       #ff3864;
+    --red-bg:    #3a0d1c;
+    --yellow:    #ffe600;
+    --yellow-bg: #2e2a05;
+    --gray:      #3a3160;
+    --blue:      #00e5ff;
+    --cyan:      #ff4ecd;
+}
+/* The neon fills are too bright for white letters. */
+:root[data-theme="neon"] .indicator { color: #0b0814; text-shadow: none; }
+/* Header confetti: background layers only, so nothing in the header moves.
+   Odd tile sizes keep the repeat from lining up. Same rules in all pages. */
+:root[data-theme="confetti-night"] .header {
+    background-image:
+        radial-gradient(circle, rgba(255,209,102,.8) 0 2.5px, transparent 3px),
+        radial-gradient(circle, rgba(239,71,111,.8) 0 2px, transparent 2.5px),
+        radial-gradient(circle, rgba(6,214,160,.8) 0 2.5px, transparent 3px),
+        radial-gradient(circle, rgba(76,201,240,.8) 0 2px, transparent 2.5px),
+        radial-gradient(circle, rgba(199,125,255,.8) 0 2px, transparent 2.5px);
+    background-size: 97px 41px, 131px 53px, 173px 47px, 113px 37px, 151px 59px;
+    background-position: 11px 7px, 47px 23px, 89px 13px, 23px 31px, 67px 5px;
+}
+:root[data-theme="neon"] .header {
+    border-bottom-color: #ff4ecd;
+    background-image:
+        radial-gradient(1.5px 7px, #ff4ecd 0 60%, transparent 100%),
+        radial-gradient(1.5px 8px, #39ff88 0 60%, transparent 100%),
+        radial-gradient(1.5px 6px, #00e5ff 0 60%, transparent 100%),
+        radial-gradient(1.5px 7px, #ffe600 0 60%, transparent 100%),
+        radial-gradient(1.5px 8px, #a259ff 0 60%, transparent 100%);
+    background-size: 103px 43px, 139px 57px, 167px 39px, 119px 51px, 157px 47px;
+    background-position: 13px 9px, 53px 21px, 91px 5px, 29px 27px, 71px 15px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
