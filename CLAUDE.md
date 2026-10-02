@@ -530,7 +530,10 @@ hub/
                         Solarized Dark, Monokai, High Contrast, Terminal green, Confetti Night, Neon Streamers) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
                         localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. Adding or changing a theme means
-                        editing all three pages. syslog.html and timeline.html use the smaller
+                        editing all three pages. Each page also has one shared header-confetti rule (an SVG
+                        mask over stripes of the theme's --yellow/--red/--green/--blue/--cyan), so every
+                        theme but Neon (its own streaks) gets confetti in its palette with no per-theme CSS.
+                        syslog.html and timeline.html use the smaller
                         variable set (--row-line, and --gray is a text grey there, not a fill).
   static/
   agent/              — scripts served to nodes (created at build time)

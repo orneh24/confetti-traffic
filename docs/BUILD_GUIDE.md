@@ -347,6 +347,13 @@ group twice stops nodes in one group testing each other. An excluded pair
 shows as a muted dot in the matrix and isn't counted as passing or failing.
 Static targets are not affected. Remove the rule to go back to full mesh.
 
+**Colour themes.** The menu at the right of each page's header picks one of
+ten themes: Dark, Light, Nord, Dracula, Solarized Dark, Monokai, High
+Contrast, Terminal green, Confetti Night and Neon Streamers. **Shuffle**
+changes to a different theme every 5–10 minutes. The choice is saved in your
+browser and shared by all three pages. Every theme has confetti in its
+header in its own colours, except Neon Streamers, which has glowing streaks.
+
 ### 6.2 Static targets
 
 Addresses with no agent (a gateway, a loopback, an outside host). Add them

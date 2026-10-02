@@ -247,7 +247,7 @@ function syncThemeSelect() {
     --gray:      #1a8a3a;
     --cyan:      #7dffb0;
 }
-/* Confetti Night — navy with a gold accent; confetti dots in the header */
+/* Confetti Night — navy with a gold accent */
 :root[data-theme="confetti-night"] {
     --bg:        #0f1222;
     --bg-card:   #171c34;
@@ -287,18 +287,31 @@ function syncThemeSelect() {
     --gray:      #8a83ab;
     --cyan:      #ff4ecd;
 }
-/* Header confetti: background layers only, so nothing in the header moves.
-   Odd tile sizes keep the repeat from lining up. Same rules in all pages. */
-:root[data-theme="confetti-night"] header {
-    background-image:
-        radial-gradient(circle, rgba(255,209,102,.8) 0 2.5px, transparent 3px),
-        radial-gradient(circle, rgba(239,71,111,.8) 0 2px, transparent 2.5px),
-        radial-gradient(circle, rgba(6,214,160,.8) 0 2.5px, transparent 3px),
-        radial-gradient(circle, rgba(76,201,240,.8) 0 2px, transparent 2.5px),
-        radial-gradient(circle, rgba(199,125,255,.8) 0 2px, transparent 2.5px);
-    background-size: 97px 41px, 131px 53px, 173px 47px, 113px 37px, 151px 59px;
-    background-position: 11px 7px, 47px 23px, 89px 13px, 23px 31px, 67px 5px;
+/* Header confetti, every theme but Neon (which has its own streaks). The
+   shapes are a mask; their colours are stripes of the theme's own variables,
+   so each theme gets confetti in its palette and a new theme needs nothing
+   here. Pieces sit in 26px columns, so none spans two colours. Same rule in
+   all three pages. */
+:root:not([data-theme="neon"]) header { position: relative; isolation: isolate; }
+:root:not([data-theme="neon"]) header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: .8;
+    background: repeating-linear-gradient(90deg,
+        var(--yellow) 0 26px, var(--red) 26px 52px, var(--green) 52px 78px,
+        var(--blue) 78px 104px, var(--cyan) 104px 130px);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='390' height='60'%3E%3Cpath d='M7 15 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='38' y='40' width='3' height='7' rx='1' transform='rotate(-56 39 43)'/%3E%3Crect x='89' y='11' width='5' height='5' transform='rotate(31 91 13)'/%3E%3Crect x='115' y='11' width='5' height='5' transform='rotate(61 117 13)'/%3E%3Crect x='142' y='42' width='3' height='7' rx='1' transform='rotate(-49 143 45)'/%3E%3Crect x='168' y='31' width='3' height='7' rx='1' transform='rotate(-68 169 34)'/%3E%3Crect x='193' y='14' width='5' height='5' transform='rotate(-6 195 16)'/%3E%3Crect x='220' y='13' width='3' height='8' rx='1' transform='rotate(66 221 17)'/%3E%3Crect x='246' y='42' width='3' height='7' rx='1' transform='rotate(-32 247 45)'/%3E%3Crect x='272' y='10' width='3' height='8' rx='1' transform='rotate(64 273 14)'/%3E%3Crect x='298' y='40' width='3' height='10' rx='1' transform='rotate(29 299 45)'/%3E%3Crect x='324' y='35' width='3' height='8' rx='1' transform='rotate(12 325 39)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='650' height='60'%3E%3Cpolygon points='10,42 17,44 12,49' transform='rotate(-4 13 45)'/%3E%3Cpolygon points='62,34 69,36 64,41' transform='rotate(-7 65 37)'/%3E%3Crect x='116' y='32' width='3' height='8' rx='1' transform='rotate(-38 117 36)'/%3E%3Cpolygon points='166,48 173,50 168,55' transform='rotate(-61 169 51)'/%3E%3Cpolygon points='244,50 251,52 246,57' transform='rotate(9 247 53)'/%3E%3Crect x='323' y='11' width='5' height='5' transform='rotate(-11 325 13)'/%3E%3Cpath d='M371 52 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M449 51 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='480' y='35' width='3' height='7' rx='1' transform='rotate(10 481 38)'/%3E%3Cpath d='M527 24 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='558' y='31' width='3' height='8' rx='1' transform='rotate(47 559 35)'/%3E%3Crect x='584' y='41' width='3' height='10' rx='1' transform='rotate(-9 585 46)'/%3E%3Cpath d='M631 32 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='390' height='60'%3E%3Cpath d='M7 15 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='38' y='40' width='3' height='7' rx='1' transform='rotate(-56 39 43)'/%3E%3Crect x='89' y='11' width='5' height='5' transform='rotate(31 91 13)'/%3E%3Crect x='115' y='11' width='5' height='5' transform='rotate(61 117 13)'/%3E%3Crect x='142' y='42' width='3' height='7' rx='1' transform='rotate(-49 143 45)'/%3E%3Crect x='168' y='31' width='3' height='7' rx='1' transform='rotate(-68 169 34)'/%3E%3Crect x='193' y='14' width='5' height='5' transform='rotate(-6 195 16)'/%3E%3Crect x='220' y='13' width='3' height='8' rx='1' transform='rotate(66 221 17)'/%3E%3Crect x='246' y='42' width='3' height='7' rx='1' transform='rotate(-32 247 45)'/%3E%3Crect x='272' y='10' width='3' height='8' rx='1' transform='rotate(64 273 14)'/%3E%3Crect x='298' y='40' width='3' height='10' rx='1' transform='rotate(29 299 45)'/%3E%3Crect x='324' y='35' width='3' height='8' rx='1' transform='rotate(12 325 39)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='650' height='60'%3E%3Cpolygon points='10,42 17,44 12,49' transform='rotate(-4 13 45)'/%3E%3Cpolygon points='62,34 69,36 64,41' transform='rotate(-7 65 37)'/%3E%3Crect x='116' y='32' width='3' height='8' rx='1' transform='rotate(-38 117 36)'/%3E%3Cpolygon points='166,48 173,50 168,55' transform='rotate(-61 169 51)'/%3E%3Cpolygon points='244,50 251,52 246,57' transform='rotate(9 247 53)'/%3E%3Crect x='323' y='11' width='5' height='5' transform='rotate(-11 325 13)'/%3E%3Cpath d='M371 52 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M449 51 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='480' y='35' width='3' height='7' rx='1' transform='rotate(10 481 38)'/%3E%3Cpath d='M527 24 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='558' y='31' width='3' height='8' rx='1' transform='rotate(47 559 35)'/%3E%3Crect x='584' y='41' width='3' height='10' rx='1' transform='rotate(-9 585 46)'/%3E%3Cpath d='M631 32 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+    -webkit-mask-size: 390px 60px, 650px 60px;
+    mask-size: 390px 60px, 650px 60px;
+    -webkit-mask-position: 0 0, 52px 3px;
+    mask-position: 0 0, 52px 3px;
 }
+/* Neon header: glowing streaks instead of confetti, as background layers
+   only. Odd tile sizes keep the repeat from lining up. */
 :root[data-theme="neon"] header {
     border-bottom-color: #ff4ecd;
     background-image:
