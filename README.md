@@ -21,7 +21,7 @@ synthetic 6-node mesh.*
 ## Tests
 
 Every node tests every other node once a minute and sends the results to the
-hub. Each cell in the dashboard's matrix shows one letter per test: green
+hub. Each cell in the dashboard's Confetti traffic matrix shows one letter per test: green
 passed, yellow slow, red failed, grey no data.
 
 | Letter | Test | What it checks | Runs |
@@ -143,6 +143,11 @@ serves.
 
 Details: [BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
 
+**Renamed from Pervium.** The project was called Pervium before October
+2026. There is no in-place upgrade from a Pervium VM: rebuild it from a fresh
+Alpine VM, and rename its `guestinfo.pervium.*` keys to `guestinfo.confetti.*`
+in vCenter. The installer refuses to run next to an old install.
+
 ### VMware guestinfo keys
 
 Set these on the VM in vCenter (VM Options → Advanced → Configuration
@@ -193,6 +198,12 @@ minutes around it.
   panel.
 - **Nodes**: Alpine VMs, ~128 MB RAM, one per network segment. Cloned from
   one template. Cron runs the tests every 60 s and pushes results to the hub.
+- **Names on the VMs**: our OpenRC services start with `confettid-`
+  (`confettid-hub` on the hub; `confettid-httpd`, `-smbd`, `-smtpd`,
+  `-iperf3` on nodes). Our scripts and commands start with `confettictl-`
+  (`confettictl-update`, `confettictl-status`, `confettictl-trust-hub`).
+  Everything else uses `confetti`: `/opt/confetti-hub`, `/etc/confetti`,
+  `guestinfo.confetti.*`.
 
 Full design and the constraints that must not regress:
 [`CLAUDE.md`](CLAUDE.md). Open items and roadmap:

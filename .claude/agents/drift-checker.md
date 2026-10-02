@@ -91,6 +91,7 @@ Pass: the only hits are the deliberate ones, which each name an old
 install on purpose:
 - `confettictl-install.sh` and `confettictl-update.sh`: the loop over old install paths that
   refuses to build or update next to an old install;
+- `README.md`: the "Renamed from Pervium" note under Updating;
 - this section of `drift-checker.md` itself.
 
 Anything else, including prose, examples and agent or skill text, is
