@@ -11,18 +11,17 @@ Nothing here works today. Checked against the code 2026-10-02.
   configuring a second NIC overwrites the first. The node's no-DHCP fallback
   in `confettictl-setup.sh` has its own copy of the same logic, so a fix must
   cover both.
-- **TODO: make the connectivity check configurable instead of always
-  full-mesh.** Today every node tests every other node (http, ssh, pmtu,
-  loss, plus the opt-in tests). Allow choosing which pairs or groups test
-  each other.
 
 ## Not yet verified on real VMs
 
 - **Hub as the lab's NTP source.** The hub build appends `allow all` and
   `local stratum 10 orphan` to `chrony.conf`, and `confettictl-setup.sh` points
-  node chrony at the host in `HUB_URL` (`HUB_NTP=false` opts out). Checked
-  for syntax only so far: confirm on real VMs that nodes reach the hub on
-  UDP/123 and report `clock ok` on the dashboard.
+  node chrony at the host in `HUB_URL` (`HUB_NTP=false` opts out). Verified
+  in Alpine 3.22 containers: the hub serves UDP/123 at stratum 10 and nodes
+  sync to it and report `clock ok`. Still to confirm on real VMs: OpenRC's
+  `rc-service chronyd restart` in the build, that the service gives
+  `/run/chrony` chrony ownership (the hub's `chronyc`, hence `/api/time` and
+  Hub Health, needs it), and that the sysctl forwarding pin applies at boot.
 - **Syslog on the real hub.** So far only run as a local Python process.
   Confirm the OpenRC service starts the listener, UDP/514 binds, and a real
   device's messages arrive.

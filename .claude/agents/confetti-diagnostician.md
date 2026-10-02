@@ -36,6 +36,7 @@ curl -s http://<hub>/endpoints | jq .
 ```
 
 - Missing hostname → the node never registered. Go to Step 4.
+- Both nodes registered but a pair has no recent results → check `curl -s http://<hub>/mesh-rules` first. A rule between their groups stops that pair testing (both ways) by design; the dashboard shows it as a muted excluded cell.
 - `last_seen` older than ~5 min → registration is failing now.
 - Two entries you expected, one present → duplicate hostname on a clone; one is overwriting the other. Look for a `last_seen` whose `ip` alternates.
 

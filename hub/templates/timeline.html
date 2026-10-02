@@ -628,7 +628,8 @@ a { color: var(--blue); }
             getJSON("/api/path-changes?minutes=" + mins),
             getJSON("/api/syslog?minutes=" + mins + "&severity=5&limit=2000"),
             getJSON("/api/bw"),
-            getJSON("/api/health")
+            getJSON("/api/health"),
+            getJSON("/mesh-rules")
         ]).then(function(r) {
             if (mySeq !== seq) return;      // a newer range choice superseded this load
             try { build(r, mins); } catch (e) { S.partial = true; }
@@ -654,6 +655,10 @@ a { color: var(--blue); }
         var sysl = Array.isArray(r[3]) ? r[3] : [];
         var bws = Array.isArray(r[4]) ? r[4] : [];
         S.health = r[5] && typeof r[5] === "object" ? r[5] : null;
+        // Mesh rules as they stand now (not as they stood at each moment):
+        // excluded pairs are left out of the ribbon and the path counts.
+        S.rules = {};
+        (Array.isArray(r[6]) ? r[6] : []).forEach(function(x) { S.rules[x.group_a + "|" + x.group_b] = true; });
         S.resultCount = rows.length;
 
         eps.sort(function(a, b) {
@@ -870,11 +875,16 @@ a { color: var(--blue); }
     // ---------------------------------------------------------------
     // Replay: the mesh as it stood at moment t.
     // ---------------------------------------------------------------
+    function excludedPair(a, b) {
+        var ga = a.group_name || "", gb = b.group_name || "";
+        return !!(S.rules && S.rules[ga < gb ? ga + "|" + gb : gb + "|" + ga]);
+    }
+
     function stateAt(t) {
         var cells = [], counts = { fail: 0, route: 0, ok: 0, none: 0 };
         S.eps.forEach(function(a) {
             S.eps.forEach(function(b) {
-                if (a.hostname === b.hostname) return;
+                if (a.hostname === b.hostname || excludedPair(a, b)) return;
                 var pk = a.hostname + "|" + b.hostname;
                 var types = S.pairTypes[pk] || [];
                 var st = "none", bad = [];
@@ -1048,12 +1058,12 @@ a { color: var(--blue); }
 
     function renderQuiet() {
         var total = 0, involved = {};
-        S.eps.forEach(function(a) { S.eps.forEach(function(b) { if (a.hostname !== b.hostname) total++; }); });
+        S.eps.forEach(function(a) { S.eps.forEach(function(b) { if (a.hostname !== b.hostname && !excludedPair(a, b)) total++; }); });
         S.incidents.forEach(function(inc) { Object.keys(inc.pairs).forEach(function(k) { involved[k] = true; }); });
         var quiet = 0;
         S.eps.forEach(function(a) {
             S.eps.forEach(function(b) {
-                if (a.hostname !== b.hostname && !involved[a.hostname + "|" + b.hostname]) quiet++;
+                if (a.hostname !== b.hostname && !excludedPair(a, b) && !involved[a.hostname + "|" + b.hostname]) quiet++;
             });
         });
         var html = "<div class='note'>" + quiet + " of " + total + " mesh paths had no failure or route change in this range.</div>";

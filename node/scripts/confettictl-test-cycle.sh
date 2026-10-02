@@ -148,7 +148,10 @@ trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT INT TERM
 # -------------------------------------------------------------------
 log "Fetching endpoint list from ${HUB_URL}/endpoints"
 
-ENDPOINTS=$(curl -s --connect-timeout 5 --max-time 10 "${HUB_URL}/endpoints" 2>/dev/null)
+# ?for= asks for this node's own peer list: the hub leaves out peers in groups
+# a mesh rule excludes. A hub that predates rules ignores it and returns the
+# full mesh, as does one that doesn't know this hostname yet.
+ENDPOINTS=$(curl -s --connect-timeout 5 --max-time 10 "${HUB_URL}/endpoints?for=${MY_HOSTNAME}" 2>/dev/null)
 
 if [ -z "$ENDPOINTS" ]; then
     log "ERROR: could not fetch endpoints from hub"

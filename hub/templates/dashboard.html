@@ -590,6 +590,17 @@ a:hover { text-decoration: underline; }
     cursor: default;
     background: var(--bg);
 }
+/* Pair excluded by a mesh rule: not tested, so neither pass nor fail. */
+.matrix td.excluded {
+    cursor: default;
+    background: var(--bg-muted);
+    color: var(--text-dim);
+    text-align: center;
+}
+.matrix td.excluded:hover { background: var(--bg-muted); outline: none; }
+.rule-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.rule-list li { display: flex; align-items: center; gap: 8px; padding: 3px 2px; }
+.rule-list .rule-name { flex: 1; }
 .cell-indicators {
     display: flex;
     gap: 3px;
@@ -1075,6 +1086,32 @@ a:hover { text-decoration: underline; }
             </div>
         </div>
 
+        <!-- Group pairs excluded from the full mesh (/mesh-rules). Nodes get
+             their peer list from GET /endpoints?for=<self>, which leaves
+             excluded groups out; no rules means full mesh. -->
+        <div class="section" id="rules-section">
+            <div class="section-header">
+                <span>Mesh Rules</span>
+                <span id="rules-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
+            </div>
+            <div class="section-body">
+                <ul class="rule-list" id="rule-list"></ul>
+                <div class="filter-row">
+                    <label for="rule-a">Exclude</label>
+                    <input id="rule-a" list="rule-groups" maxlength="64" placeholder="group" size="12">
+                    <label for="rule-b">&harr;</label>
+                    <input id="rule-b" list="rule-groups" maxlength="64" placeholder="group" size="12">
+                    <button type="button" class="btn-small" id="rule-add">add</button>
+                    <datalist id="rule-groups"></datalist>
+                </div>
+                <div class="empty-hint" style="padding:0 2px">
+                    Nodes in these two groups stop testing each other within about a
+                    minute, both ways. The same group twice stops a group testing
+                    itself. Static targets are not affected.
+                </div>
+            </div>
+        </div>
+
         <!-- On-demand bandwidth test (hub/app/bandwidth.py). Node to node: the
              hub runs iperf3 on both over SSH. Node to browser: this page
              talks to the node's /cgi-bin/confettictl-bw directly. One at a time. -->
@@ -1222,6 +1259,9 @@ a:hover { text-decoration: underline; }
     // static-targets matrix, so one change marks both correctly.
     var pathChangeLookup = {};
     var selectedPair = null; // {source, target}
+    // Group pairs excluded from the mesh (GET /mesh-rules). Excluded pairs
+    // are drawn as "excluded" and left out of every pass/fail count.
+    var meshRules = [];
 
     // Wider-than-the-matrix history, fetched separately, purely to detect
     // transitions for the Recent Changes panel — see computeRecentChanges().
@@ -1258,9 +1298,12 @@ a:hover { text-decoration: underline; }
             fetchJSON("/api/results?minutes=60"),
             fetchJSON("/api/path-changes?minutes=60"),
             fetchJSON("/api/syslog?" + syslogQuery),
-            fetchJSON("/node/release")
+            fetchJSON("/node/release"),
+            fetchJSON("/mesh-rules").catch(function() { return []; })
         ]).then(function(arr) {
             hubRelease = arr[7] ? arr[7].commit : null;
+            meshRules = Array.isArray(arr[8]) ? arr[8] : [];
+            renderMeshRules();
             endpoints = arr[0];
             resultsData = arr[1];
             targets = arr[2];
@@ -1433,10 +1476,13 @@ a:hover { text-decoration: underline; }
         var total = 0, failed = 0;
         for (var k in lookup) {
             if (!lookup.hasOwnProperty(k)) continue;
+            var pair = k.split("|");
+            // Results from before a rule was added would otherwise keep an
+            // excluded pair red for the rest of the window.
+            if (ruleFor(pair[0], pair[1])) continue;
             total++;
             if (!lookup[k].success) {
                 failed++;
-                var pair = k.split("|");
                 failing[pair[0] + "|" + pair[1]] = true;
             }
         }
@@ -1464,6 +1510,23 @@ a:hover { text-decoration: underline; }
     // this renders straight from the API response.
     function nameIp(ep) {
         return ep && ep.ip ? "<span class='ip'>" + esc(ep.ip) + "</span>" : "";
+    }
+
+    // The mesh rule that excludes src -> dst, or null. Only node pairs can be
+    // excluded: a static target has no group, so it never matches.
+    function ruleFor(src, dst) {
+        if (!meshRules.length) return null;
+        var ga = null, gb = null;
+        for (var i = 0; i < endpoints.length; i++) {
+            if (endpoints[i].hostname === src) ga = endpoints[i].group_name;
+            if (endpoints[i].hostname === dst) gb = endpoints[i].group_name;
+        }
+        if (ga === null || gb === null) return null;
+        var lo = ga < gb ? ga : gb, hi = ga < gb ? gb : ga;
+        for (var j = 0; j < meshRules.length; j++) {
+            if (meshRules[j].group_a === lo && meshRules[j].group_b === hi) return meshRules[j];
+        }
+        return null;
     }
 
     function buildLookup() {
@@ -1504,6 +1567,9 @@ a:hover { text-decoration: underline; }
     // detection has for a pair's very first stored sample.
     // ---------------------------------------------------------------
     function computeRecentChanges(rows, pathRows) {
+        // An excluded pair stops testing; its last samples are not news.
+        rows = rows.filter(function(r) { return !ruleFor(r.source, r.target_hostname); });
+        pathRows = pathRows.filter(function(c) { return !ruleFor(c.source, c.target); });
         var byPairType = {};   // "src|dst|type" -> rows, chronological
         var batchTypes = {};   // "src|dst|received_at" -> {type: true}
         for (var i = 0; i < rows.length; i++) {
@@ -1728,6 +1794,12 @@ a:hover { text-decoration: underline; }
             for (var j = 0; j < hosts.length; j++) {
                 if (i === j) {
                     html += "<td class='self'>&mdash;</td>";
+                    continue;
+                }
+                var rule = ruleFor(hosts[i], hosts[j]);
+                if (rule) {
+                    html += "<td class='excluded' title='" + escAttr("not tested: excluded by rule " +
+                        rule.group_a + " ↔ " + rule.group_b) + "'>&middot;</td>";
                     continue;
                 }
                 var sel = selectedPair && selectedPair.source === hosts[i] && selectedPair.target === hosts[j];
@@ -2529,6 +2601,63 @@ a:hover { text-decoration: underline; }
                 loadSettings();
             });
         });
+    });
+
+    // ---------------------------------------------------------------
+    // Mesh rules panel
+    // ---------------------------------------------------------------
+    function renderMeshRules() {
+        var list = document.getElementById("rule-list");
+        if (!meshRules.length) {
+            list.innerHTML = "<li class='empty-hint' style='padding:0'>No rules &mdash; full mesh.</li>";
+        } else {
+            list.innerHTML = meshRules.map(function(r) {
+                return "<li><span class='rule-name'>" + esc(r.group_a) + " &harr; " + esc(r.group_b) +
+                    "</span><button type='button' class='btn-small rule-del' data-a='" + escAttr(r.group_a) +
+                    "' data-b='" + escAttr(r.group_b) + "' aria-label='Remove rule'>remove</button></li>";
+            }).join("");
+        }
+        var groups = {};
+        endpoints.forEach(function(e) { if (e.group_name) groups[e.group_name] = true; });
+        document.getElementById("rule-groups").innerHTML = Object.keys(groups).sort().map(function(g) {
+            return "<option value='" + escAttr(g) + "'>";
+        }).join("");
+    }
+
+    function sendRule(method, url, body) {
+        var status = document.getElementById("rules-status");
+        var opts = {method: method};
+        if (body) {
+            opts.headers = {"Content-Type": "application/json"};
+            opts.body = JSON.stringify(body);
+        }
+        return fetch(url, opts).then(function(r) {
+            return r.json().then(function(rules) {
+                if (!r.ok) throw new Error(rules.error || r.status);
+                status.textContent = "saved " + new Date().toLocaleTimeString();
+                refresh();
+            });
+        }).catch(function(e) { status.textContent = "save failed: " + e.message; });
+    }
+
+    document.getElementById("rule-add").addEventListener("click", function() {
+        var a = document.getElementById("rule-a").value.trim();
+        var b = document.getElementById("rule-b").value.trim();
+        if (!a || !b) {
+            document.getElementById("rules-status").textContent = "pick two groups";
+            return;
+        }
+        sendRule("POST", "/mesh-rules", {group_a: a, group_b: b}).then(function() {
+            document.getElementById("rule-a").value = "";
+            document.getElementById("rule-b").value = "";
+        });
+    });
+
+    document.getElementById("rule-list").addEventListener("click", function(ev) {
+        var btn = ev.target.closest ? ev.target.closest(".rule-del") : null;
+        if (!btn) return;
+        sendRule("DELETE", "/mesh-rules?a=" + encodeURIComponent(btn.getAttribute("data-a")) +
+            "&b=" + encodeURIComponent(btn.getAttribute("data-b")));
     });
 
     // ---------------------------------------------------------------

@@ -35,7 +35,9 @@ Diagram: `docs/TOPOLOGY.md`.
   time, before `start_pre` sources `hub.env`, so the setting would be ignored.
 - API endpoints:
   - `POST /register` — hostname, ip, subnet, group_name
-  - `GET /endpoints` — mesh list (prunes stale endpoints as a side effect)
+  - `GET /endpoints` — mesh list (prunes stale endpoints as a side effect);
+    `?for=<hostname>` is that node's peer list with mesh-rule exclusions
+    applied (see Mesh rules below). Without `for`, always the full list
   - `POST /results` — result batch (runs the retention sweep as a side effect)
   - `GET /api/results?minutes=N`, `GET /api/results/<source>/<target>`
   - `GET /api/path-changes?minutes=N` — detected traceroute path changes
@@ -44,6 +46,8 @@ Diagram: `docs/TOPOLOGY.md`.
   - `GET|POST /targets`, `DELETE /targets/<name>` — static targets
   - `GET|POST /settings` — mesh-wide switches for the opt-in tests (see
     Mesh settings below)
+  - `GET|POST /mesh-rules`, `DELETE /mesh-rules?a=&b=` — group pairs
+    excluded from the full mesh (see Mesh rules below)
   - `GET /agent/manifest`, `GET /agent/<script>` — agent distribution
   - `GET /node/bundle.tar.gz`, `GET /node/release` — node bundle and its
     commit (see Hub-managed nodes below)
@@ -159,6 +163,25 @@ with `HUB_SETTINGS=false` ignores the hub. A separate route rather than a
 field on `/endpoints`, whose bare-array shape every deployed node parses. Any
 fetch failure falls back to local config — it must never fail a cycle, or
 self-update would roll the script back.
+
+### Mesh rules
+Full mesh is the default; rules **exclude** group pairs from it. A rule is
+between two groups, covers every test and both directions, and the same group
+twice (`site-a ↔ site-a`) stops a group testing itself. Edited in the
+dashboard's "Mesh Rules" panel, stored in the `mesh_rules` table (pair sorted,
+so one row per pair). Unauthenticated, like push-update.
+
+Applied hub-side: `confettictl-test-cycle.sh` fetches
+`/endpoints?for=<its hostname>` and the hub leaves out peers in excluded
+groups, so the rule logic is Python and the node change is one URL. Every
+failure mode is the old full mesh: a node without `?for=` (not yet
+self-updated), a hub that ignores it, or a hostname the hub doesn't know yet
+all get the full list, so rules can never fail a cycle (self-update gate 3).
+The response is still the bare array. The dashboard draws an excluded pair as
+a muted "excluded" cell and leaves it out of the pass/fail summary and Recent
+Changes; the timeline leaves it out of its ribbon and path counts, using the
+rules as they stand now, not as they stood at each moment. Static targets are
+not affected.
 
 ### Static targets
 Addresses that run no agent — gateways, device loopbacks, outside hosts —

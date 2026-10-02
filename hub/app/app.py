@@ -95,6 +95,14 @@ def init_db():
             value   TEXT NOT NULL,
             updated TEXT NOT NULL
         );
+        -- Group pairs excluded from the full mesh. Stored sorted
+        -- (group_a <= group_b) so a rule covers both directions.
+        CREATE TABLE IF NOT EXISTS mesh_rules (
+            group_a TEXT NOT NULL,
+            group_b TEXT NOT NULL,
+            created TEXT NOT NULL,
+            PRIMARY KEY (group_a, group_b)
+        );
         CREATE TABLE IF NOT EXISTS bwtests (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             started_at  TEXT NOT NULL,
@@ -335,7 +343,12 @@ def result_row(r):
 
 @app.route("/endpoints", methods=["GET"])
 def list_endpoints():
-    """Return all registered endpoints, pruning any that have gone stale."""
+    """Return all registered endpoints, pruning any that have gone stale.
+
+    ?for=<hostname> is the node's own peer list: endpoints whose group pair
+    is excluded by a mesh rule are left out. An unknown or missing host gets
+    the full list, so every failure mode is the old full mesh.
+    """
     db = get_db()
     prune_stale_endpoints(db)
     db.commit()
@@ -355,6 +368,14 @@ def list_endpoints():
         d["managed"] = None if d["managed"] is None else d["managed"] == "true"
         d["clock_synced"] = None if d["clock_synced"] is None else d["clock_synced"] == "true"
         out.append(d)
+
+    requester = request.args.get("for")
+    own = next((d for d in out if d["hostname"] == requester), None) if requester else None
+    if own is not None:
+        pairs = excluded_pairs(db)
+        if pairs:
+            out = [d for d in out if d is own
+                   or not is_excluded(pairs, own["group_name"], d["group_name"])]
     return jsonify(out)
 
 
@@ -675,6 +696,74 @@ def update_settings():
             )
     db.commit()
     return jsonify(read_settings(db))
+
+
+# ---------------------------------------------------------------------------
+# Mesh rules: group pairs excluded from the full mesh. No rules = full mesh.
+# Applied hub-side through GET /endpoints?for=<hostname>, so the node only
+# changes one URL and an old node or old hub simply keeps the full mesh.
+# ---------------------------------------------------------------------------
+
+MAX_GROUP_LEN = 64
+
+
+def excluded_pairs(db):
+    return {(a, b) for a, b in db.execute("SELECT group_a, group_b FROM mesh_rules")}
+
+
+def is_excluded(pairs, g1, g2):
+    return tuple(sorted((g1 or "", g2 or ""))) in pairs
+
+
+def _rule_pair(a, b):
+    """Validated, sorted pair, or None. Names are plain strings, 1-64 chars."""
+    if not isinstance(a, str) or not isinstance(b, str):
+        return None
+    a, b = a.strip(), b.strip()
+    if not a or not b or len(a) > MAX_GROUP_LEN or len(b) > MAX_GROUP_LEN:
+        return None
+    return tuple(sorted((a, b)))
+
+
+def read_mesh_rules(db):
+    rows = db.execute("SELECT group_a, group_b, created FROM mesh_rules "
+                      "ORDER BY group_a, group_b").fetchall()
+    return [{"group_a": r[0], "group_b": r[1], "created": iso(r[2])} for r in rows]
+
+
+@app.route("/mesh-rules", methods=["GET"])
+def get_mesh_rules():
+    return jsonify(read_mesh_rules(get_db()))
+
+
+@app.route("/mesh-rules", methods=["POST"])
+def add_mesh_rule():
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "Body must be a JSON object"}), 400
+    pair = _rule_pair(data.get("group_a"), data.get("group_b"))
+    if pair is None:
+        return jsonify({"error": "group_a and group_b must be non-empty strings "
+                                 "of at most {} characters".format(MAX_GROUP_LEN)}), 400
+    db = get_db()
+    db.execute("INSERT OR IGNORE INTO mesh_rules (group_a, group_b, created) VALUES (?, ?, ?)",
+               (pair[0], pair[1], sqlite_now()))
+    db.commit()
+    return jsonify(read_mesh_rules(db))
+
+
+@app.route("/mesh-rules", methods=["DELETE"])
+def delete_mesh_rule():
+    # Query parameters, not path segments: a group label may contain "/".
+    pair = _rule_pair(request.args.get("a"), request.args.get("b"))
+    if pair is None:
+        return jsonify({"error": "a and b query parameters are required"}), 400
+    db = get_db()
+    cur = db.execute("DELETE FROM mesh_rules WHERE group_a = ? AND group_b = ?", pair)
+    db.commit()
+    if cur.rowcount == 0:
+        return jsonify({"error": "no such rule"}), 404
+    return jsonify(read_mesh_rules(db))
 
 
 # ---------------------------------------------------------------------------

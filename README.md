@@ -39,6 +39,10 @@ passed, yellow slow, red failed, grey no data.
 "When enabled" tests are switched on per node in its config, or for the
 whole mesh from the dashboard's Mesh Settings panel.
 
+Every node tests every other node by default. The dashboard's Mesh Rules
+panel can exclude pairs of groups, for example to stop two branch sites
+testing each other when only their paths to the data centre matter.
+
 **Static targets** are addresses that run no Confetti Traffic software, such as a
 gateway, a switch loopback or an outside server. You add them once on the
 hub, choose which of the tests above apply to each, and every node tests

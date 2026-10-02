@@ -814,6 +814,39 @@ def live_checks(base, db, tmp):
             need(c == 400, "body %r returned %d, want 400" % (raw, c), p)
         return p
 
+    @check("R30-live", "mesh rules filter /endpoints?for= and fail open to full mesh")
+    def _():
+        p = []
+        hosts = (("rt30a", "rt30-g1"), ("rt30b", "rt30-g1"), ("rt30c", "rt30-g2"))
+        for h, g in hosts:
+            http("POST", base + "/register", {"hostname": h, "ip": "10.30.0.1",
+                                              "subnet": "10.30.0.0/24", "group_name": g})
+
+        def names(q):
+            code, body = http("GET", base + "/endpoints" + q)
+            rows = json.loads(body) if code == 200 else None
+            need(isinstance(rows, list), "/endpoints%s is not a bare array" % q, p)
+            return {r["hostname"] for r in rows or []} & {"rt30a", "rt30b", "rt30c"}
+
+        code = http("POST", base + "/mesh-rules", {"group_a": "rt30-g2", "group_b": "rt30-g1"})[0]
+        need(code == 200, "POST /mesh-rules returned %d" % code, p)
+        need(names("?for=rt30a") == {"rt30a", "rt30b"}, "?for=rt30a still lists the excluded group", p)
+        need(names("?for=rt30c") == {"rt30c"}, "?for=rt30c lists peers from the excluded group", p)
+        need(len(names("")) == 3, "/endpoints without for= is filtered", p)
+        need(len(names("?for=nobody-here")) == 3, "unknown for= host is filtered (must be full mesh)", p)
+        for raw in (b"[]", b'{"group_a":"","group_b":"x"}', b'{"group_a":1,"group_b":"x"}',
+                    json.dumps({"group_a": "x" * 65, "group_b": "y"}).encode(), b"{not json"):
+            c = http("POST", base + "/mesh-rules", raw=raw)[0]
+            need(c == 400, "POST /mesh-rules %r returned %d, want 400" % (raw[:40], c), p)
+        c = http("DELETE", base + "/mesh-rules?a=rt30-g1&b=rt30-g2")[0]
+        need(c == 200, "DELETE /mesh-rules returned %d" % c, p)
+        need(names("?for=rt30a") == {"rt30a", "rt30b", "rt30c"}, "rule removal did not restore full mesh", p)
+        c = http("DELETE", base + "/mesh-rules?a=rt30-g1&b=rt30-g2")[0]
+        need(c == 404, "deleting a missing rule returned %d, want 404" % c, p)
+        for h, _g in hosts:
+            http("DELETE", base + "/endpoints/" + h)
+        return p
+
     @check("R18-live", "syslog window and filter input")
     def _():
         p = []

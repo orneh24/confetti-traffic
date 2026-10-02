@@ -52,7 +52,7 @@ Sample count, first and last `received_at`, distinct sources and targets.
 
 Judging traceroute against a one-per-minute baseline would report an ~80% reporting gap that is purely by design.
 
-Compare observed sources against `/endpoints` to spot nodes that register but never report. Note that `target_hostname` values absent from `/endpoints` are **static targets** (gateways, outside addresses, device loopbacks), not anomalies — cross-check against `/targets` before calling one a stray.
+Compare observed sources against `/endpoints` to spot nodes that register but never report. Note that `target_hostname` values absent from `/endpoints` are **static targets** (gateways, outside addresses, device loopbacks), not anomalies — cross-check against `/targets` before calling one a stray. A registered pair with no recent results may be excluded on purpose: check `curl -s http://<hub>/mesh-rules` (group pairs that don't test each other, both ways) — an excluded pair is not a gap. Its results from before the rule was added stay in `/api/results`.
 
 ### Step 2: Per-pair success rates
 
