@@ -20,47 +20,31 @@ the Confetti Night theme. Mock data from a synthetic 6-node mesh.*
 
 ## Tests
 
-Every node tests every other node once a minute and sends the results to the
-hub. Each cell in the dashboard's Confetti traffic matrix shows one letter per test: green
-passed, yellow slow, red failed, grey no data. A muted dot instead of letters
-means a mesh rule excludes that pair (below).
+Every node tests every other node once a minute and reports to the hub. Each
+matrix cell shows one letter per test: green passed, yellow slow, red failed,
+grey no data; a muted dot means a mesh rule excludes the pair.
 
-| Letter | Test | What it checks | Runs |
+| | Test | What it checks | Runs |
 |---|---|---|---|
-| H | HTTP | Fetches a small fixed website from the peer (5 files, one of them ~57 KB) and checks every byte. Catches devices that rewrite or cut short web traffic, not just blocked ports. | always |
-| S | SSH | Logs in with a shared key and runs `echo ok`. The key can do nothing else. | always |
-| M | Path MTU | Sends a full 1500-byte packet with "don't fragment" set. On failure it steps down to find the largest size that gets through. Catches paths where small packets work but large transfers hang. | always |
-| L | Loss | Packet loss and jitter with `fping`. Some loss is shown as data, not a failure; only 100% loss fails. | always |
-| T | Traceroute | The hop-by-hop path. The hub flags when a path changes between runs. | every 5 min, and right after H or S fails |
-| D | DNS | Looks up a name on a given DNS server. | when `DNS_SERVER` is set |
-| I | iperf3 | TCP throughput. | when enabled |
-| B | SMB | Downloads an 8 MB file from the peer's file share. Catches problems that only show in sustained transfers. | when enabled |
-| E | SMTP | Holds a mail conversation up to the recipient, then stops. It never sends mail. Shows when a firewall rewrites mail commands. | when enabled |
+| H | HTTP | Fetches a fixed 5-file site and checks every byte (catches rewriting) | always |
+| S | SSH | Key login running `echo ok` | always |
+| M | Path MTU | 1500-byte DF packet; steps down on failure | always |
+| L | Loss | Loss and jitter (`fping`); only 100% loss fails | always |
+| T | Traceroute | Hop path; hub flags path changes | 5 min, and after H/S fails |
+| D | DNS | Name lookup on a given server | `DNS_SERVER` set |
+| I | iperf3 | TCP throughput | enabled |
+| B | SMB | 8 MB file download (sustained transfer) | enabled |
+| E | SMTP | Mail conversation, never sends; shows command rewriting | enabled |
 
-"When enabled" tests are switched on per node in its config, or for the
-whole mesh from the dashboard's Mesh Settings panel.
+- **Enabled** tests: per node in its config, or mesh-wide in Mesh Settings.
+- **Mesh Rules** exclude group pairs (both ways, all tests); the same group
+  twice stops a group testing itself.
+- **Static targets** (gateways, loopbacks, outside hosts) are added once on
+  the hub, with the tests that apply, and every node tests them.
+- **Bandwidth on demand:** node to node (`iperf3`, 1–8 streams) or node to
+  your browser, both directions.
 
-Every node tests every other node by default. The dashboard's Mesh Rules
-panel can exclude pairs of groups, for example to stop two branch sites
-testing each other when only their paths to the data centre matter. A rule
-works both ways and covers every test; the same group twice stops nodes in
-one group testing each other.
-
-**One clock.** The hub serves time (NTP) to the lab, and nodes sync to it, so
-results and syslog line up even with no internet. Each node's clock state
-shows under its name on the dashboard: "clock ok", or in yellow when it is
-unsynced or more than a second off.
-
-**Static targets** are addresses that run no Confetti Traffic software, such as a
-gateway, a switch loopback or an outside server. You add them once on the
-hub, choose which of the tests above apply to each, and every node tests
-them too.
-
-**Bandwidth on demand.** The dashboard's Bandwidth Test panel measures
-throughput when you ask, in both directions. It can test between two nodes,
-using `iperf3` with 1–8 streams, or between a node and your own browser.
-
-Details for each test: [BUILD_GUIDE §6.1](docs/BUILD_GUIDE.md#61-test-types).
+Details: [BUILD_GUIDE §6.1](docs/BUILD_GUIDE.md#61-test-types).
 
 ## Quick start
 
@@ -79,10 +63,7 @@ by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
    wget -O- https://github.com/orneh24/confetti-traffic/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/confetti-traffic-main /root/confetti && sh /root/confetti/confettictl-install.sh
    ```
 
-3. **Set the network.** Log out and back in: `confettictl-hub-setup.sh` asks for the
-   static IP (with prefix, e.g. `/24`) and the gateway, which defaults to the
-   subnet's `.1`. It also asks for an optional DNS server and hostname, then
-   restarts networking and starts the hub. Or do the same by hand:
+3. **Configure the network.** Log out and back in. Login script will prompt for config
 
    ```sh
    confettictl-set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
@@ -155,29 +136,26 @@ serves.
 
 Details: [BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
 
-**Renamed from Pervium.** The project was called Pervium before October
-2026. There is no in-place upgrade from a Pervium VM: rebuild it from a fresh
-Alpine VM, and rename its `guestinfo.pervium.*` keys to `guestinfo.confetti.*`
-in vCenter. The installer refuses to run next to an old install.
-
 ### VMware guestinfo keys
 
 Set these on the VM in vCenter (VM Options → Advanced → Configuration
 Parameters, or PowerCLI `New-AdvancedSetting`) before first boot. Only the
-two marked keys are required.
+two marked keys are required. All keys start with `guestinfo.`
 
-| Key | Role | Example | Notes |
-|---|---|---|---|
-| `guestinfo.confetti.hub_url` | node | `http://10.0.0.100` | **required** |
-| `guestinfo.confetti.group` | node | `site-a` | **required**; groups nodes on the dashboard |
-| `guestinfo.confetti.subnet` | node | `10.1.1.0/24` | taken from the DHCP lease if unset |
-| `guestinfo.confetti.hostname` | node | `ct-site-a` | `ct-<group>-<ab1234>` if unset; must be unique |
-| `guestinfo.confetti.dns_server` | node | `10.0.0.53` | unset skips the DNS test |
-| `guestinfo.confetti.dns_query` | node | `example.com` | name the DNS test looks up |
-| `guestinfo.hub.ip` | hub | `10.0.0.100/24` | if unset, `confettictl-hub-setup.sh` asks at login |
-| `guestinfo.hub.gateway` | hub | `10.0.0.1` | |
-| `guestinfo.hub.dns` | hub | `10.0.0.53` | optional; without it the hub can't resolve names, so `confettictl-update` can't download |
-| `guestinfo.hub.hostname` | hub | `confetti-hub` | optional; unset keeps the template's hostname. Re-read at every boot, so a change applies at the next reboot |
+| Key | Example | Notes |
+|---|---|---|
+| `confetti.hub_url` | `http://10.0.0.100` | **required** |
+| `confetti.group` | `site-a` | **required**; groups nodes on the dashboard |
+| `confetti.subnet` | `10.1.1.0/24` | default: from DHCP lease |
+| `confetti.hostname` | `ct-site-a` | default: `ct-<group>-<ab1234>`; must be unique |
+| `confetti.dns_server` | `10.0.0.53` | unset skips the DNS test |
+| `confetti.dns_query` | `example.com` | name the DNS test looks up |
+| `hub.ip` | `10.0.0.100/24` | unset: asked at login |
+| `hub.gateway` | `10.0.0.1` | |
+| `hub.dns` | `10.0.0.53` | needed for `confettictl-update` |
+| `hub.hostname` | `confetti-hub` | re-read every boot |
+
+`confetti.*` keys go on nodes, `hub.*` keys on the hub.
 
 More: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) (reference tables) and
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (checklist with verification).
@@ -210,9 +188,9 @@ minutes around it.
   panel.
 - **Nodes**: Alpine VMs, ~128 MB RAM, one per network segment. Cloned from
   one template. Cron runs the tests every 60 s and pushes results to the hub.
-- **Names on the VMs**: our OpenRC services start with `confettid-`
+- **Names on the VMs**: OpenRC services start with `confettid-`
   (`confettid-hub` on the hub; `confettid-httpd`, `-smbd`, `-smtpd`,
-  `-iperf3` on nodes). Our scripts and commands start with `confettictl-`
+  `-iperf3` on nodes). Scripts and commands start with `confettictl-`
   (`confettictl-update`, `confettictl-status`, `confettictl-trust-hub`).
   Everything else uses `confetti`: `/opt/confetti-hub`, `/etc/confetti`,
   `guestinfo.confetti.*`.
