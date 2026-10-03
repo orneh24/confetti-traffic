@@ -108,10 +108,45 @@ fi
 case "$RUNNOW" in
     [yY]*)
         log "Running $BUILD_SCRIPT ..."
-        exec sh "$BUILD_SCRIPT"
+        sh "$BUILD_SCRIPT"
         ;;
     *)
         log "Not run. When ready:"
         log "  sh $BUILD_SCRIPT"
+        exit 0
         ;;
 esac
+
+# -------------------------------------------------------------------
+# Offer to configure this VM in place, so a single VM goes from base
+# Alpine to working in one run instead of needing a log out and back in.
+# Runs the same wizard the login prompt would, so nothing new happens here.
+# Only with a real keyboard: a scripted run leaves it to the login prompt
+# or guestinfo, as before.
+#
+# Hub: run its wizard straight away. Its own first question ("Configure a
+# static IP now? [Y/n]") is the offer, so asking here too would ask twice.
+# Node: ask first, default no. Nodes are usually cloned from this VM as a
+# template, and configuring it would undo the build's template cleanup;
+# the node wizard's own question defaults to yes, so it can't be the offer.
+# -------------------------------------------------------------------
+if [ -t 0 ]; then
+    if [ "$ROLE" = "hub" ]; then
+        SETUP_CMD="/opt/confetti-hub/confettictl-hub-setup.sh"
+        CONFIGURE="y"
+    else
+        SETUP_CMD="/usr/local/bin/confetti/confettictl-node-setup.sh"
+        echo
+        printf 'Configure this node now? Say no if you will turn it into a template. [y/N] '
+        if ! read -r CONFIGURE; then
+            CONFIGURE="n"
+        fi
+    fi
+    if [ -f "$SETUP_CMD" ]; then
+        echo
+        case "$CONFIGURE" in
+            [yY]*) sh "$SETUP_CMD" || log "Setup did not finish. Log out and back in to try again." ;;
+            *)     log "Not configured. Log in again (or run $SETUP_CMD) when ready." ;;
+        esac
+    fi
+fi

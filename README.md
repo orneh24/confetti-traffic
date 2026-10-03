@@ -1,6 +1,6 @@
 # Confetti Traffic
 
-> **AI disclaimer:** This project was created using [Claude Code](https://claude.com/claude-code).
+> **AI disclaimer:** This project was created using [Claude Code](https://claude.com/claude-code) for training/labbing purposes - use freely, but at own risk :-)
 
 End-to-end connectivity testing between nodes on a network. It goes beyond
 ICMP: it makes real TCP connections (HTTP, SSH, SMB, SMTP, iperf3) and
@@ -55,21 +55,20 @@ by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
 
 1. **Base VM.** Install Alpine on a new VM (`setup-alpine`). Put it on a
    segment that every node subnet and your workstation can reach.
-2. **Run the installer** as root. It downloads the repo and starts
-   `confettictl-install.sh`, which asks whether the VM becomes a hub or a node. Pick
-   *hub*:
+2. **Run the installer** as root. It downloads the repo to `/root/confetti`
+   and starts `confettictl-install.sh`, which asks whether the VM becomes a hub
+   or a node. Pick *hub*:
 
    ```sh
-   wget -O- https://github.com/orneh24/confetti-traffic/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/confetti-traffic-main /root/confetti && sh /root/confetti/confettictl-install.sh
+   wget -O /tmp/oi.sh https://github.com/orneh24/confetti-traffic/raw/main/online-install.sh && sh /tmp/oi.sh
    ```
 
-3. **Configure the network.** Log out and back in. Login script will prompt for config
+   Add `hub` or `node` at the end to skip the question. Save the script and
+   run it as shown; don't pipe it into `sh`, or it can't ask its questions.
 
-   ```sh
-   confettictl-set-static-ip <hub-ip>/<cidr> <gateway> [dns] [hostname]
-   rc-service networking restart
-   rc-service confettid-hub start
-   ```
+3. **Configure the network.** When the build finishes, the installer asks for
+   the hub's static IP, gateway, and optional DNS server and hostname, then
+   starts the hub. If you skip it, it asks again at your next login.
 
    Or set `guestinfo.hub.ip`, `guestinfo.hub.gateway` (and optionally
    `guestinfo.hub.dns`, `guestinfo.hub.hostname`) on the VM in vCenter
@@ -115,10 +114,10 @@ re-running a build wipes its config or the hub's database. Pass `hub` or
 `node` to skip the menu, and `-y` to skip the confirmation.
 
 **Single VM, no cloning.** Run the installer on a fresh Alpine VM, then
-finish in place: for a hub, step 3 above; for a node, log out and back in and
-answer the `confettictl-node-setup.sh` prompt (or run `/usr/local/bin/confetti/confettictl-setup.sh`).
-Ignore the node build's "convert to template" message. Fresh VM only: an
-existing `/root/confetti` makes the `mv` put the new copy inside it.
+answer *yes* when it asks to configure the VM now (for a node the default is
+*no*, since nodes are usually cloned first). Said no? Log out and back in and
+answer the setup prompt, or run `confettictl-hub-setup.sh` / `confettictl-node-setup.sh`.
+Ignore the node build's "convert to template" message.
 
 ### Updating
 

@@ -92,8 +92,11 @@ Now clone the VM twice (hub and node template).
 On each clone, run as root:
 
 ```sh
-wget -O- https://github.com/orneh24/confetti-traffic/archive/refs/heads/main.tar.gz | tar -xz -C /root && mv /root/confetti-traffic-main /root/confetti && sh /root/confetti/confettictl-install.sh
+wget -O /tmp/oi.sh https://github.com/orneh24/confetti-traffic/raw/main/online-install.sh && sh /tmp/oi.sh
 ```
+
+`online-install.sh` downloads the repo to `/root/confetti` and runs
+`confettictl-install.sh` from it.
 
 Pick **hub** on one clone and **node** on the other. The build enables the
 community repository, installs packages, installs the services and cleans
@@ -107,7 +110,7 @@ are wrong.
 
 ### 4.1 Hub
 
-Log out and back in. `confettictl-hub-setup.sh` asks for the static IP and gateway, plus
+When the build finishes, `confettictl-install.sh` runs `confettictl-hub-setup.sh` (or log out and back in if you skipped it). It asks for the static IP and gateway, plus
 an optional DNS server and hostname. Then it restarts networking and starts
 the hub. Type the IP with its prefix (e.g. `10.0.0.100/24`); the gateway
 then defaults to the subnet's first address (`10.0.0.1`), and you can type
