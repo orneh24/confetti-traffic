@@ -1,6 +1,6 @@
 ---
 name: regression-tester
-description: Confetti Traffic regression gate. Invoke before handing a code change to the user — anything under node/, hub/, the build scripts, confettictl-install.sh or confettictl-update.sh (doc-only changes need drift-checker instead). Runs dev/regress.py, which checks every numbered constraint in CLAUDE.md plus the R21-and-later checks that have no constraint number (R30-live covers mesh rules), the wire contract and a live hub + node round trip, then investigates only what failed. Reports pass / fail / not-run and blocks the handover on any fail.
+description: Confetti Traffic regression gate. Invoke before handing a code change to the user — anything under node/, hub/, the build scripts, confettictl-install.sh or confettictl-update.sh (doc-only changes need drift-checker instead). Runs dev/regress.py, which checks every numbered constraint in CLAUDE.md plus the R21-and-later checks that have no constraint number (R30-live covers mesh rules, R31 keeps the three hub pages' shared blocks in step), the wire contract and a live hub + node round trip, then investigates only what failed. Reports pass / fail / not-run and blocks the handover on any fail.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---

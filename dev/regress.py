@@ -575,6 +575,71 @@ def _():
     return p
 
 
+@check("R31", "shared blocks match across dashboard, syslog and timeline pages")
+def _():
+    # CLAUDE.md: themes, the theme picker, confettiBlast, the header confetti
+    # and the footer buttons live inline in all three pages, so a change made
+    # in one page only is easy to miss. Page-specific CSS (variable sets,
+    # Neon box selectors) is deliberately not compared.
+    p = []
+    pages = ["hub/templates/%s.html" % n for n in ("dashboard", "syslog", "timeline")]
+    base = pages[0]
+
+    # 1. The head <script> (themes list, picker, shuffle, confettiBlast).
+    #    Comment wording may differ; code may not.
+    def head_script(f):
+        m = re.search(r"<head>.*?<script>\n(.*?)</script>", read(f), re.S)
+        return [l.rstrip() for l in (m.group(1) if m else "").splitlines()
+                if l.strip() and not l.lstrip().startswith("//")]
+    ref = head_script(base)
+    need(ref, "%s: no head <script> found" % base, p)
+    for f in pages[1:]:
+        cur = head_script(f)
+        if cur != ref:
+            n = next((i for i, (a, b) in enumerate(zip(ref, cur)) if a != b), min(len(ref), len(cur)))
+            p.append("%s: head <script> differs from %s (first at code line %d)" % (f, base, n + 1))
+
+    # 2. Every theme has a block in every page, with the same core colours.
+    #    --gray is excluded on purpose: a fill on the dashboard, a text grey
+    #    on the other two.
+    core = ("--bg", "--bg-card", "--bg-hover", "--border", "--text", "--text-dim",
+            "--yellow", "--red", "--green", "--blue", "--cyan",
+            "--green-bg", "--red-bg", "--yellow-bg")
+    def theme_blocks(f):
+        out = {}
+        for m in re.finditer(r'^:root(?:\[data-theme="([\w-]+)"\])? \{\n(.*?)^\}', read(f), re.M | re.S):
+            out.setdefault(m.group(1) or "dark", dict(re.findall(r"(--[\w-]+):\s*([^;]+);", m.group(2))))
+        return out
+    blocks = {f: theme_blocks(f) for f in pages}
+    names = ["dark"] + re.findall(r"\['([\w-]+)', '", read(base).split("var THEMES", 1)[-1].split("];", 1)[0])
+    for name in dict.fromkeys(names):
+        for f in pages:
+            need(name in blocks[f], "%s: no :root block for theme '%s'" % (f, name), p)
+        for v in core:
+            vals = {f: blocks[f].get(name, {}).get(v) for f in pages}
+            if len(set(vals.values())) > 1:
+                p.append("theme '%s' %s differs: %s" % (name, v, ", ".join(
+                    "%s=%s" % (f.rsplit("/", 1)[-1], vals[f]) for f in pages)))
+
+    # 3. The header confetti mask: one shared rule (selector is .header on
+    #    the dashboard, header on the others).
+    def confetti_rule(f):
+        m = re.search(r'^:root:not\(\[data-theme="neon"\]\) \.?header::before \{\n(.*?)^\}', read(f), re.M | re.S)
+        return m.group(1) if m else None
+    ref = confetti_rule(base)
+    need(ref, "%s: header confetti rule not found" % base, p)
+    for f in pages[1:]:
+        need(confetti_rule(f) == ref, "%s: header confetti rule differs from %s" % (f, base), p)
+
+    # 4. The footer buttons.
+    for f in pages:
+        m = re.search(r'<div class="page-footer">(.*?)</div>', read(f), re.S)
+        foot = m.group(1) if m else ""
+        need("https://isitdns.com/" in foot, "%s: footer has no 'Is it DNS..?' link" % f, p)
+        need("confettiBlast(this)" in foot, "%s: footer has no Confetti! button" % f, p)
+    return p
+
+
 # ============================================================ Tier 2 static
 
 @check("T2-sh", "sh -n on every shell script and initd")
