@@ -517,6 +517,8 @@ VM becomes a hub or a node and runs the matching `confettictl-build-template.sh`
 ```
 confettictl-install.sh             — repo-root entry point: asks hub or node, runs the
                           matching confettictl-build-template.sh
+online-install.sh       — downloads the GitHub tarball to /root/confetti and runs
+                          confettictl-install.sh; the documented one-line start
 confettictl-update.sh              — updates an installed hub (from GitHub) or node (from
                           its hub); installed as /usr/local/bin/confettictl-update
 hub/
@@ -533,6 +535,8 @@ hub/
                         editing all three pages. Each page also has one shared header-confetti rule (an SVG
                         mask over stripes of the theme's --yellow/--red/--green/--blue/--cyan), so every
                         theme but Neon (its own streaks) gets confetti in its palette with no per-theme CSS.
+                        Each page's footer has "Is it DNS..?" and a "Confetti!" button that calls confettiBlast(),
+                        a canvas overlay in the same five colours; its block is identical in all three pages.
                         syslog.html and timeline.html use the smaller
                         variable set (--row-line, and --gray is a text grey there, not a fill).
   static/

@@ -88,6 +88,74 @@ function syncThemeSelect() {
     }
     sel.value = shuffling ? 'shuffle' : currentTheme();
 }
+// "Confetti!" button: a burst from the button, then rain from the top, in the
+// current theme's colours. Plain canvas, no library (the hub may be offline).
+// Each click gets its own overlay canvas, removed when the last piece falls off.
+function confettiBlast(btn) {
+    var css = getComputedStyle(document.documentElement);
+    var colors = ['--yellow', '--red', '--green', '--blue', '--cyan']
+        .map(function (v) { return css.getPropertyValue(v).trim(); })
+        .filter(Boolean);
+    if (!colors.length) colors = ['#d29922', '#f85149', '#3fb950', '#58a6ff', '#39c5cf'];
+    var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var dpr = window.devicePixelRatio || 1;
+    var W = window.innerWidth, H = window.innerHeight;
+    var cv = document.createElement('canvas');
+    cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+    cv.width = W * dpr;
+    cv.height = H * dpr;
+    document.body.appendChild(cv);
+    var ctx = cv.getContext('2d');
+    ctx.scale(dpr, dpr);
+    var bits = [];
+    function add(x, y, vx, vy) {
+        bits.push({ x: x, y: y, vx: vx, vy: vy,
+            w: 6 + Math.random() * 6, h: 3 + Math.random() * 5,
+            rot: Math.random() * 6.28, spin: (Math.random() - 0.5) * 0.3,
+            sway: Math.random() * 6.28,
+            color: colors[Math.floor(Math.random() * colors.length)] });
+    }
+    if (!calm && btn) {
+        var r = btn.getBoundingClientRect();
+        var bx = r.left + r.width / 2, by = r.top + r.height / 2;
+        for (var i = 0; i < 600; i++) {
+            var a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.2;
+            var s = 8 + Math.random() * 14;
+            add(bx, by, Math.cos(a) * s, Math.sin(a) * s);
+        }
+    }
+    var rainTotal = calm ? 320 : 1000, rainLeft = rainTotal;
+    var start = performance.now(), last = start;
+    function frame(now) {
+        var t = now - start, dt = Math.min(2, (now - last) / 16.7);
+        // Rain is spread over the first 2 s: this frame's share of the total.
+        var due = Math.max(1, Math.round(rainTotal * (now - last) / 2000));
+        last = now;
+        for (; due > 0 && rainLeft > 0; due--, rainLeft--) {
+            add(Math.random() * W, -20 - Math.random() * 40, (Math.random() - 0.5) * 2, 2 + Math.random() * 3);
+        }
+        ctx.clearRect(0, 0, W, H);
+        bits = bits.filter(function (b) {
+            b.vy += 0.25 * dt;
+            b.vx *= Math.pow(0.98, dt);
+            b.vy *= Math.pow(0.98, dt);
+            b.sway += 0.1 * dt;
+            b.x += (b.vx + Math.sin(b.sway)) * dt;
+            b.y += b.vy * dt;
+            b.rot += b.spin * dt;
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            ctx.rotate(b.rot);
+            ctx.fillStyle = b.color;
+            ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h * Math.abs(Math.cos(b.sway)));
+            ctx.restore();
+            return b.y < H + 30;
+        });
+        if ((bits.length || rainLeft > 0) && t < 7000) requestAnimationFrame(frame);
+        else cv.remove();
+    }
+    requestAnimationFrame(frame);
+}
 </script>
 <style>
 :root {
@@ -101,8 +169,8 @@ function syncThemeSelect() {
     --border-soft: #21262d;
     --badge-bg:  #1a2332;
     --badge-border: #253040;
-    --text:      #c9d1d9;
-    --text-dim:  #8b949e;
+    --text:      #f0f6fc;
+    --text-dim:  #bcc5cf;
     --green:     #3fb950;
     --green-bg:  #0f2d1a;
     --red:       #f85149;
@@ -306,30 +374,30 @@ function syncThemeSelect() {
 }
 /* Neon Streamers — near-black with neon accents; glowing streaks in the header */
 :root[data-theme="neon"] {
-    --bg:        #07060c;
-    --bg-card:   #110e1c;
-    --bg-hover:  #1a1530;
-    --bg-muted:  #1c1730;
-    --bg-code:   #040308;
-    --stripe:    #0c0a15;
-    --border:    #2a2342;
-    --border-soft: #1c1730;
-    --badge-bg:  #1d1236;
-    --badge-border: #4a3d73;
-    --text:      #f4f1ff;
-    --text-dim:  #a59fc4;
-    --green:     #39ff88;
+    --bg:        #050608;
+    --bg-card:   #0d1014;
+    --bg-hover:  #151a20;
+    --bg-muted:  #161b22;
+    --bg-code:   #030405;
+    --stripe:    #0a0c10;
+    --border:    #263040;
+    --border-soft: #161b22;
+    --badge-bg:  #0f1e2a;
+    --badge-border: #1f6f8a;
+    --text:      #ffffff;
+    --text-dim:  #c4d0dc;
+    --green:     #39ff14;
     --green-bg:  #0b2a18;
-    --red:       #ff3864;
+    --red:       #ff2052;
     --red-bg:    #3a0d1c;
-    --yellow:    #ffe600;
+    --yellow:    #fff200;
     --yellow-bg: #2e2a05;
-    --gray:      #3a3160;
-    --blue:      #00e5ff;
-    --cyan:      #ff4ecd;
+    --gray:      #2e3a48;
+    --blue:      #00f0ff;
+    --cyan:      #ff2d95;
 }
-/* The neon fills are too bright for white letters. */
-:root[data-theme="neon"] .indicator { color: #0b0814; text-shadow: none; }
+/* Neon boxes use deep status fills, so the letters are white. */
+:root[data-theme="neon"] .indicator { color: #ffffff; text-shadow: none; }
 /* Header confetti, every theme but Neon (which has its own streaks). The
    shapes are a mask; their colours are stripes of the theme's own variables,
    so each theme gets confetti in its palette and a new theme needs nothing
@@ -356,16 +424,47 @@ function syncThemeSelect() {
 /* Neon header: glowing streaks instead of confetti, as background layers
    only. Odd tile sizes keep the repeat from lining up. */
 :root[data-theme="neon"] .header {
-    border-bottom-color: #ff4ecd;
+    border-bottom-color: #ff2d95;
     background-image:
-        radial-gradient(1.5px 7px, #ff4ecd 0 60%, transparent 100%),
-        radial-gradient(1.5px 8px, #39ff88 0 60%, transparent 100%),
-        radial-gradient(1.5px 6px, #00e5ff 0 60%, transparent 100%),
-        radial-gradient(1.5px 7px, #ffe600 0 60%, transparent 100%),
-        radial-gradient(1.5px 8px, #a259ff 0 60%, transparent 100%);
+        radial-gradient(1.5px 7px, #ff8c00 0 60%, transparent 100%),
+        radial-gradient(1.5px 8px, #39ff14 0 60%, transparent 100%),
+        radial-gradient(1.5px 6px, #00f0ff 0 60%, transparent 100%),
+        radial-gradient(1.5px 7px, #fff200 0 60%, transparent 100%),
+        radial-gradient(1.5px 8px, #ff2d95 0 60%, transparent 100%);
     background-size: 103px 43px, 139px 57px, 167px 39px, 119px 51px, 157px 47px;
     background-position: 13px 9px, 53px 21px, 91px 5px, 29px 27px, 71px 15px;
 }
+/* Neon boxes: each box a bright colour, cycling five. Inside a box the palette
+   flips to dark text and deep status colours, and the fills become tints, so
+   everything still reads against the bright background. */
+:root[data-theme="neon"] .section {
+    --text:      #000000;
+    --text-dim:  #1f1f1f;
+    --bg:        rgba(255,255,255,.35);
+    --bg-hover:  rgba(0,0,0,.10);
+    --bg-muted:  rgba(0,0,0,.14);
+    --bg-code:   rgba(0,0,0,.12);
+    --stripe:    rgba(0,0,0,.05);
+    --border:    rgba(0,0,0,.45);
+    --border-soft: rgba(0,0,0,.20);
+    --row-line:  rgba(0,0,0,.20);
+    --badge-bg:  rgba(255,255,255,.45);
+    --badge-border: rgba(0,0,0,.45);
+    --green:     #00661a;
+    --green-bg:  rgba(0,102,26,.15);
+    --red:       #a50018;
+    --red-bg:    rgba(165,0,24,.15);
+    --yellow:    #6b4f00;
+    --yellow-bg: rgba(107,79,0,.15);
+    --blue:      #003f9e;
+    --cyan:      #004e5a;
+    --gray:      rgba(0,0,0,.30);
+    --bg-card:   #ff9f1c;
+}
+:root[data-theme="neon"] .section:nth-child(5n+2) { --bg-card: #00e5ff; }
+:root[data-theme="neon"] .section:nth-child(5n+3) { --bg-card: #b6ff00; }
+:root[data-theme="neon"] .section:nth-child(5n+4) { --bg-card: #ff7ac8; }
+:root[data-theme="neon"] .section:nth-child(5n+5) { --bg-card: #ffe600; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
     font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace;
@@ -426,11 +525,11 @@ a:hover { text-decoration: underline; }
 .section {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 0;
     overflow: hidden;
 }
 .section-header {
-    padding: 10px 16px;
+    padding: 6px 10px;
     border-bottom: 1px solid var(--border);
     font-size: 12px;
     font-weight: 600;
@@ -442,7 +541,7 @@ a:hover { text-decoration: underline; }
     justify-content: space-between;
 }
 .section-body {
-    padding: 12px 16px;
+    padding: 8px 10px;
     overflow: auto;
 }
 .section.collapsed .section-body { display: none; }
@@ -469,7 +568,7 @@ a:hover { text-decoration: underline; }
 .filter-row label { color: var(--text-dim); }
 .filter-row select, .filter-row input {
     background: var(--bg); color: var(--text); border: 1px solid var(--border);
-    border-radius: 3px; padding: 2px 4px; font: inherit; font-size: 11px;
+    border-radius: 0; padding: 2px 4px; font: inherit; font-size: 11px;
 }
 .filter-row input[type=text] { min-width: 180px; }
 .page-footer .btn-small { display: inline-block; }
@@ -491,7 +590,7 @@ a:hover { text-decoration: underline; }
     font-family: inherit;
     font-size: 10px;
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: 0;
     cursor: pointer;
 }
 .btn-small:hover { color: var(--text); border-color: var(--blue); }
@@ -505,7 +604,7 @@ a:hover { text-decoration: underline; }
     font-weight: 600;
     line-height: 18px;
     padding: 4px 12px;
-    border-radius: 4px;
+    border-radius: 0;
     text-decoration: none;
 }
 .btn-nav:hover { background: var(--cyan); color: var(--bg); text-decoration: none; }
@@ -524,7 +623,7 @@ a:hover { text-decoration: underline; }
     font-weight: 600;
     line-height: 18px;
     padding: 4px 12px;
-    border-radius: 4px;
+    border-radius: 0;
     cursor: default;
 }
 
@@ -532,13 +631,12 @@ a:hover { text-decoration: underline; }
     color: var(--text-dim);
     font-size: 11px;
     line-height: 1.6;
-    padding: 10px 2px;
-    max-width: 60ch;
+    padding: 4px 2px;
 }
 .empty-hint code {
     background: var(--bg-hover);
     padding: 1px 4px;
-    border-radius: 3px;
+    border-radius: 0;
     color: var(--cyan);
 }
 
@@ -567,25 +665,26 @@ a:hover { text-decoration: underline; }
 .matrix th .ip {
     font-weight: 400;
     font-size: 10px;
+    font-style: italic;
     color: var(--text-dim);
-    opacity: 0.7;
-    margin-left: 4px;
+    margin-left: 14px;
 }
 .matrix thead th .ip {
     display: block;
     margin-left: 0;
+    margin-top: 4px;
 }
 .matrix thead th {
     top: 0;
-    text-align: center;
+    text-align: left;
 }
 .matrix tbody th {
     left: 0;
-    text-align: right;
+    text-align: left;
     border-right: 1px solid var(--border);
 }
 .matrix td {
-    text-align: center;
+    text-align: left;
     padding: 6px 8px;
     cursor: pointer;
     border-bottom: 1px solid var(--border);
@@ -608,7 +707,7 @@ a:hover { text-decoration: underline; }
     cursor: default;
     background: var(--bg-muted);
     color: var(--text-dim);
-    text-align: center;
+    text-align: left;
 }
 .matrix td.excluded:hover { background: var(--bg-muted); outline: none; }
 .rule-list { list-style: none; margin: 0 0 8px; padding: 0; }
@@ -617,13 +716,13 @@ a:hover { text-decoration: underline; }
 .cell-indicators {
     display: flex;
     gap: 3px;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
 }
 .indicator {
     width: 18px;
     height: 18px;
-    border-radius: 3px;
+    border-radius: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -654,10 +753,8 @@ a:hover { text-decoration: underline; }
 .dim { color: var(--gray); font-size: 10px; }
 .dns-out {
     color: var(--text-dim);
-    max-width: 42ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
 }
 
 /* Sidebar */
@@ -720,7 +817,7 @@ a:hover { text-decoration: underline; }
     display: inline-block;
     background: var(--badge-bg);
     border: 1px solid var(--badge-border);
-    border-radius: 3px;
+    border-radius: 0;
     padding: 1px 6px;
     font-size: 10px;
     color: var(--blue);
@@ -794,7 +891,7 @@ a:hover { text-decoration: underline; }
 .detail-test-card {
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: 0;
     overflow: hidden;
 }
 .detail-test-header {
@@ -816,7 +913,7 @@ a:hover { text-decoration: underline; }
     font-size: 11px;
     font-weight: 600;
     padding: 2px 8px;
-    border-radius: 3px;
+    border-radius: 0;
 }
 .detail-test-status.pass { background: var(--green-bg); color: var(--green); }
 .detail-test-status.fail { background: var(--red-bg); color: var(--red); }
@@ -856,7 +953,7 @@ a:hover { text-decoration: underline; }
     gap: 5px;
     font-size: 11px;
     padding: 3px 8px;
-    border-radius: 4px;
+    border-radius: 0;
     background: var(--bg);
     border: 1px solid var(--border);
 }
@@ -890,7 +987,7 @@ a:hover { text-decoration: underline; }
 .health-bar-track {
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 3px;
+    border-radius: 0;
     height: 6px;
     width: 100%;
     margin-top: 4px;
@@ -918,7 +1015,7 @@ a:hover { text-decoration: underline; }
 }
 .legend-dot {
     width: 10px; height: 10px;
-    border-radius: 2px;
+    border-radius: 0;
 }
 </style>
 </head>
@@ -1186,6 +1283,7 @@ a:hover { text-decoration: underline; }
 
         <div class="page-footer">
             <a class="btn-small" href="https://isitdns.com/" target="_blank" rel="noopener noreferrer">Is it DNS..?</a>
+            <button class="btn-small" type="button" onclick="confettiBlast(this)">Confetti!</button>
         </div>
     </div>
 
@@ -2203,7 +2301,7 @@ a:hover { text-decoration: underline; }
                     var histCount = Math.min(items.length, 20);
                     for (var h = 0; h < histCount; h++) {
                         var hc = items[h].success ? "var(--green)" : "var(--red)";
-                        html += "<span style='display:inline-block;width:8px;height:8px;border-radius:1px;background:" + hc +
+                        html += "<span style='display:inline-block;width:8px;height:8px;border-radius: 0;background:" + hc +
                                 ";margin:0 1px' title='" + esc(formatWhen(items[h].received_at || items[h].timestamp)) + "'></span>";
                     }
                 }
