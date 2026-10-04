@@ -343,7 +343,7 @@ throughput when you ask. It isn't part of the minute-by-minute tests.
   Mbit/s for each direction. Hover over a failed run to see why it failed.
 
 **Mesh rules.** By default every node tests every other node. The
-dashboard's **Mesh Rules** panel excludes pairs of groups: type or pick two
+**Mesh Rules** part of the dashboard's Mesh Settings panel excludes pairs of groups: type or pick two
 groups and press add. Nodes in those groups stop testing each other, both
 ways and for every test, from their next cycle (about a minute). The same
 group twice stops nodes in one group testing each other. An excluded pair
@@ -351,7 +351,7 @@ shows as a muted dot in the matrix and isn't counted as passing or failing.
 Static targets are not affected. Remove the rule to go back to full mesh.
 
 **Colour themes.** The menu at the right of each page's header picks one of
-ten themes: Dark, Light, Nord, Dracula, Solarized Dark, Monokai, High
+nine themes: Dark, Light, Nord, Dracula, Monokai (military green), High
 Contrast, Terminal green, Confetti Night and Neon Streamers. **Shuffle**
 changes to a different theme every 5–10 minutes. The choice is saved in your
 browser and shared by all three pages. Every theme has confetti in its

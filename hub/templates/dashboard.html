@@ -15,7 +15,6 @@ var THEMES = [
     ['light', 'Light'],
     ['nord', 'Nord'],
     ['dracula', 'Dracula'],
-    ['solarized', 'Solarized Dark'],
     ['monokai', 'Monokai'],
     ['contrast', 'High Contrast'],
     ['terminal', 'Terminal green'],
@@ -252,51 +251,27 @@ function confettiBlast(btn) {
     --blue:      #bd93f9;
     --cyan:      #8be9fd;
 }
-/* Solarized Dark */
-:root[data-theme="solarized"] {
-    --bg:        #002b36;
-    --bg-card:   #073642;
-    --bg-hover:  #0b404e;
-    --bg-muted:  #0b404e;
-    --bg-code:   #00212b;
-    --stripe:    #04303c;
-    --border:    #27505b;
-    --border-soft: #0b404e;
-    --badge-bg:  #0a3a52;
-    --badge-border: #1f5f7a;
-    --text:      #eee8d5;
-    --text-dim:  #93a1a1;
-    --green:     #859900;
-    --green-bg:  #1f3a1c;
-    --red:       #dc322f;
-    --red-bg:    #3b2227;
-    --yellow:    #b58900;
-    --yellow-bg: #33341a;
-    --gray:      #586e75;
-    --blue:      #268bd2;
-    --cyan:      #2aa198;
-}
-/* Monokai */
+/* Monokai -- military green: olive drab backgrounds, Monokai accents */
 :root[data-theme="monokai"] {
-    --bg:        #272822;
-    --bg-card:   #2e2f28;
-    --bg-hover:  #3a3b32;
-    --bg-muted:  #3a3b32;
-    --bg-code:   #1e1f1a;
-    --stripe:    #2b2c25;
-    --border:    #49483e;
-    --border-soft: #3a3b32;
-    --badge-bg:  #2c3a3e;
-    --badge-border: #46666e;
+    --bg:        #22261a;
+    --bg-card:   #2b3021;
+    --bg-hover:  #363d29;
+    --bg-muted:  #363d29;
+    --bg-code:   #1a1d14;
+    --stripe:    #272c1d;
+    --border:    #4b5337;
+    --border-soft: #363d29;
+    --badge-bg:  #2f3a22;
+    --badge-border: #5b6b3a;
     --text:      #f8f8f2;
-    --text-dim:  #b3b19f;
+    --text-dim:  #bcc0a2;
     --green:     #a6e22e;
     --green-bg:  #33401c;
     --red:       #f92672;
     --red-bg:    #4a1f33;
     --yellow:    #e6db74;
     --yellow-bg: #44402a;
-    --gray:      #75715e;
+    --gray:      #5e664a;
     --blue:      #66d9ef;
     --cyan:      #66d9ef;
 }
@@ -516,7 +491,7 @@ a:hover { text-decoration: underline; }
 }
 .container {
     display: grid;
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 1fr 440px;
     grid-template-rows: auto 1fr;
     gap: 16px;
     padding: 16px 24px;
@@ -527,6 +502,15 @@ a:hover { text-decoration: underline; }
     border: 1px solid var(--border);
     border-radius: 0;
     overflow: hidden;
+}
+/* Zebra boxes: every other box a shade lighter (darker in Light), mixed
+   from each theme's own card and text colours so no theme needs its own
+   value. Set as --bg-card, so sticky table headers inside match the box.
+   Neon colours its boxes itself. */
+:root { --bg-card-alt: color-mix(in srgb, var(--bg-card), var(--text) 6%); }
+:root:not([data-theme="neon"]) .main-col > .section:nth-child(even),
+:root:not([data-theme="neon"]) .sidebar > .section:nth-child(even) {
+    --bg-card: var(--bg-card-alt);
 }
 .section-header {
     padding: 6px 10px;
@@ -546,6 +530,34 @@ a:hover { text-decoration: underline; }
 }
 .section.collapsed .section-body { display: none; }
 .section.collapsed .section-header { border-bottom: none; }
+/* A box with nothing to show says so in its title (set by setHeaderNote()). */
+.hdr-note {
+    margin-left: 10px;
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.hdr-note:empty { display: none; }
+.hdr-note code {
+    background: var(--bg-hover);
+    padding: 1px 4px;
+    border-radius: 0;
+}
+/* A titled part inside a box (Mesh Rules within Mesh Settings). */
+.sub-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+}
 
 /* Main column: mesh matrix, static targets, DNS.
    Sections size to their content rather than one panel stretching to fill
@@ -767,13 +779,17 @@ a:hover { text-decoration: underline; }
     min-height: 0;
     max-height: calc(100vh - 84px);
 }
+/* Grows to fit every endpoint; only past half the sidebar does the list
+   scroll, so Test Detail below always keeps room. */
 .endpoints-section {
-    flex: 0 0 auto;
-    max-height: 35%;
+    flex: 0 1 auto;
+    max-height: 50%;
+    display: flex;
+    flex-direction: column;
 }
 .endpoints-section .section-body {
     overflow: auto;
-    max-height: 200px;
+    min-height: 0;
 }
 .detail-section {
     flex: 1;
@@ -844,7 +860,7 @@ a:hover { text-decoration: underline; }
 .ep-table .btn-push:hover { opacity: 1; }
 .ep-table .btn-push:disabled { color: var(--text-dim); opacity: 0.3; cursor: default; }
 .ep-table .ep-build { font-size: 10px; color: var(--text-dim); }
-/* The sidebar is a fixed ~380px; with the update button and ct-<group>-<id>
+/* The sidebar is a fixed ~440px; with the update button and ct-<group>-<id>
    names the endpoints table needs tighter cells to fit without scrolling. */
 #ep-table th, #ep-table td { padding-left: 5px; padding-right: 5px; }
 #ep-table td:last-child { padding-left: 0; padding-right: 2px; }
@@ -1076,7 +1092,7 @@ a:hover { text-decoration: underline; }
              produces nothing here on purpose. -->
         <div class="section" id="changes-section">
             <div class="section-header">
-                <span>Recent Changes</span>
+                <span>Recent Changes<span class="hdr-note" id="changes-note"></span></span>
                 <span class="hdr-actions"><button type="button" class="btn-small collapse-toggle" data-section="changes-section">Collapse</button></span>
             </div>
             <div class="section-body">
@@ -1093,7 +1109,7 @@ a:hover { text-decoration: underline; }
              still capped at 10 rows, so "View all" is where to read more. -->
         <div class="section" id="syslog-preview-section">
             <div class="section-header">
-                <span>Recent Syslog</span>
+                <span>Recent Syslog<span class="hdr-note" id="syslog-preview-note"></span></span>
                 <span class="hdr-actions">
                     <a href="/syslog" id="sp-viewall" class="btn-small">View all &rarr;</a>
                     <button type="button" class="btn-small collapse-toggle" data-section="syslog-preview-section">Collapse</button>
@@ -1135,7 +1151,7 @@ a:hover { text-decoration: underline; }
              collected and stored but had nowhere to render. -->
         <div class="section" id="targets-section">
             <div class="section-header">
-                <span>Static Targets</span>
+                <span>Static Targets<span class="hdr-note" id="targets-note"></span></span>
                 <span class="hdr-actions">
                     <button class="btn-small" id="btn-add-target">+ add</button>
                 </span>
@@ -1157,7 +1173,7 @@ a:hover { text-decoration: underline; }
              source->target pair, so it cannot light up in a grid. It lives
              here instead of occupying a permanently grey matrix column. -->
         <div class="section" id="dns-section">
-            <div class="section-header"><span>DNS Resolution</span></div>
+            <div class="section-header"><span>DNS Resolution<span class="hdr-note" id="dns-note"></span></span></div>
             <div class="section-body">
                 <table class="ep-table" id="dns-table">
                     <thead><tr><th>Source</th><th>Resolver</th><th>Result</th><th>Status</th></tr></thead>
@@ -1193,18 +1209,13 @@ a:hover { text-decoration: underline; }
                     stops the matching server itself. A node with
                     <code>HUB_SETTINGS=false</code> in its config ignores these.
                 </div>
-            </div>
-        </div>
-
-        <!-- Group pairs excluded from the full mesh (/mesh-rules). Nodes get
-             their peer list from GET /endpoints?for=<self>, which leaves
-             excluded groups out; no rules means full mesh. -->
-        <div class="section" id="rules-section">
-            <div class="section-header">
-                <span>Mesh Rules</span>
-                <span id="rules-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
-            </div>
-            <div class="section-body">
+                <!-- Group pairs excluded from the full mesh (/mesh-rules). Nodes get
+                     their peer list from GET /endpoints?for=<self>, which leaves
+                     excluded groups out; no rules means full mesh. -->
+                <div class="sub-header">
+                    <span>Mesh Rules</span>
+                    <span id="rules-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
+                </div>
                 <ul class="rule-list" id="rule-list"></ul>
                 <div class="filter-row">
                     <label for="rule-a">Exclude</label>
@@ -1756,6 +1767,20 @@ a:hover { text-decoration: underline; }
             : "<span style='color:var(--green)'>PASS</span> &rarr; <span style='color:var(--red)'>FAIL</span>");
     }
 
+    // An empty box says so in its title and folds its body away, so the
+    // page leads with what has something to show. html is trusted markup
+    // from this page's own hint text, never data from the hub.
+    function setHeaderNote(sectionId, noteId, html) {
+        document.getElementById(noteId).innerHTML = html ? "&mdash; " + html : "";
+        document.getElementById(sectionId).classList.toggle("collapsed", !!html);
+    }
+
+    // Recent Changes folds itself only when it goes from having entries to
+    // none (or starts empty), so a viewer who expands it by hand isn't
+    // overruled on every refresh. With entries again it returns to the
+    // viewer's own Collapse/Expand choice.
+    var changesWasEmpty = null;
+
     function renderRecentChanges() {
         var changes = computeRecentChanges(changeHistoryResults, changeHistoryPathChanges);
         var tbody = document.querySelector("#changes-table tbody");
@@ -1776,6 +1801,13 @@ a:hover { text-decoration: underline; }
         }
         tbody.innerHTML = html;
         document.getElementById("changes-empty").style.display = changes.length ? "none" : "";
+        var none = !changes.length;
+        document.getElementById("changes-note").innerHTML = none ? "&mdash; no recent changes" : "";
+        if (none !== changesWasEmpty) {
+            changesWasEmpty = none;
+            var toggle = document.querySelector(".collapse-toggle[data-section='changes-section']");
+            setCollapsed(toggle, none || readCollapsed().indexOf("changes-section") !== -1);
+        }
         var rows = tbody.querySelectorAll("tr.clickable");
         for (var r = 0; r < rows.length; r++) {
             rows[r].addEventListener("click", function() {
@@ -1863,6 +1895,12 @@ a:hover { text-decoration: underline; }
         return "var(--green)";
     }
 
+    // Like Recent Changes: fold when it first goes empty, otherwise leave the
+    // viewer's choice alone. Only with the default filters -- the filters
+    // live inside the box, so folding on a filtered-empty result would hide
+    // the very controls needed to widen it again.
+    var syslogWasEmpty = null;
+
     function renderRecentSyslog() {
         var tbody = document.querySelector("#syslog-preview-table tbody");
         var html = "";
@@ -1882,6 +1920,13 @@ a:hover { text-decoration: underline; }
         var empty = document.getElementById("syslog-preview-empty");
         empty.textContent = filtered ? "No syslog messages match these filters." : "No syslog messages.";
         empty.style.display = recentSyslog.length ? "none" : "";
+        var none = !recentSyslog.length && !filtered;
+        document.getElementById("syslog-preview-note").innerHTML = none ? "&mdash; no syslog messages" : "";
+        if (none !== syslogWasEmpty) {
+            syslogWasEmpty = none;
+            var toggle = document.querySelector(".collapse-toggle[data-section='syslog-preview-section']");
+            setCollapsed(toggle, none || readCollapsed().indexOf("syslog-preview-section") !== -1);
+        }
     }
 
     function renderMatrix() {
@@ -1986,10 +2031,12 @@ a:hover { text-decoration: underline; }
         if (!targets.length) {
             table.style.display = "none";
             empty.style.display = "";
+            setHeaderNote("targets-section", "targets-note", empty.innerHTML.trim());
             return;
         }
         table.style.display = "";
         empty.style.display = "none";
+        setHeaderNote("targets-section", "targets-note", "");
 
         var lookup = buildLookup();
         var hosts = endpoints.map(function(e) { return e.hostname; });
@@ -2050,10 +2097,12 @@ a:hover { text-decoration: underline; }
         if (!rows.length) {
             table.style.display = "none";
             empty.style.display = "";
+            setHeaderNote("dns-section", "dns-note", empty.innerHTML.trim());
             return;
         }
         table.style.display = "";
         empty.style.display = "none";
+        setHeaderNote("dns-section", "dns-note", "");
 
         var html = "";
         for (var j = 0; j < rows.length; j++) {

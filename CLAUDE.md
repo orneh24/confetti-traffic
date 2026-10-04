@@ -168,7 +168,7 @@ self-update would roll the script back.
 Full mesh is the default; rules **exclude** group pairs from it. A rule is
 between two groups, covers every test and both directions, and the same group
 twice (`site-a ↔ site-a`) stops a group testing itself. Edited in the
-dashboard's "Mesh Rules" panel, stored in the `mesh_rules` table (pair sorted,
+"Mesh Rules" part of the dashboard's "Mesh Settings" panel, stored in the `mesh_rules` table (pair sorted,
 so one row per pair). Unauthenticated, like push-update.
 
 Applied hub-side: `confettictl-test-cycle.sh` fetches
@@ -529,7 +529,7 @@ hub/
                         syslog_server.py, nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
   templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light, Nord, Dracula,
-                        Solarized Dark, Monokai, High Contrast, Terminal green, Confetti Night, Neon Streamers) are inline in ALL THREE pages: a THEMES list in the
+                        Monokai, High Contrast, Terminal green, Confetti Night, Neon Streamers) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
                         localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. Adding or changing a theme means
                         editing all three pages. Each page also has one shared header-confetti rule (an SVG
