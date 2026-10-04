@@ -351,7 +351,7 @@ shows as a muted dot in the matrix and isn't counted as passing or failing.
 Static targets are not affected. Remove the rule to go back to full mesh.
 
 **Colour themes.** The menu at the right of each page's header picks one of
-nine themes: Dark, Light, Nord, Dracula, Monokai (military green), High
+eight themes: Dark, Light, Dracula, Monokai (military green), High
 Contrast, Terminal green, Confetti Night and Neon Streamers. **Shuffle**
 changes to a different theme every 5–10 minutes. The choice is saved in your
 browser and shared by all three pages. Every theme has confetti in its
