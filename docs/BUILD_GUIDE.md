@@ -359,6 +359,19 @@ changes to a different theme every 5–10 minutes. The choice is saved in your
 browser and shared by all three pages. Every theme has confetti in its
 header in its own colours, except Neon Streamers, which has glowing streaks.
 
+**Layouts.** On the dashboard, a second menu beside the theme picks the
+layout. **Classic** is the original. **Modern** adds a menu down the left
+side, summary tiles along the top (failing paths, tests passing, endpoints,
+path changes, hub state) and rounded panels in two columns; Test Detail opens
+on the right when you click a matrix cell. Modern uses whichever colour
+theme you pick. **Retro 95** turns every panel into a Windows 95 window on a
+teal desktop, with a taskbar and a Start menu (which also holds **Is it
+DNS..?**, **Confetti!** and a way back to Classic). It has its own colours,
+so the theme menu is greyed out while it's on. **Amber CRT** is an amber
+terminal screen with scanlines. It also has its own colours; a failing test
+shows as an inverted block so it stands out without a second colour. The
+Syslog and Timeline pages have one layout.
+
 ### 6.2 Static targets
 
 Addresses with no agent (a gateway, a loopback, an outside host). Add them

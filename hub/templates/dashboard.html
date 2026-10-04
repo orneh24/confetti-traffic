@@ -1039,9 +1039,642 @@ a:hover { text-decoration: underline; }
     width: 10px; height: 10px;
     border-radius: 0;
 }
+
+/* ------------------------------------------------------------------
+   Layouts. Classic is everything above. Each other layout is CSS keyed
+   on :root[data-layout=NAME]; the elements only it shows (.side-nav,
+   .kpi-row) are hidden here so Classic never sees them.
+   ------------------------------------------------------------------ */
+.side-nav, .kpi-row { display: none; }
+
+/* Modern: menu on the left, summary tiles on top, rounded cards in a
+   two-column grid, the page scrolls as a whole, and Test Detail is a
+   right-hand column that only appears once a pair is selected. Colours
+   come from the theme, so every theme works here. */
+:root[data-layout="modern"] body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    min-height: 100vh;
+    /* The menu is sticky and one screen tall; paint its column (and border)
+       down the whole page so a long page doesn't show it ending. */
+    background: linear-gradient(to right, var(--bg-card) 209px, var(--border) 209px 210px, var(--bg) 210px);
+}
+:root[data-layout="modern"] .side-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    grid-column: 1;
+    grid-row: 1 / 4;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 18px 12px;
+}
+:root[data-layout="modern"] .side-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 15px; font-weight: 700; color: var(--text);
+    margin: 0 6px 18px;
+}
+:root[data-layout="modern"] .side-mark {
+    width: 28px; height: 28px; border-radius: 8px; flex: none;
+    background: conic-gradient(from 30deg, var(--red), var(--yellow), var(--green), var(--blue), var(--cyan), var(--red));
+}
+:root[data-layout="modern"] .side-link {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 10px; border-radius: 8px;
+    color: var(--text-dim); text-decoration: none;
+}
+:root[data-layout="modern"] a.side-link:hover { background: var(--bg-hover); color: var(--text); }
+:root[data-layout="modern"] .side-link.current { background: var(--bg-hover); color: var(--text); font-weight: 600; }
+:root[data-layout="modern"] .side-badge {
+    background: var(--red-bg); color: var(--red);
+    border-radius: 10px; padding: 0 7px; font-size: 11px; font-weight: 700;
+}
+:root[data-layout="modern"] .side-group {
+    margin: 16px 10px 4px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--text-dim); opacity: .8;
+}
+:root[data-layout="modern"] .header {
+    grid-column: 2;
+    background: transparent;
+    border-bottom: none;
+    padding: 20px 26px 4px;
+}
+/* The menu carries the product name, so the page title becomes "Overview". */
+:root[data-layout="modern"] .header h1 { font-size: 0; letter-spacing: 0; }
+:root[data-layout="modern"] .header h1::before {
+    content: "Overview";
+    font-size: 22px; font-weight: 700; color: var(--text);
+}
+:root[data-layout="modern"] .header-left .btn-nav,
+:root[data-layout="modern"] .header-left .btn-nav-current { display: none; }
+:root[data-layout="modern"] .header .status { font-size: 12px; }
+:root[data-layout="modern"] .theme-select,
+:root[data-layout="modern"] .btn-nav { border-radius: 8px; }
+:root[data-layout="modern"] .kpi-row {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+    padding: 14px 26px 0;
+}
+:root[data-layout="modern"] .kpi {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    min-width: 0;
+}
+:root[data-layout="modern"] .kpi-label { font-size: 12px; color: var(--text-dim); }
+:root[data-layout="modern"] .kpi-value { font-size: 24px; font-weight: 700; line-height: 1.3; }
+:root[data-layout="modern"] .kpi-sub {
+    font-size: 12px; color: var(--text-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+:root[data-layout="modern"] .kpi-value.bad { color: var(--red); }
+:root[data-layout="modern"] .kpi-value.good { color: var(--green); }
+:root[data-layout="modern"] .kpi-value.warn { color: var(--yellow); }
+:root[data-layout="modern"] .container {
+    grid-column: 2;
+    max-height: none;
+    padding: 18px 26px 26px;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    align-items: start;
+}
+:root[data-layout="modern"] .main-col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    overflow: visible;
+    align-items: start;
+}
+:root[data-layout="modern"] .main-col > * { grid-column: span 2; }
+:root[data-layout="modern"] .main-col > #targets-section,
+:root[data-layout="modern"] .main-col > #dns-section,
+:root[data-layout="modern"] .main-col > #settings-section,
+:root[data-layout="modern"] .main-col > #bw-section { grid-column: span 1; }
+/* Right-hand column: Endpoints, with Test Detail opening above them once a
+   pair is selected. Stays in view while the main column scrolls. */
+:root[data-layout="modern"] .sidebar {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    gap: 18px;
+}
+:root[data-layout="modern"] .endpoints-section { max-height: none; flex: none; }
+:root[data-layout="modern"] .section {
+    border-radius: 14px;
+    scroll-margin-top: 16px;
+}
+:root[data-layout="modern"] .section-header {
+    padding: 12px 16px;
+    font-size: 14px;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text);
+}
+:root[data-layout="modern"] .section-body { padding: 10px 16px 14px; }
+/* The matrices' pinned first column sticks at the padding edge; cover the
+   16 px of padding to its left so scrolled cells don't show through. */
+:root[data-layout="modern"] .matrix tbody th,
+:root[data-layout="modern"] .matrix th.origin { box-shadow: -16px 0 0 var(--bg-card); }
+:root[data-layout="modern"] .btn-small { border-radius: 7px; padding: 3px 10px; font-size: 11px; }
+:root[data-layout="modern"] .filter-row select,
+:root[data-layout="modern"] .filter-row input { border-radius: 6px; padding: 3px 6px; }
+/* Same card colour for every box: the Classic zebra reads as noise in a
+   grid. The zebra rule sets --bg-card from --bg-card-alt, so make the two
+   equal. */
+:root[data-layout="modern"] { --bg-card-alt: var(--bg-card); }
+:root[data-layout="modern"] .detail-section { display: none; order: -1; flex: none; }
+:root[data-layout="modern"] body.has-detail .detail-section { display: flex; }
+:root[data-layout="modern"] .detail-test-card,
+:root[data-layout="modern"] .detail-related { border-radius: 10px; }
+:root[data-layout="modern"] .page-footer { padding: 6px 0 0; }
+@media (max-width: 1100px) {
+    :root[data-layout="modern"] body { grid-template-columns: minmax(0, 1fr); }
+    :root[data-layout="modern"] .side-nav { display: none; }
+    :root[data-layout="modern"] .header,
+    :root[data-layout="modern"] .kpi-row,
+    :root[data-layout="modern"] .container { grid-column: 1; }
+    :root[data-layout="modern"] .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    :root[data-layout="modern"] .container,
+    :root[data-layout="modern"] .main-col { grid-template-columns: minmax(0, 1fr); }
+    :root[data-layout="modern"] .main-col > *,
+    :root[data-layout="modern"] .main-col > #targets-section,
+    :root[data-layout="modern"] .main-col > #dns-section,
+    :root[data-layout="modern"] .main-col > #settings-section,
+    :root[data-layout="modern"] .main-col > #bw-section { grid-column: 1; }
+    :root[data-layout="modern"] .main-col { grid-row: auto; }
+    :root[data-layout="modern"] .sidebar { grid-column: 1; grid-row: auto; position: static; max-height: none; }
+}
+
+/* Retro 95: every panel a Windows 95 window on a teal desktop, with a
+   taskbar and Start menu. It brings its own colours, so the theme picker is
+   disabled while it is on and this block overrides every theme variable.
+   It sits after all theme rules on purpose: same-specificity rules here win
+   by coming later, which is what beats Neon's per-box colours
+   (.section:nth-child) and its header. */
+:root[data-layout="retro95"],
+:root[data-layout="retro95"] .section:nth-child(n) {
+    --bg:        #ffffff;
+    --bg-card:   #c0c0c0;
+    --bg-card-alt: #c0c0c0;
+    --bg-hover:  #dcdcdc;
+    --bg-muted:  #d4d4d4;
+    --bg-code:   #ffffff;
+    --stripe:    #f2f2f2;
+    --border:    #808080;
+    --border-soft: #dcdcdc;
+    --row-line:  #dcdcdc;
+    --badge-bg:  #ffffff;
+    --badge-border: #808080;
+    --text:      #000000;
+    --text-dim:  #404040;
+    --green:     #007a00;
+    --green-bg:  #c8f0c8;
+    --red:       #c00000;
+    --red-bg:    #ffd0d0;
+    --yellow:    #806000;
+    --yellow-bg: #fff4b0;
+    --gray:      #a0a0a0;
+    --blue:      #0000cc;
+    --cyan:      #000080;
+    color-scheme: light;
+}
+:root[data-layout="retro95"] body {
+    font-family: "Microsoft Sans Serif", "MS Sans Serif", Tahoma, Verdana, sans-serif;
+    font-size: 12px;
+    background: #008080;
+    padding-bottom: 36px; /* room for the taskbar */
+}
+:root[data-layout="retro95"] .header::before { display: none; }
+:root[data-layout="retro95"] .header {
+    background: #c0c0c0;
+    background-image: none;
+    margin: 8px 8px 0;
+    padding: 3px 6px 3px 3px;
+    border: 1px solid;
+    border-color: #dfdfdf #000 #000 #dfdfdf;
+    box-shadow: inset 1px 1px #fff, inset -1px -1px #808080;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+/* The page title becomes an application title bar. */
+:root[data-layout="retro95"] .header h1 { font-size: 0; letter-spacing: 0; }
+:root[data-layout="retro95"] .header h1::before {
+    content: "Confetti Traffic - Network Connectivity Tester";
+    display: inline-block;
+    font-size: 12px; font-weight: 700; color: #fff;
+    background: linear-gradient(90deg, #000080, #1084d0);
+    padding: 3px 10px;
+}
+:root[data-layout="retro95"] .header .status { color: #000; font-size: 11px; }
+/* Windows. Title bars: blue for the two you work in, grey for the rest. */
+:root[data-layout="retro95"] .section {
+    border-radius: 0;
+    border: 1px solid;
+    border-color: #dfdfdf #000 #000 #dfdfdf;
+    box-shadow: inset 1px 1px #fff, inset -1px -1px #808080;
+    padding: 2px;
+}
+:root[data-layout="retro95"] .section-header {
+    background: linear-gradient(90deg, #808080, #b5b5b5);
+    color: #c0c0c0;
+    padding: 2px 3px 2px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0;
+    border-bottom: none;
+    /* Notes inside a title bar sit on dark blue or grey. */
+    --red: #ffb0b0;
+    --yellow: #ffff80;
+    --green: #a0ffa0;
+    --text-dim: #e8e8e8;
+}
+:root[data-layout="retro95"] #matrix-section > .section-header,
+:root[data-layout="retro95"] .detail-section > .section-header,
+:root[data-layout="retro95"] .endpoints-section > .section-header {
+    background: linear-gradient(90deg, #000080, #1084d0);
+    color: #fff;
+}
+:root[data-layout="retro95"] .section-body { padding: 6px 4px 4px; }
+/* White sunken fields for the lists and grids inside a window. */
+:root[data-layout="retro95"] .ep-table,
+:root[data-layout="retro95"] .matrix {
+    background: #fff;
+    border: 2px solid;
+    border-color: #808080 #fff #fff #808080;
+}
+:root[data-layout="retro95"] .matrix td { background: #fff; }
+:root[data-layout="retro95"] .matrix th,
+:root[data-layout="retro95"] .ep-table th {
+    background: #c0c0c0;
+    color: #000;
+    border: 1px solid;
+    border-color: #fff #808080 #808080 #fff;
+}
+/* Cover the padding left of the pinned first column, as in Modern. */
+:root[data-layout="retro95"] .matrix tbody th,
+:root[data-layout="retro95"] .matrix th.origin { box-shadow: -6px 0 0 #c0c0c0; }
+:root[data-layout="retro95"] .matrix td.selected { outline: 2px dashed #000080; outline-offset: -2px; }
+:root[data-layout="retro95"] .indicator { border: 1px solid #000; text-shadow: none; color: #000; }
+:root[data-layout="retro95"] .indicator.pass { background: #00c000; }
+:root[data-layout="retro95"] .indicator.fail { background: #ff0000; color: #fff; }
+:root[data-layout="retro95"] .indicator.slow { background: #ffff00; }
+:root[data-layout="retro95"] .indicator.none { background: #d4d4d4; color: #808080; border-color: #a0a0a0; }
+/* Buttons raised, fields sunken, the current page pressed in. */
+:root[data-layout="retro95"] .btn-small,
+:root[data-layout="retro95"] .btn-nav,
+:root[data-layout="retro95"] .info-btn {
+    background: #c0c0c0;
+    color: #000;
+    border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+    border-radius: 0;
+    font-family: inherit;
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+:root[data-layout="retro95"] .btn-small:active,
+:root[data-layout="retro95"] .btn-nav:active,
+:root[data-layout="retro95"] .btn-nav-current {
+    background: #d4d4d4;
+    color: #000;
+    border: 2px solid;
+    border-color: #404040 #fff #fff #404040;
+    border-radius: 0;
+}
+:root[data-layout="retro95"] .btn-nav:hover { background: #c0c0c0; color: #000; }
+:root[data-layout="retro95"] select,
+:root[data-layout="retro95"] input,
+:root[data-layout="retro95"] textarea {
+    background: #fff;
+    color: #000;
+    border: 2px solid;
+    border-color: #808080 #fff #fff #808080;
+    border-radius: 0;
+    font-family: inherit;
+}
+:root[data-layout="retro95"] .theme-select:disabled { color: #808080; text-shadow: 1px 1px #fff; cursor: default; }
+:root[data-layout="retro95"] .detail-test-card,
+:root[data-layout="retro95"] .detail-related {
+    border: 2px solid;
+    border-color: #808080 #fff #fff #808080;
+}
+/* The page scrolls as a whole; the right-hand column stays in view. */
+/* minmax(0, ...) so a wide matrix scrolls inside its window instead of
+   widening the page (Classic gets that from its scrolling column). */
+:root[data-layout="retro95"] .container {
+    max-height: none; padding: 8px; gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 440px;
+}
+:root[data-layout="retro95"] .main-col { overflow: visible; gap: 8px; }
+:root[data-layout="retro95"] .sidebar {
+    position: sticky;
+    top: 8px;
+    max-height: calc(100vh - 52px);
+    overflow-y: auto;
+    gap: 8px;
+}
+:root[data-layout="retro95"] .page-footer { display: none; } /* both buttons live in the Start menu */
+/* Taskbar and Start menu (Retro 95 only). */
+.taskbar { display: none; }
+:root[data-layout="retro95"] .taskbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 32px;
+    padding: 2px 4px;
+    background: #c0c0c0;
+    border-top: 2px solid #fff;
+    box-shadow: 0 -1px #dfdfdf;
+    z-index: 50;
+    font-size: 12px;
+}
+:root[data-layout="retro95"] .taskbar .btn-nav { padding: 3px 10px; height: 24px; display: inline-flex; align-items: center; }
+:root[data-layout="retro95"] .start { position: relative; }
+:root[data-layout="retro95"] .start > summary {
+    list-style: none;
+    cursor: pointer;
+    font-weight: 700;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    height: 24px;
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+}
+:root[data-layout="retro95"] .start > summary::-webkit-details-marker { display: none; }
+:root[data-layout="retro95"] .start[open] > summary { border-color: #404040 #fff #fff #404040; }
+:root[data-layout="retro95"] .start-flag {
+    width: 14px; height: 14px; display: inline-block;
+    background: conic-gradient(#f00 0 25%, #0a0 0 50%, #ff0 0 75%, #00f 0);
+    border: 1px solid #000;
+}
+:root[data-layout="retro95"] .start-menu {
+    position: absolute;
+    bottom: 30px; left: 0;
+    display: flex;
+    min-width: 200px;
+    background: #c0c0c0;
+    border: 1px solid;
+    border-color: #dfdfdf #000 #000 #dfdfdf;
+    box-shadow: inset 1px 1px #fff, inset -1px -1px #808080;
+    padding: 2px;
+}
+:root[data-layout="retro95"] .start-band {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    background: linear-gradient(0deg, #000080, #1084d0);
+    color: #c0c0c0;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 6px 3px;
+}
+:root[data-layout="retro95"] .start-band b { color: #fff; }
+:root[data-layout="retro95"] .start-items { display: flex; flex-direction: column; flex: 1; padding: 2px 0; }
+:root[data-layout="retro95"] .start-items a,
+:root[data-layout="retro95"] .start-items button {
+    display: block; text-align: left;
+    padding: 6px 14px; color: #000;
+    background: none; border: none; font: inherit; cursor: pointer;
+}
+:root[data-layout="retro95"] .start-items a:hover,
+:root[data-layout="retro95"] .start-items button:hover { background: #000080; color: #fff; text-decoration: none; }
+:root[data-layout="retro95"] .start-items hr { border: none; border-top: 1px solid #808080; border-bottom: 1px solid #fff; margin: 3px 2px; }
+:root[data-layout="retro95"] .tray {
+    margin-left: auto;
+    padding: 3px 10px;
+    border: 1px solid;
+    border-color: #808080 #fff #fff #808080;
+}
+
+/* Amber CRT: a monochrome amber terminal with scanlines and glow. Brings
+   its own colours (theme picker disabled), so like Retro 95 it must stay
+   after all theme rules. One hue means status can't rely on colour alone:
+   a fail is inverted (dark on hot amber), slow is bright and underlined,
+   pass is plain amber. Local monospace fonts only: a hub may be offline. */
+:root[data-layout="amber"],
+:root[data-layout="amber"] .section:nth-child(n) {
+    --bg:        #120a00;
+    --bg-card:   #170d00;
+    --bg-card-alt: #170d00;
+    --bg-hover:  #2a1a00;
+    --bg-muted:  #241600;
+    --bg-code:   #0d0700;
+    --stripe:    #1c1100;
+    --border:    #7a5400;
+    --border-soft: #3d2a00;
+    --row-line:  #3d2a00;
+    --badge-bg:  #241600;
+    --badge-border: #7a5400;
+    --text:      #ffb000;
+    --text-dim:  #b37b00;
+    --green:     #ffb000;
+    --green-bg:  #2a1a00;
+    --red:       #ff6a1a;
+    --red-bg:    #3a1400;
+    --yellow:    #ffe08a;
+    --yellow-bg: #332400;
+    --gray:      #4a3300;
+    --blue:      #ffc94d;
+    --cyan:      #ffc94d;
+    color-scheme: dark;
+}
+:root[data-layout="amber"] body {
+    font-family: "VT323", "Fixedsys Excelsior", "Consolas", "Lucida Console", "Courier New", monospace;
+    background: radial-gradient(ellipse at 50% 40%, #221400 0%, #120a00 60%, #070400 100%) fixed;
+    text-shadow: 0 0 4px rgba(255, 176, 0, .55);
+}
+/* Scanlines over the whole screen; clicks pass through. */
+:root[data-layout="amber"] body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 60;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px);
+}
+:root[data-layout="amber"] ::selection { background: #ffb000; color: #120a00; text-shadow: none; }
+:root[data-layout="amber"] * { scrollbar-color: #7a5400 #120a00; }
+:root[data-layout="amber"] .header::before { display: none; }
+:root[data-layout="amber"] .header {
+    background: transparent;
+    background-image: none;
+    border-bottom: 1px solid #7a5400;
+    padding: 14px 24px 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+:root[data-layout="amber"] .header h1 { font-size: 0; letter-spacing: 0; }
+:root[data-layout="amber"] .header h1::before {
+    content: "> CONFETTI TRAFFIC";
+    font-size: 28px; font-weight: 700; letter-spacing: 3px; color: #ffb000;
+    text-shadow: 0 0 6px rgba(255, 176, 0, .9), 0 0 20px rgba(255, 140, 0, .5);
+}
+:root[data-layout="amber"] .header .status { color: #b37b00; text-transform: uppercase; }
+:root[data-layout="amber"] .header .status .dot { background: #ffb000; box-shadow: 0 0 6px #ffb000; }
+/* Boxes: double-line borders, the title cut into the top edge. */
+:root[data-layout="amber"] .section {
+    background: transparent;
+    border: 3px double #7a5400;
+    border-radius: 0;
+    overflow: visible;
+}
+:root[data-layout="amber"] .section-header {
+    border-bottom: 1px dashed #3d2a00;
+    color: #ffb000;
+    letter-spacing: 2px;
+}
+:root[data-layout="amber"] .section-header > span:first-child::before { content: "\2524 "; color: #7a5400; }
+:root[data-layout="amber"] .section-header > span:first-child::after { content: " \251C"; color: #7a5400; }
+:root[data-layout="amber"] .matrix th,
+:root[data-layout="amber"] .ep-table th { background: #120a00; color: #b37b00; }
+:root[data-layout="amber"] .matrix td { background: transparent; }
+:root[data-layout="amber"] .matrix td.selected { outline: 1px dashed #ffb000; outline-offset: -3px; }
+:root[data-layout="amber"] .indicator { background: transparent; color: #ffb000; text-shadow: 0 0 3px rgba(255, 176, 0, .7); }
+:root[data-layout="amber"] .indicator.pass { background: #2a1a00; }
+:root[data-layout="amber"] .indicator.slow { background: #2a1a00; color: #ffe08a; text-decoration: underline; }
+:root[data-layout="amber"] .indicator.fail { background: #ff8c1a; color: #120a00; text-shadow: none; box-shadow: 0 0 6px rgba(255, 140, 26, .8); }
+:root[data-layout="amber"] .indicator.none { color: #4a3300; text-shadow: none; }
+/* A fail anywhere else is inverted too, so it reads without colour. */
+:root[data-layout="amber"] .detail-test-status.fail,
+:root[data-layout="amber"] .health-bad { background: #ff8c1a; color: #120a00; text-shadow: none; padding: 0 4px; }
+:root[data-layout="amber"] .btn-small,
+:root[data-layout="amber"] .btn-nav,
+:root[data-layout="amber"] .btn-nav-current,
+:root[data-layout="amber"] .info-btn {
+    background: transparent;
+    color: #ffb000;
+    border: 1px solid #7a5400;
+    border-radius: 0;
+    font-family: inherit;
+    text-transform: uppercase;
+    text-shadow: inherit;
+}
+:root[data-layout="amber"] .btn-small:hover,
+:root[data-layout="amber"] .btn-nav:hover,
+:root[data-layout="amber"] .btn-nav-current {
+    background: #ffb000; color: #120a00; text-shadow: none; text-decoration: none;
+}
+:root[data-layout="amber"] select,
+:root[data-layout="amber"] input,
+:root[data-layout="amber"] textarea {
+    background: transparent;
+    color: #ffb000;
+    border: none;
+    border-bottom: 1px solid #7a5400;
+    border-radius: 0;
+    font-family: inherit;
+    text-shadow: inherit;
+}
+:root[data-layout="amber"] select option { background: #120a00; color: #ffb000; }
+:root[data-layout="amber"] .theme-select:disabled { color: #4a3300; border-color: #3d2a00; }
+:root[data-layout="amber"] .detail-test-card,
+:root[data-layout="amber"] .detail-related { background: transparent; border: 1px solid #3d2a00; }
+:root[data-layout="amber"] .container {
+    max-height: none;
+    grid-template-columns: minmax(0, 1fr) 440px;
+}
+:root[data-layout="amber"] .main-col { overflow: visible; }
+:root[data-layout="amber"] .sidebar {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+}
+:root[data-layout="amber"] .matrix tbody th,
+:root[data-layout="amber"] .matrix th.origin { box-shadow: -10px 0 0 #120a00; }
+/* A prompt with a blinking cursor under the footer buttons. */
+:root[data-layout="amber"] .page-footer::after {
+    content: "confetti@hub:~$ \2588";
+    display: block;
+    margin-top: 10px;
+    color: #b37b00;
+    animation: amber-blink 1s steps(1) infinite;
+}
+@keyframes amber-blink { 50% { color: transparent; text-shadow: none; } }
+@media (prefers-reduced-motion: reduce) {
+    :root[data-layout="amber"] .page-footer::after { animation: none; }
+}
 </style>
+<script>
+// Layout picker, dashboard only (syslog and timeline keep one layout). A
+// layout is CSS keyed on :root[data-layout=NAME] plus a few elements only
+// that layout shows; the data, scripts and panels are the same in all of
+// them. Classic is the default and has no attribute. Applied before first
+// paint, like the theme. Kept out of the head script above, which must stay
+// identical across the three pages (dev/regress.py R31).
+// Third field: the layout brings its own colours, so the theme picker is
+// disabled while it is on (the saved theme is kept for the other layouts).
+var LAYOUTS = [
+    ['classic', 'Classic'],
+    ['modern', 'Modern'],
+    ['retro95', 'Retro 95', true],
+    ['amber', 'Amber CRT', true],
+];
+function applyLayout(name) {
+    var known = LAYOUTS.some(function (l) { return l[0] === name; });
+    if (!known || name === 'classic') document.documentElement.removeAttribute('data-layout');
+    else document.documentElement.setAttribute('data-layout', name);
+}
+try { applyLayout(localStorage.getItem('confetti-layout')); } catch (e) {}
+function setLayout(name) {
+    applyLayout(name);
+    try { localStorage.setItem('confetti-layout', document.documentElement.getAttribute('data-layout') || 'classic'); } catch (e) {}
+    syncLayoutSelect();
+}
+function syncLayoutSelect() {
+    var sel = document.getElementById('layout-select');
+    if (!sel) return;
+    if (!sel.options.length) {
+        LAYOUTS.forEach(function (l) {
+            var o = document.createElement('option');
+            o.value = l[0];
+            o.textContent = l[1];
+            sel.appendChild(o);
+        });
+    }
+    sel.value = document.documentElement.getAttribute('data-layout') || 'classic';
+    var own = LAYOUTS.some(function (l) { return l[0] === sel.value && l[2]; });
+    var themeSel = document.getElementById('theme-select');
+    if (themeSel) {
+        themeSel.disabled = own;
+        themeSel.title = own ? 'This layout has its own colours' : '';
+    }
+}
+</script>
 </head>
 <body>
+
+<!-- Modern layout only: a menu down the left side. Hidden in Classic. -->
+<nav class="side-nav" aria-label="Pages and panels">
+    <div class="side-brand"><span class="side-mark"></span>Confetti Traffic</div>
+    <span class="side-link current">Dashboard <span class="side-badge" id="side-fail-badge" hidden></span></span>
+    <a class="side-link" href="/syslog">Syslog</a>
+    <a class="side-link" href="/timeline">Timeline</a>
+    <div class="side-group">On this page</div>
+    <a class="side-link" href="#matrix-section">Matrix</a>
+    <a class="side-link" href="#changes-section">Recent changes</a>
+    <a class="side-link" href="#syslog-preview-section">Recent syslog</a>
+    <a class="side-link" href="#targets-section">Static targets</a>
+    <a class="side-link" href="#dns-section">DNS</a>
+    <a class="side-link" href="#settings-section">Mesh settings</a>
+    <a class="side-link" href="#bw-section">Bandwidth test</a>
+    <a class="side-link" href="#health-section">Hub health</a>
+    <a class="side-link" href="#endpoints-section">Endpoints</a>
+</nav>
 
 <div class="header">
     <div class="header-left">
@@ -1063,13 +1696,25 @@ a:hover { text-decoration: underline; }
         <span id="clock" class="clock" title="Hub's own NTP sync state (chronyc tracking)">clock: --</span>
         <select id="theme-select" class="btn-nav theme-select" aria-label="Colour theme" onchange="setTheme(this.value)"></select>
         <script>syncThemeSelect();</script>
+        <select id="layout-select" class="btn-nav theme-select" aria-label="Layout" onchange="setLayout(this.value)"></select>
+        <script>syncLayoutSelect();</script>
     </div>
+</div>
+
+<!-- Modern layout only: the summary before the detail. Filled by
+     renderKpis() from data the page already has. Hidden in Classic. -->
+<div class="kpi-row" id="kpi-row">
+    <div class="kpi"><div class="kpi-label">Paths failing</div><div class="kpi-value" id="kpi-fail">&ndash;</div><div class="kpi-sub" id="kpi-fail-sub"></div></div>
+    <div class="kpi"><div class="kpi-label">Tests passing</div><div class="kpi-value" id="kpi-pass">&ndash;</div><div class="kpi-sub" id="kpi-pass-sub"></div></div>
+    <div class="kpi"><div class="kpi-label">Endpoints</div><div class="kpi-value" id="kpi-ep">&ndash;</div><div class="kpi-sub" id="kpi-ep-sub"></div></div>
+    <div class="kpi"><div class="kpi-label">Path changes (1 h)</div><div class="kpi-value" id="kpi-path">&ndash;</div><div class="kpi-sub" id="kpi-path-sub"></div></div>
+    <div class="kpi"><div class="kpi-label">Hub</div><div class="kpi-value" id="kpi-hub">&ndash;</div><div class="kpi-sub" id="kpi-hub-sub"></div></div>
 </div>
 
 <div class="container">
     <!-- Main column -->
     <div class="main-col">
-        <div class="section">
+        <div class="section" id="matrix-section">
             <div class="section-header">
                 <span>Confetti traffic matrix</span>
                 <div class="legend">
@@ -1313,7 +1958,7 @@ a:hover { text-decoration: underline; }
 
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="section endpoints-section">
+        <div class="section endpoints-section" id="endpoints-section">
             <div class="section-header">
                 <span>Registered Endpoints</span>
                 <span class="hdr-actions">
@@ -1348,6 +1993,32 @@ a:hover { text-decoration: underline; }
             </div>
         </div>
     </div>
+</div>
+
+<!-- Retro 95 layout only: taskbar with a Start menu (a plain <details>, no
+     script) and a clock. The Start menu also holds the footer's two buttons,
+     which this layout hides. Hidden in every other layout. -->
+<div class="taskbar">
+    <details class="start">
+        <summary><span class="start-flag"></span>Start</summary>
+        <div class="start-menu">
+            <div class="start-band"><b>Confetti</b>95</div>
+            <div class="start-items">
+                <a href="/">Dashboard</a>
+                <a href="/syslog">Syslog</a>
+                <a href="/timeline">Timeline</a>
+                <hr>
+                <a href="https://isitdns.com/" target="_blank" rel="noopener noreferrer">Is it DNS..?</a>
+                <button type="button" onclick="confettiBlast(this)">Confetti!</button>
+                <hr>
+                <button type="button" onclick="setLayout('classic')">Back to Classic layout</button>
+            </div>
+        </div>
+    </details>
+    <span class="btn-nav-current">Confetti Traffic</span>
+    <a class="btn-nav" href="/syslog">Syslog</a>
+    <a class="btn-nav" href="/timeline">Timeline</a>
+    <span class="tray" id="tray-clock"></span>
 </div>
 
 <script>
@@ -1599,11 +2270,28 @@ a:hover { text-decoration: underline; }
                          esc(h.build === "unknown" ? h.build : h.build.substring(0, 7)) + "</div></div>";
                 }
                 document.getElementById("health-metrics").innerHTML = m;
+
+                // Hub tile (Modern). A service the hub couldn't check is
+                // "unknown", not "up": the tile says so rather than claim healthy.
+                var up = 0, down = 0, unknown = 0;
+                for (var sn in services) {
+                    if (!services.hasOwnProperty(sn)) continue;
+                    if (services[sn].status === "up") up++;
+                    else if (services[sn].status === "down") down++;
+                    else unknown++;
+                }
+                var sub = up + " of " + (up + down + unknown) + " services up" +
+                          (unknown ? ", " + unknown + " unknown" : "") +
+                          (h.syslog_listening ? "" : " · syslog off");
+                if (down) setKpi("kpi-hub", "Problem", "bad", sub);
+                else if (unknown) setKpi("kpi-hub", "Unknown", "warn", sub);
+                else setKpi("kpi-hub", "Healthy", "good", sub);
             })
             .catch(function() {
                 document.getElementById("health-services").style.display = "none";
                 document.getElementById("health-metrics").style.display = "none";
                 document.getElementById("health-empty").style.display = "";
+                setKpi("kpi-hub", "Unknown", "warn", "health check unavailable");
             });
     }
 
@@ -1639,6 +2327,57 @@ a:hover { text-decoration: underline; }
                              " failing (" + failed + " test" + (failed !== 1 ? "s" : "") + ")";
             el.className = "health-bad";
         }
+        renderKpis(lookup, total, failed, Object.keys(failing));
+    }
+
+    // Summary tiles and the menu's failing badge. Only the Modern layout
+    // shows them; filled regardless, as it is cheap and keeps no state.
+    function setKpi(id, value, cls, sub) {
+        var v = document.getElementById(id);
+        v.textContent = value;
+        v.className = "kpi-value" + (cls ? " " + cls : "");
+        document.getElementById(id + "-sub").textContent = sub;
+    }
+
+    function renderKpis(lookup, total, failed, failingPairs) {
+        var names = failingPairs.map(function(k) { return k.replace("|", " → "); });
+        setKpi("kpi-fail", failingPairs.length, failingPairs.length ? "bad" : "good",
+               failingPairs.length
+                   ? failed + " test" + (failed !== 1 ? "s" : "") + " · " + names.slice(0, 2).join(", ") +
+                     (names.length > 2 ? " …" : "")
+                   : "none");
+
+        // Slow = passing but over its warning threshold, as the matrix shows it.
+        var slow = 0;
+        for (var k in lookup) {
+            if (!lookup.hasOwnProperty(k)) continue;
+            var pair = k.split("|"), r = lookup[k], warn = LATENCY_WARN_MS[r.test_type];
+            if (ruleFor(pair[0], pair[1])) continue;
+            if (r.success && warn && r.latency_ms > warn) slow++;
+        }
+        setKpi("kpi-pass", total ? (total - failed) + " / " + total : "–", "",
+               total ? (slow ? slow + " slow" : "none slow") : "no results yet");
+
+        // Same rules as the endpoint list's yellow build and clock notes.
+        var old = 0, clockOff = 0;
+        for (var i = 0; i < endpoints.length; i++) {
+            var e = endpoints[i];
+            if (hubRelease && hubRelease !== "unknown" && (e.build || "unknown") !== hubRelease) old++;
+            if (e.clock_synced === false ||
+                (e.clock_synced && typeof e.clock_offset_s === "number" && Math.abs(e.clock_offset_s) > CLOCK_WARN_S)) clockOff++;
+        }
+        var notes = [];
+        if (old) notes.push(old + " on an older build");
+        if (clockOff) notes.push(clockOff + " clock off");
+        setKpi("kpi-ep", endpoints.length, notes.length ? "warn" : "", notes.join(" · ") || "all current");
+
+        var pc = changeHistoryPathChanges;
+        setKpi("kpi-path", pc.length, pc.length ? "warn" : "",
+               pc.length ? "latest " + pc[0].source + " → " + pc[0].target : "none");
+
+        var badge = document.getElementById("side-fail-badge");
+        badge.textContent = failingPairs.length;
+        badge.hidden = !failingPairs.length;
     }
 
     // ---------------------------------------------------------------
@@ -2309,6 +3048,7 @@ a:hover { text-decoration: underline; }
     function renderDetail(src, dst, rows) {
         var body = document.getElementById("detail-body");
         document.getElementById("detail-close").style.display = "";
+        document.body.classList.add("has-detail"); // Modern shows the panel only now
 
         // Group by test_type, keep most recent + history. Show only the
         // types this pair actually reports, rather than a fixed list with
@@ -2639,6 +3379,7 @@ a:hover { text-decoration: underline; }
     document.getElementById("detail-close").addEventListener("click", function() {
         selectedPair = null;
         detailState = null;
+        document.body.classList.remove("has-detail");
         document.getElementById("detail-body").innerHTML = "<div class='detail-empty'>Click a matrix cell to inspect test results</div>";
         this.style.display = "none";
         var prev = document.querySelectorAll(".matrix td.selected");
@@ -3115,6 +3856,30 @@ a:hover { text-decoration: underline; }
         setCollapsed(btn, prefCollapsed(id));
         btn.addEventListener("click", function() {
             choose(id, !document.getElementById(id).classList.contains("collapsed"));
+        });
+    });
+
+    // Retro 95's taskbar clock (the browser's local time, like the real one).
+    function tickTray() {
+        document.getElementById("tray-clock").textContent =
+            new Date().toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+    }
+    tickTray();
+    setInterval(tickTray, 15000);
+    // Its Start menu closes on a click anywhere else, or once an item is used.
+    document.addEventListener("click", function(ev) {
+        var start = document.querySelector(".start[open]");
+        if (start && (!start.contains(ev.target) || ev.target.closest(".start-items a, .start-items button"))) {
+            start.open = false;
+        }
+    });
+
+    // Modern's menu: jumping to a folded admin panel opens it.
+    document.querySelectorAll(".side-nav a[href^='#']").forEach(function(a) {
+        a.addEventListener("click", function() {
+            var id = a.getAttribute("href").slice(1);
+            var sec = document.getElementById(id);
+            if (sec && sec.classList.contains("collapsed") && toggleFor(id)) choose(id, false);
         });
     });
 

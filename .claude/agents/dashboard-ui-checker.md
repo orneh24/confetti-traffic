@@ -44,6 +44,18 @@ Unless told otherwise, check: Dark (the default), Light (the odd one out),
 and Neon Streamers (its own box colours and header). Add any theme the change
 touched.
 
+The dashboard (only) also has layouts: `setLayout('<name>')`, names in its
+`LAYOUTS` list (classic, modern, retro95, amber), saved under `localStorage` key
+`confetti-layout`. Same rule as the theme: read it first, put it back with
+`setLayout(...)` before you finish. After a dashboard change check every
+layout: Classic must show no `.side-nav`, `.kpi-row` or `.taskbar`; in Modern check the
+side menu, the summary tiles, and that Test Detail stays hidden until a
+matrix cell is clicked. Also check Modern below 1100 px wide (menu hidden,
+tiles in two columns, one column of panels). Retro 95 and Amber CRT have their own colours (theme
+picker disabled): check each once with Neon saved as the theme; in Amber, a failing
+cell must still stand out (inverted) without relying on hue. Open Retro 95's
+Start menu (a `<details>` in the taskbar).
+
 ## What to look at
 
 - The change itself: is it there, on every page it should be on?
@@ -81,9 +93,9 @@ Do not save screenshots to disk unless asked.
 
 Short, plain text, no screenshots inline:
 
-- One line per page and theme checked: OK, or what is wrong.
-- Each problem: page, theme, what you saw, where on the page, and the
+- One line per page, theme and layout checked: OK, or what is wrong.
+- Each problem: page, theme, layout, what you saw, where on the page, and the
   element or CSS rule if you found it.
 - Console errors, quoted.
 - What you did not check, and why.
-- Confirm the theme was restored and your tab was closed.
+- Confirm the theme and layout were restored and your tab was closed.

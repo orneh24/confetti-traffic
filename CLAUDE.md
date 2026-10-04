@@ -560,6 +560,21 @@ hub/
                         a canvas overlay in the same five colours; its block is identical in all three pages.
                         syslog.html and timeline.html use the smaller
                         variable set (--row-line, and --gray is a text grey there, not a fill).
+                        Layouts are dashboard.html ONLY: a LAYOUTS list in a second head <script>
+                        (kept out of the first, which R31 requires identical across pages), the
+                        choice on :root[data-layout=NAME] (Classic = no attribute), localStorage key
+                        confetti-layout, picker beside the theme picker. A layout is CSS plus a few
+                        elements only it shows (.side-nav, .kpi-row, hidden in Classic); same DOM,
+                        data and scripts in every layout. Modern follows the theme's colours; it
+                        shows Test Detail only once a pair is selected (body.has-detail).
+                        Retro 95 (retro95) brings its own colours (third LAYOUTS field = true,
+                        which disables the theme picker): its block redefines every theme
+                        variable and must stay AFTER all theme rules, since it beats Neon's
+                        .section:nth-child colours only by coming later. Its .taskbar holds a
+                        <details> Start menu with the footer's two buttons (footer hidden there).
+                        Amber CRT (amber) is the same own-colours pattern. One hue, so status
+                        must not rest on colour: a fail is inverted (dark on hot amber), slow is
+                        bright + underlined. Local monospace fonts only (a hub may be offline).
   static/
   agent/              — scripts served to nodes (created at build time)
   bundle/             — node bundle + RELEASE (created at build time)
