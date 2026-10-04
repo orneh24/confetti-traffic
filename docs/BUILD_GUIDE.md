@@ -167,7 +167,7 @@ Set the keys on the VM before first boot. On boot, the
 `confettid-firstboot` service runs `confettictl-setup.sh` with them, and the node
 configures and registers itself with no console session.
 
-The keys are listed in the [README](../README.md#vmware-guestinfo-keys).
+The keys are listed in the [README](../README.md#vmware-guestinfo-keys-optional).
 Only `hub_url` and `group` are required. In the vSphere Client: VM →
 **Edit Settings** → **VM Options** → **Advanced** → **Edit Configuration** →
 add one row per key.

@@ -20,31 +20,27 @@ the Confetti Night theme. Mock data from a synthetic 6-node mesh.*
 
 ## Tests
 
-Every node tests every other node once a minute and reports to the hub. Each
-matrix cell shows one letter per test: green passed, yellow slow, red failed,
-grey no data; a muted dot means a mesh rule excludes the pair.
+Every node tests every other node once a minute. Each matrix cell shows one
+letter per test: green pass, yellow slow, red fail, grey no data.
 
-| | Test | What it checks | Runs |
-|---|---|---|---|
-| H | HTTP | Fetches a fixed 5-file site and checks every byte (catches rewriting) | always |
-| S | SSH | Key login running `echo ok` | always |
-| M | Path MTU | 1500-byte DF packet; steps down on failure | always |
-| L | Loss | Loss and jitter (`fping`); only 100% loss fails | always |
-| T | Traceroute | Hop path; hub flags path changes | 5 min, and after H/S fails |
-| D | DNS | Name lookup on a given server | `DNS_SERVER` set |
-| I | iperf3 | TCP throughput | enabled |
-| B | SMB | 8 MB file download (sustained transfer) | enabled |
-| E | SMTP | Mail conversation, never sends; shows command rewriting | enabled |
+| Test | Checks | Runs |
+|---|---|---|
+| **H** HTTP | 5-file site, byte for byte | always |
+| **S** SSH | key login | always |
+| **M** Path MTU | 1500-byte DF packet | always |
+| **L** Loss | loss and jitter | always |
+| **T** Traceroute | hop path changes | 5 min, and after H/S fails |
+| **D** DNS | name lookup | `DNS_SERVER` set |
+| **I** iperf3 | TCP throughput | opt-in |
+| **B** SMB | 8 MB download | opt-in |
+| **E** SMTP | mail rewriting (never sends) | opt-in |
 
-- **Enabled** tests: per node in its config, or mesh-wide in Mesh Settings.
-- **Mesh Rules** exclude group pairs (both ways, all tests); the same group
-  twice stops a group testing itself.
-- **Static targets** (gateways, loopbacks, outside hosts) are added once on
-  the hub, with the tests that apply, and every node tests them.
-- **Bandwidth on demand:** node to node (`iperf3`, 1–8 streams) or node to
-  your browser, both directions.
+Static targets (gateways, loopbacks, outside hosts) get the tests that apply
+to them. Optional syslog from network devices (UDP/514) is linked from each
+result, and a failing pair lists what the devices logged.
 
-Details: [BUILD_GUIDE §6.1](docs/BUILD_GUIDE.md#61-test-types).
+Opt-in tests, mesh rules, static targets and on-demand bandwidth tests:
+[BUILD_GUIDE §6](docs/BUILD_GUIDE.md#6-ongoing-operation).
 
 ## Quick start
 
@@ -102,7 +98,7 @@ cloned.
    segment's port group.
 4. Before first boot, set `guestinfo.confetti.hub_url` and
    `guestinfo.confetti.group` on each clone (all keys are listed under
-   [VMware guestinfo keys](#vmware-guestinfo-keys)). It then configures
+   [VMware guestinfo keys](#vmware-guestinfo-keys-optional)). It then configures
    itself. Without them, log in and answer the `confettictl-node-setup.sh` prompt.
 
 Every node fetches its SSH keys from the hub at setup. The hub's management
@@ -135,51 +131,29 @@ serves.
 
 Details: [BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
 
-### VMware guestinfo keys
+### VMware guestinfo keys (Optional)
 
 Set these on the VM in vCenter (VM Options → Advanced → Configuration
 Parameters, or PowerCLI `New-AdvancedSetting`) before first boot. Only the
-two marked keys are required. All keys start with `guestinfo.`
+two marked keys are required.
 
 | Key | Example | Notes |
 |---|---|---|
-| `confetti.hub_url` | `http://10.0.0.100` | **required** |
-| `confetti.group` | `site-a` | **required**; groups nodes on the dashboard |
-| `confetti.subnet` | `10.1.1.0/24` | default: from DHCP lease |
-| `confetti.hostname` | `ct-site-a` | default: `ct-<group>-<ab1234>`; must be unique |
-| `confetti.dns_server` | `10.0.0.53` | unset skips the DNS test |
-| `confetti.dns_query` | `example.com` | name the DNS test looks up |
-| `hub.ip` | `10.0.0.100/24` | unset: asked at login |
-| `hub.gateway` | `10.0.0.1` | |
-| `hub.dns` | `10.0.0.53` | needed for `confettictl-update` |
-| `hub.hostname` | `confetti-hub` | re-read every boot |
+| `guestinfo.confetti.hub_url` | `http://10.0.0.100` | **required** |
+| `guestinfo.confetti.group` | `site-a` | **required**; groups nodes on the dashboard |
+| `guestinfo.confetti.subnet` | `10.1.1.0/24` | default: from DHCP lease |
+| `guestinfo.confetti.hostname` | `ct-site-a` | default: `ct-<group>-<ab1234>`; must be unique |
+| `guestinfo.confetti.dns_server` | `10.0.0.53` | unset skips the DNS test |
+| `guestinfo.confetti.dns_query` | `example.com` | name the DNS test looks up |
+| `guestinfo.hub.ip` | `10.0.0.100/24` | unset: asked at login |
+| `guestinfo.hub.gateway` | `10.0.0.1` | |
+| `guestinfo.hub.dns` | `10.0.0.53` | needed for `confettictl-update` |
+| `guestinfo.hub.hostname` | `confetti-hub` | re-read every boot |
 
-`confetti.*` keys go on nodes, `hub.*` keys on the hub.
+`guestinfo.confetti.*` keys go on nodes, `guestinfo.hub.*` keys on the hub.
 
 More: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) (reference tables) and
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (checklist with verification).
-
-## What it tests
-
-| Type | Label | Runs against |
-|---|---|---|
-| HTTP | H | every node pair, static targets |
-| SSH | S | every node pair, static targets |
-| Traceroute | T | every 5 min, and right after an HTTP or SSH failure |
-| Path MTU | M | every node pair, static targets; catches paths that pass small packets but hang on large ones |
-| DNS | D | one resolver per node, when `DNS_SERVER` is set |
-| iperf3 | I | every node pair, when `ENABLE_IPERF=true` |
-| SMB | B | every node pair, when `ENABLE_SMB=true` |
-| Loss/jitter | L | every node pair, always on (`fping`) |
-| SMTP | E | every node pair when `ENABLE_SMTP=true`, and static targets that list it; catches firewalls that rewrite SMTP instead of blocking it |
-
-**Static targets** are addresses with no agent (gateways, loopbacks, outside
-hosts). You add them once on the hub and every node tests them.
-
-**Syslog correlation** is optional. The hub accepts RFC3164 syslog on
-UDP/514. Each test result on the dashboard links to the syslog from ±5
-minutes around it, and a failing pair lists the related device messages
-next to its results, with a button that copies a summary for a ticket.
 
 ## Architecture
 
