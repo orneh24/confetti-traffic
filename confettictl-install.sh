@@ -101,6 +101,7 @@ else
     echo "destructive to run again on an already-configured VM."
     printf 'Run it now? [y/N] '
     if ! read -r RUNNOW; then
+        echo
         RUNNOW=""
     fi
 fi
@@ -139,6 +140,7 @@ if [ -t 0 ]; then
         echo
         printf 'Configure this node now? Say no if you will turn it into a template. [y/N] '
         if ! read -r CONFIGURE; then
+            echo
             CONFIGURE="n"
         fi
     fi
