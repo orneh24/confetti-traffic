@@ -328,7 +328,9 @@ uses one probe per hop and at most 10 hops, so it can't overrun the
 60-second cycle when the network breaks.
 
 **Bandwidth on demand.** The dashboard's **Bandwidth Test** panel measures
-throughput when you ask. It isn't part of the minute-by-minute tests.
+throughput when you ask. It isn't part of the minute-by-minute tests. Like
+Static Targets and Mesh Settings, it starts folded: press **Expand**, and
+the dashboard remembers that in your browser.
 
 - **Two nodes:** pick From and To, a duration (5–30 s) and 1–8 TCP streams.
   The hub runs `iperf3` on both nodes over SSH: From sends, then To sends.
@@ -469,6 +471,12 @@ On the dashboard, each test result links to syslog from ±5 min around it,
 and each pair has links filtered by group. Those filter on the hostname the
 device puts in its messages. If a group link is empty but the plain link
 shows the message, the device logs under a different name than the group.
+
+When a pair is failing, its detail panel also shows **Related events**: what
+the devices in the pair's groups logged within 5 minutes of when the pair
+started failing, plus any traceroute path change. **Copy summary** copies a
+plain-text summary of the pair (each test, the path change, related syslog,
+times in UTC and links back), ready to paste into a ticket.
 
 Keep in mind:
 

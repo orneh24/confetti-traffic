@@ -269,6 +269,26 @@ link comes back empty while the unfiltered window beside it still works, which
 is the intended failure: an empty view rather than a wrong one. The hub does
 not maintain an IP→device map.
 
+A failing pair's drill-down also lists **Related events**: syslog from the
+pair's groups (same `host` matching, so same best effort) within ±5 min of
+when the pair *started* failing, plus the hub's path-change note (from the
+last hour's `/api/path-changes` only, so an older failure shows syslog but no
+path change) — the start
+of the failure run, not the newest sample, because that is when the cause was
+logged. The pair endpoint returns the newest 200 rows, so a longer run says
+"was already failing". **Copy summary** puts a plain-text version of the pair
+(every test, path change, related syslog, UTC times, links back) on the
+clipboard for a ticket. `navigator.clipboard` only exists in a secure context
+and the hub serves plain HTTP, so the copy normally goes through a hidden
+textarea + `execCommand("copy")`; if the browser refuses both, the text is
+shown selected to copy by hand. Both are dashboard-only, on existing APIs.
+
+The admin panels — Static Targets, Mesh Settings, Bandwidth Test — start
+folded (`data-default="collapsed"` on their toggle; the viewer's Expand is
+remembered in localStorage `confetti-expanded`). Static Targets carries its
+verdict in the folded header ("2 targets, 1 path failing") so a failing
+target can't hide behind a closed box.
+
 **The clock is shown because the pinning depends on it.** `/api/time` reports
 chrony's tracking state in the syslog header. A ±5 min window around a
 `received_at` is only meaningful if the hub's clock is disciplined, so an

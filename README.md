@@ -178,7 +178,8 @@ hosts). You add them once on the hub and every node tests them.
 
 **Syslog correlation** is optional. The hub accepts RFC3164 syslog on
 UDP/514. Each test result on the dashboard links to the syslog from ±5
-minutes around it.
+minutes around it, and a failing pair lists the related device messages
+next to its results, with a button that copies a summary for a ticket.
 
 ## Architecture
 

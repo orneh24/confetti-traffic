@@ -865,6 +865,37 @@ a:hover { text-decoration: underline; }
     color: var(--text-dim);
     margin: -6px 0 12px 0;
 }
+.detail-pair { display: flex; align-items: center; gap: 8px; }
+.detail-pair .btn-small { margin-left: auto; }
+.detail-summary-box {
+    width: 100%;
+    margin: -4px 0 12px 0;
+    font-family: inherit;
+    font-size: 11px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+/* Related events: syslog from the pair's groups around when it started failing. */
+.detail-related { border: 1px solid var(--border); background: var(--bg); margin: 0 0 12px 0; }
+.detail-related-title {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 1px solid var(--border-soft);
+}
+.detail-related-note { font-weight: 400; color: var(--text-dim); margin-left: 8px; }
+.detail-related-body { padding: 4px 12px 6px; font-size: 11px; color: var(--text-dim); }
+.related-row {
+    display: grid;
+    grid-template-columns: auto auto auto 1fr;
+    gap: 10px;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border-soft);
+}
+.related-row:last-child { border-bottom: none; }
+.related-msg { color: var(--text); overflow-wrap: anywhere; }
 .detail-syslog a { color: var(--cyan); text-decoration: none; }
 .detail-syslog a:hover { text-decoration: underline; }
 .detail-syslog .sep { opacity: .5; margin: 0 6px; }
@@ -1124,11 +1155,12 @@ a:hover { text-decoration: underline; }
         <!-- Static targets: addresses that run no agent, so they can never
              appear in the mesh matrix above. Their results were previously
              collected and stored but had nowhere to render. -->
-        <div class="section" id="targets-section">
+        <div class="section collapsed" id="targets-section">
             <div class="section-header">
                 <span>Static Targets<span class="hdr-note" id="targets-note"></span></span>
                 <span class="hdr-actions">
                     <button class="btn-small" id="btn-add-target">+ add</button>
+                    <button type="button" class="btn-small collapse-toggle" data-section="targets-section" data-default="collapsed">Expand</button>
                 </span>
             </div>
             <div class="section-body scroll-x">
@@ -1165,10 +1197,13 @@ a:hover { text-decoration: underline; }
              cycle (GET /settings) and start/stop the matching server
              themselves; "node config" leaves each node's own ENABLE_* line
              in charge. -->
-        <div class="section" id="settings-section">
+        <div class="section collapsed" id="settings-section">
             <div class="section-header">
                 <span>Mesh Settings</span>
-                <span id="settings-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
+                <span class="hdr-actions">
+                    <span id="settings-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
+                    <button type="button" class="btn-small collapse-toggle" data-section="settings-section" data-default="collapsed">Expand</button>
+                </span>
             </div>
             <div class="section-body">
                 <div class="filter-row">
@@ -1211,10 +1246,13 @@ a:hover { text-decoration: underline; }
         <!-- On-demand bandwidth test (hub/app/bandwidth.py). Node to node: the
              hub runs iperf3 on both over SSH. Node to browser: this page
              talks to the node's /cgi-bin/confettictl-bw directly. One at a time. -->
-        <div class="section" id="bw-section">
+        <div class="section collapsed" id="bw-section">
             <div class="section-header">
                 <span>Bandwidth Test</span>
-                <span id="bw-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
+                <span class="hdr-actions">
+                    <span id="bw-status" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
+                    <button type="button" class="btn-small collapse-toggle" data-section="bw-section" data-default="collapsed">Expand</button>
+                </span>
             </div>
             <div class="section-body scroll-x">
                 <div class="filter-row">
@@ -1786,7 +1824,7 @@ a:hover { text-decoration: underline; }
         if (none !== changesWasEmpty) {
             changesWasEmpty = none;
             var toggle = document.querySelector(".collapse-toggle[data-section='changes-section']");
-            setCollapsed(toggle, none || readCollapsed().indexOf("changes-section") !== -1);
+            setCollapsed(toggle, none || prefCollapsed("changes-section"));
         }
         var rows = tbody.querySelectorAll("tr.clickable");
         for (var r = 0; r < rows.length; r++) {
@@ -1905,7 +1943,7 @@ a:hover { text-decoration: underline; }
         if (none !== syslogWasEmpty) {
             syslogWasEmpty = none;
             var toggle = document.querySelector(".collapse-toggle[data-section='syslog-preview-section']");
-            setCollapsed(toggle, none || readCollapsed().indexOf("syslog-preview-section") !== -1);
+            setCollapsed(toggle, none || prefCollapsed("syslog-preview-section"));
         }
     }
 
@@ -2012,13 +2050,14 @@ a:hover { text-decoration: underline; }
             table.style.display = "none";
             empty.style.display = "";
             setHeaderNote("targets-section", "targets-note", empty.innerHTML.trim());
+            setCollapsed(toggleFor("targets-section"), true);
             return;
         }
         table.style.display = "";
         empty.style.display = "none";
-        setHeaderNote("targets-section", "targets-note", "");
 
         var lookup = buildLookup();
+        var failing = 0, reported = 0;
         var hosts = endpoints.map(function(e) { return e.hostname; });
 
         var hrow = "<th class='origin'>src \\ target</th>";
@@ -2040,6 +2079,12 @@ a:hover { text-decoration: underline; }
                 for (var d = 0; d < declared.length; d++) {
                     if (PAIR_TEST_TYPES.indexOf(declared[d]) !== -1) types.push(declared[d]);
                 }
+                var down = false;
+                for (var ti = 0; ti < types.length; ti++) {
+                    var res = lookup[hosts[i] + "|" + targets[k].name + "|" + types[ti]];
+                    if (res) { reported++; if (!res.success) down = true; }
+                }
+                if (down) failing++;
                 var sel = selectedPair && selectedPair.source === hosts[i] && selectedPair.target === targets[k].name;
                 html += "<td data-src='" + esc(hosts[i]) + "' data-dst='" + esc(targets[k].name) + "'" +
                         (sel ? " class='selected'" : "") + ">";
@@ -2050,6 +2095,15 @@ a:hover { text-decoration: underline; }
             html += "</tr>";
         }
         table.querySelector("tbody").innerHTML = html;
+
+        // The box starts folded (it's partly admin), so its title carries the
+        // verdict: a failing target must not hide behind a closed panel.
+        var verdict = failing
+            ? "<span style='color:var(--red)'>" + failing + " path" + (failing !== 1 ? "s" : "") + " failing</span>"
+            : (reported ? "all passing" : "no results yet");
+        document.getElementById("targets-note").innerHTML = "&mdash; " + targets.length + " target" +
+            (targets.length !== 1 ? "s" : "") + ", " + verdict;
+        setCollapsed(toggleFor("targets-section"), prefCollapsed("targets-section"));
 
         var cells = table.querySelectorAll("td[data-src]");
         for (var c = 0; c < cells.length; c++) cells[c].addEventListener("click", onCellClick);
@@ -2271,7 +2325,12 @@ a:hover { text-decoration: underline; }
             return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
 
-        var html = "<div class='detail-pair'>" + esc(src) + " &rarr; " + esc(dst) + "</div>";
+        var failingTypes = order.filter(function(t) { return !byType[t][0].success; });
+        var since = failingTypes.length ? failingSince(byType, failingTypes) : null;
+
+        var html = "<div class='detail-pair'><span>" + esc(src) + " &rarr; " + esc(dst) + "</span>" +
+                   "<button type='button' class='btn-small' id='detail-copy' title='Copy a plain-text summary of this pair, for a ticket or a chat'>copy summary</button></div>";
+        html += "<textarea class='detail-summary-box' id='detail-summary-box' rows='8' readonly hidden></textarea>";
 
         // Anchored on the most recent sample for this pair — that is the
         // moment someone clicking a red cell is asking about.
@@ -2288,6 +2347,14 @@ a:hover { text-decoration: underline; }
                     esc(groups[gi]) + "</a>";
         }
         html += "</div>";
+
+        if (since) {
+            html += "<div class='detail-related'><div class='detail-related-title'>Related events" +
+                    "<span class='detail-related-note'>&plusmn;" + SYSLOG_PIN_MINUTES + " min around " +
+                    esc(since.at.toLocaleTimeString()) + ", when this pair " +
+                    (since.capped ? "was already failing" : "started failing") + "</span></div>" +
+                    "<div class='detail-related-body' id='detail-related-body'>loading&hellip;</div></div>";
+        }
 
         html += "<div class='detail-tests'>";
 
@@ -2357,6 +2424,21 @@ a:hover { text-decoration: underline; }
         html += "</div>";
         body.innerHTML = html;
 
+        // A refresh re-renders this panel every 30 s; reuse the related rows
+        // already fetched for the same failure rather than flash "loading".
+        var prev = detailState;
+        detailState = {src: src, dst: dst, byType: byType, order: order, since: since, related: null};
+        if (since) {
+            if (prev && prev.src === src && prev.dst === dst && prev.related && prev.since &&
+                prev.since.at.getTime() === since.at.getTime()) {
+                detailState.related = prev.related;
+                renderRelated();
+            } else {
+                loadRelated(src, dst, since.at);
+            }
+        }
+        document.getElementById("detail-copy").addEventListener("click", onCopySummary);
+
         // Toggle output on header click
         var headers = body.querySelectorAll(".detail-test-header");
         for (var h = 0; h < headers.length; h++) {
@@ -2368,8 +2450,195 @@ a:hover { text-decoration: underline; }
         }
     }
 
+    // ---------------------------------------------------------------
+    // Related events and Copy summary (Test Detail)
+    //
+    // For a failing pair, list what the devices behind it logged around the
+    // moment it started failing: syslog from the pair's groups (matched on the
+    // hostname a device logs under, the same best effort as the group links)
+    // plus the hub's own path-change note. Rows are untrusted text, escaped
+    // like every other syslog row on this page.
+    // ---------------------------------------------------------------
+    var detailState = null; // the pair on screen, for the summary
+    var RELATED_MAX = 8;
+
+    // Oldest sample of the current failure run across the failing tests. The
+    // pair endpoint returns its newest 200 rows, so a run that reaches the end
+    // of them is only "at least since" (capped).
+    function failingSince(byType, failingTypes) {
+        var at = null, capped = false;
+        for (var t = 0; t < failingTypes.length; t++) {
+            var items = byType[failingTypes[t]];
+            var i = 0;
+            for (; i < items.length && !items[i].success; i++) {
+                var d = parseTs(items[i].received_at || items[i].timestamp);
+                if (d && (!at || d < at)) at = d;
+            }
+            if (i === items.length) capped = true;
+        }
+        return at ? {at: at, capped: capped} : null;
+    }
+
+    function loadRelated(src, dst, at) {
+        var ms = SYSLOG_PIN_MINUTES * 60000;
+        var from = new Date(at.getTime() - ms), to = new Date(at.getTime() + ms);
+        function z(d) { return d.toISOString().replace(/\.\d+Z$/, "Z"); }
+        var base = "/api/syslog?from=" + encodeURIComponent(z(from)) + "&to=" + encodeURIComponent(z(to)) +
+                   "&limit=" + RELATED_MAX + "&host=";
+        var groups = pairGroups(src, dst);
+        Promise.all(groups.map(function(g) { return fetchJSON(base + encodeURIComponent(g)); })).then(function(lists) {
+            // Another pair may have been opened while this was in flight.
+            if (!detailState || detailState.src !== src || detailState.dst !== dst) return;
+            var rows = [], seen = {};
+            for (var l = 0; l < lists.length; l++) {
+                for (var i = 0; i < lists[l].length; i++) {
+                    if (!seen[lists[l][i].id]) { seen[lists[l][i].id] = true; rows.push(lists[l][i]); }
+                }
+            }
+            for (var c = 0; c < changeHistoryPathChanges.length; c++) {
+                var pc = changeHistoryPathChanges[c], pd = parseTs(pc.received_at);
+                if (pc.source === src && pc.target === dst && pd && pd >= from && pd <= to) {
+                    rows.push({received_at: pc.received_at, host: "confetti-hub", severity: 5,
+                               message: "path changed: " + pc.detail});
+                }
+            }
+            rows.sort(function(a, b) { return a.received_at < b.received_at ? 1 : -1; });
+            detailState.related = {groups: groups, rows: rows.slice(0, RELATED_MAX)};
+            renderRelated();
+        }).catch(function() {
+            var el = document.getElementById("detail-related-body");
+            if (el) el.textContent = "Could not load syslog.";
+        });
+    }
+
+    function renderRelated() {
+        var el = document.getElementById("detail-related-body");
+        if (!el || !detailState || !detailState.related) return;
+        var rel = detailState.related;
+        if (!rel.rows.length) {
+            el.innerHTML = "Nothing logged by " +
+                (rel.groups.length ? rel.groups.map(esc).join(" or ") : "this pair's groups") +
+                " in this window, and no path change.";
+            return;
+        }
+        var html = "";
+        for (var i = 0; i < rel.rows.length; i++) {
+            var m = rel.rows[i], d = parseTs(m.received_at);
+            var sev = (m.severity === null || m.severity === undefined) ? "?" : String(m.severity);
+            html += "<div class='related-row'>" +
+                    "<span title='" + escAttr(m.received_at) + "'>" + esc(d ? d.toLocaleTimeString() : m.received_at) + "</span>" +
+                    "<span>" + esc(m.host || m.source_ip) + "</span>" +
+                    "<span style='color:" + sevColor(m.severity) + "'>" + esc(sev) + "</span>" +
+                    "<span class='related-msg'>" + esc(m.message) + "</span></div>";
+        }
+        el.innerHTML = html;
+    }
+
+    function utcStamp(d) {
+        return d.toISOString().slice(0, 16).replace("T", " ") + " UTC";
+    }
+
+    function latencyText(type, ms) {
+        if (ms === null || ms === undefined) return "";
+        if (COARSE_TIMING[type]) return ms < 1000 ? "<1s" : Math.round(ms / 1000) + "s";
+        return ms.toFixed(1) + " ms";
+    }
+
+    // Plain text for a ticket or a chat: the pair, every test's latest result,
+    // the path change, the related syslog, and links back. Times are UTC so
+    // the reader's timezone can't shift them.
+    function buildSummary() {
+        var s = detailState, lines = [];
+        function groupOf(h) {
+            for (var i = 0; i < endpoints.length; i++) if (endpoints[i].hostname === h) return endpoints[i].group_name;
+            return "";
+        }
+        function pad(t, n) { while (t.length < n) t += " "; return t; }
+        var gs = groupOf(s.src), gd = groupOf(s.dst);
+        lines.push("Confetti Traffic: " + s.src + " -> " + s.dst +
+                   (gs || gd ? " (" + (gs || "?") + " -> " + (gd || "?") + ")" : ""));
+        var failing = s.order.filter(function(t) { return !s.byType[t][0].success; });
+        if (!s.order.length) {
+            lines.push("No results recorded yet");
+        } else if (failing.length) {
+            lines.push(failing.length + " of " + s.order.length + " tests failing, since " +
+                       (s.since.capped ? "at least " : "") + utcStamp(s.since.at));
+        } else {
+            lines.push("All " + s.order.length + " tests passing");
+        }
+        for (var t = 0; t < s.order.length; t++) {
+            var r = s.byType[s.order[t]][0];
+            var out = String(r.output || "").split("\n")[0].trim();
+            if (s.order[t] === "traceroute") {
+                // One line per hop; keep hop number and address, e.g. "1 10.3.1.1 | 2 * ".
+                out = String(r.output || "").split("\n").map(function(h) {
+                    return h.trim().split(/\s+/).slice(0, 2).join(" ");
+                }).filter(Boolean).join(" | ");
+            }
+            if (out.length > 100) out = out.slice(0, 97) + "...";
+            lines.push("  " + pad(TYPE_NAMES[s.order[t]] || s.order[t], 7) + pad(r.success ? "pass" : "FAIL", 6) +
+                       pad(latencyText(s.order[t], r.latency_ms), 11) + out);
+        }
+        var pc = pathChangeLookup[s.src + "|" + s.dst];
+        if (pc && parseTs(pc.received_at)) {
+            lines.push("Path change: " + pc.detail + " at " + utcStamp(parseTs(pc.received_at)));
+        }
+        if (s.related && s.related.rows.length) {
+            lines.push("Syslog around " + utcStamp(s.since.at) + ":");
+            for (var i = 0; i < s.related.rows.length; i++) {
+                var m = s.related.rows[i], d = parseTs(m.received_at);
+                lines.push("  " + (d ? d.toISOString().slice(11, 19) : m.received_at) + "  " +
+                           (m.host || m.source_ip) + "  sev " +
+                           (m.severity === null || m.severity === undefined ? "?" : m.severity) + "  " +
+                           String(m.message || "").replace(/\s+/g, " "));
+            }
+        }
+        var first = s.order.length ? s.byType[s.order[0]][0] : null;
+        var anchor = s.since ? s.since.at.toISOString() : (first ? first.received_at || first.timestamp : null);
+        lines.push("Syslog window: " + location.origin + syslogUrl(anchor));
+        lines.push("Dashboard: " + location.origin + "/");
+        return lines.join("\n");
+    }
+
+    // navigator.clipboard exists only in a secure context (HTTPS or
+    // localhost). The hub serves plain HTTP, so the textarea route below is
+    // the one that normally runs.
+    function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+        return new Promise(function(resolve, reject) {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            ta.setAttribute("readonly", "");
+            ta.style.position = "fixed";
+            ta.style.top = "0";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            var ok = false;
+            try { ok = document.execCommand("copy"); } catch (e) {}
+            document.body.removeChild(ta);
+            if (ok) resolve(); else reject();
+        });
+    }
+
+    function onCopySummary() {
+        if (!detailState) return;
+        var btn = this, text = buildSummary();
+        copyText(text).then(function() {
+            btn.textContent = "copied";
+            setTimeout(function() { btn.textContent = "copy summary"; }, 2000);
+        }, function() {
+            // Browser refused: show the text, selected, to copy by hand.
+            var box = document.getElementById("detail-summary-box");
+            box.value = text;
+            box.hidden = false;
+            box.select();
+        });
+    }
+
     document.getElementById("detail-close").addEventListener("click", function() {
         selectedPair = null;
+        detailState = null;
         document.getElementById("detail-body").innerHTML = "<div class='detail-empty'>Click a matrix cell to inspect test results</div>";
         this.style.display = "none";
         var prev = document.querySelectorAll(".matrix td.selected");
@@ -2677,6 +2946,8 @@ a:hover { text-decoration: underline; }
                 if (!r.ok) {
                     alert("Could not add target: " + (body.error || r.status) +
                           (body.unknown ? "\nUnknown test types: " + body.unknown.join(", ") : ""));
+                } else {
+                    choose("targets-section", false); // show what was just added
                 }
                 refresh();
             });
@@ -2805,24 +3076,45 @@ a:hover { text-decoration: underline; }
     // ---------------------------------------------------------------
     // Collapse/Expand for panels that carry a .collapse-toggle button.
     // Remembered per browser; storage can be unavailable, so it's optional.
+    // A toggle with data-default="collapsed" (the admin panels) starts folded,
+    // so its stored list is the opposite one: the panels the viewer expanded.
     var COLLAPSE_KEY = "confetti-collapsed";
-    function readCollapsed() {
-        try { return JSON.parse(localStorage.getItem(COLLAPSE_KEY)) || []; } catch (e) { return []; }
+    var EXPANDED_KEY = "confetti-expanded";
+    var collapseChoice = {}; // this page's own clicks, for when storage is blocked
+    function readList(key) {
+        try { return JSON.parse(localStorage.getItem(key)) || []; } catch (e) { return []; }
+    }
+    function toggleFor(id) {
+        return document.querySelector(".collapse-toggle[data-section='" + id + "']");
+    }
+    function foldedByDefault(id) {
+        var btn = toggleFor(id);
+        return !!btn && btn.getAttribute("data-default") === "collapsed";
+    }
+    // The viewer's choice for a panel, else the panel's default.
+    function prefCollapsed(id) {
+        if (collapseChoice.hasOwnProperty(id)) return collapseChoice[id];
+        if (foldedByDefault(id)) return readList(EXPANDED_KEY).indexOf(id) === -1;
+        return readList(COLLAPSE_KEY).indexOf(id) !== -1;
     }
     function setCollapsed(btn, collapsed) {
         document.getElementById(btn.getAttribute("data-section")).classList.toggle("collapsed", collapsed);
         btn.textContent = collapsed ? "Expand" : "Collapse";
     }
-    var collapsedIds = readCollapsed();
+    // Apply and remember a choice.
+    function choose(id, collapsed) {
+        collapseChoice[id] = collapsed;
+        setCollapsed(toggleFor(id), collapsed);
+        var key = foldedByDefault(id) ? EXPANDED_KEY : COLLAPSE_KEY;
+        var list = readList(key).filter(function(x) { return x !== id; });
+        if (foldedByDefault(id) ? !collapsed : collapsed) list.push(id);
+        try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) {}
+    }
     document.querySelectorAll(".collapse-toggle").forEach(function(btn) {
-        setCollapsed(btn, collapsedIds.indexOf(btn.getAttribute("data-section")) !== -1);
+        var id = btn.getAttribute("data-section");
+        setCollapsed(btn, prefCollapsed(id));
         btn.addEventListener("click", function() {
-            var id = btn.getAttribute("data-section");
-            var nowCollapsed = !document.getElementById(id).classList.contains("collapsed");
-            setCollapsed(btn, nowCollapsed);
-            var list = readCollapsed().filter(function(x) { return x !== id; });
-            if (nowCollapsed) list.push(id);
-            try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify(list)); } catch (e) {}
+            choose(id, !document.getElementById(id).classList.contains("collapsed"));
         });
     });
 
