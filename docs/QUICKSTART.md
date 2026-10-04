@@ -61,7 +61,7 @@ Restart the hub after editing: `rc-service confettid-hub restart`.
 service and the build use the fixed paths `/etc/confetti-hub/keys` and
 `/opt/confetti-hub/bundle`.
 
-The root password (`lab123`) is set at build time. Override it with
+The root password (`confetti`) is set at build time. Override it with
 `CONFETTI_ROOT_PASSWORD` when running either `confettictl-build-template.sh`.
 
 ## Node config (`/etc/confetti/config`)

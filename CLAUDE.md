@@ -428,7 +428,7 @@ dropbear's minimal PATH, so the push's remote command sets PATH itself.
 ## Infrastructure
 - ESXi + vCenter, `open-vm-tools` on both roles
 - Two separate golden templates, each built by its own `confettictl-build-template.sh`
-- Default credentials: **root / lab123** (isolated lab only) — override with
+- Default credentials: **root / confetti** (isolated lab only) — override with
   `CONFETTI_ROOT_PASSWORD` when running either `confettictl-build-template.sh`
 - `chrony` on all VMs — the hub's clock is the mesh reference, and the hub
   serves it: its build appends `allow all` + `local stratum 10 orphan` to

@@ -32,7 +32,7 @@ UPDATE_MODE="no"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HUB_INSTALL_DIR="/opt/confetti-hub"
 DB_DIR="/var/lib/confetti"
-CONFETTI_ROOT_PASSWORD="${CONFETTI_ROOT_PASSWORD:-lab123}"
+CONFETTI_ROOT_PASSWORD="${CONFETTI_ROOT_PASSWORD:-confetti}"
 
 # -------------------------------------------------------------------
 # Helpers

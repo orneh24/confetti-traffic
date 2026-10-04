@@ -111,10 +111,10 @@ fi
 # pool hostname won't resolve.
 printf 'DNS server (e.g. 10.0.0.53, blank to skip): '
 read -r DNS || DNS=""
-CURRENT_HOSTNAME=$(hostname)
-printf 'Hostname [%s]: ' "$CURRENT_HOSTNAME"
+DEFAULT_HOSTNAME=confetti-hub
+printf 'Hostname [%s]: ' "$DEFAULT_HOSTNAME"
 read -r NEW_HOSTNAME || NEW_HOSTNAME=""
-[ -n "$NEW_HOSTNAME" ] || NEW_HOSTNAME="$CURRENT_HOSTNAME"
+[ -n "$NEW_HOSTNAME" ] || NEW_HOSTNAME="$DEFAULT_HOSTNAME"
 
 case "$NEW_HOSTNAME" in
     *[!A-Za-z0-9-]*|-*)

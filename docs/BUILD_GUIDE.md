@@ -63,7 +63,7 @@ Boot the ISO, log in as `root` (no password) and run `setup-alpine`:
 | Keyboard layout | your layout |
 | Hostname | `confetti` (each clone renames itself) |
 | Network interface | `eth0`, `dhcp` |
-| Root password | anything; the build sets it to `lab123` (see below) |
+| Root password | anything; the build sets it to `confetti` (see below) |
 | Timezone | `UTC` or your lab's timezone |
 | Proxy | `none`, unless your lab needs one |
 | NTP client | `chrony` |
@@ -80,7 +80,7 @@ ip addr show eth0
 ping -c 2 alpinelinux.org
 ```
 
-The build scripts set the root password to `lab123`. To use your own, run
+The build scripts set the root password to `confetti`. To use your own, run
 the build with `CONFETTI_ROOT_PASSWORD=<password>` set.
 
 Now clone the VM twice (hub and node template).

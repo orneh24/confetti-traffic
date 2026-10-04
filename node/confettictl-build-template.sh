@@ -30,7 +30,7 @@ INSTALL_DIR="/usr/local/bin/confetti"
 CONFIG_DIR="/etc/confetti"
 LOG_DIR="/var/log/confetti"
 WEB_ROOT="/var/www/localhost/htdocs"
-CONFETTI_ROOT_PASSWORD="${CONFETTI_ROOT_PASSWORD:-lab123}"
+CONFETTI_ROOT_PASSWORD="${CONFETTI_ROOT_PASSWORD:-confetti}"
 
 # -------------------------------------------------------------------
 # Helpers
