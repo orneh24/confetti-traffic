@@ -23,6 +23,13 @@ fi
 mkdir -p "$ROOT/hub/agent"
 cp -f "$ROOT/node/scripts/confettictl-register.sh" "$ROOT/node/scripts/confettictl-test-cycle.sh" "$ROOT/hub/agent/"
 
+# A RELEASE file like the build's bundle step writes, so /node/release and the
+# Hub Health "Build" entry show the checkout's commit. No tarball: dev nodes
+# never download the bundle.
+mkdir -p "$RUN_DIR/bundle"
+echo "commit=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)" > "$RUN_DIR/bundle/RELEASE"
+export HUB_BUNDLE_DIR="$RUN_DIR/bundle"
+
 export HUB_PORT HUB_SYSLOG_PORT
 export HUB_DB_PATH="$RUN_DIR/hub.db"
 # Root is needed for the real port 514; this box has none, so keep syslog on

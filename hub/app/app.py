@@ -1201,7 +1201,17 @@ def api_health():
         "memory": _memory_info(),
         "disk": _disk_info(),
         "uptime_s": _uptime_s(),
+        "build": _health_build(),
     })
+
+
+def _health_build():
+    # The bundle's RELEASE is rewritten on every hub build and update, so
+    # it is the hub's own commit too. None when it can't be read.
+    try:
+        return bundle_commit()
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------

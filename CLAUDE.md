@@ -74,7 +74,8 @@ Diagram: `docs/TOPOLOGY.md`.
   - `GET /api/health` — hub self-health for the dashboard's "Hub Health"
     panel: OpenRC service status (`HUB_HEALTH_SERVICES`, default
     `confettid-hub,chronyd,dropbear,open-vm-tools,lldpd`), syslog listener state,
-    load average, memory, disk, uptime. Same never-500 discipline as
+    load average, memory, disk, uptime, build (commit, from the bundle's
+    `RELEASE`). Same never-500 discipline as
     `/api/time` — a check that can't run (e.g. `rc-service` missing) reports
     `null`/a reason rather than failing the page
 

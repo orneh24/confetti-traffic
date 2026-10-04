@@ -1580,6 +1580,11 @@ a:hover { text-decoration: underline; }
                     m += "<div class='health-stat'><div class='health-stat-label'>Uptime</div>" +
                          "<div class='health-stat-value'>" + days + "d " + hrs + "h</div></div>";
                 }
+                if (h.build) {
+                    m += "<div class='health-stat'><div class='health-stat-label'>Build</div>" +
+                         "<div class='health-stat-value' title='" + escAttr(h.build) + "'>" +
+                         esc(h.build === "unknown" ? h.build : h.build.substring(0, 7)) + "</div></div>";
+                }
                 document.getElementById("health-metrics").innerHTML = m;
             })
             .catch(function() {
