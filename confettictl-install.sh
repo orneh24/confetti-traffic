@@ -50,27 +50,6 @@ for _old in /usr/local/bin/pervium /opt/pervium-hub /usr/local/bin/mesh-flux /op
 done
 
 # -------------------------------------------------------------------
-# Backspace. Terminals disagree on what Backspace sends (^H or DEL), and a
-# mismatch with the tty's erase key echoes ^H instead of deleting. One keypress
-# tells us which, and the setting is inherited by every prompt this install
-# starts. Only with a keyboard; a scripted run has no one to ask.
-# -------------------------------------------------------------------
-if [ -t 0 ]; then
-    printf 'Press Backspace once (so typing mistakes can be corrected): '
-    _tty=$(stty -g 2>/dev/null) || _tty=""
-    if [ -n "$_tty" ]; then
-        stty -icanon -echo min 1 time 0 2>/dev/null || true
-        _key=$(dd bs=1 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n') || _key=""
-        stty "$_tty" 2>/dev/null || true
-        case "$_key" in
-            08) stty erase '^H' 2>/dev/null || true ;;
-            7f) stty erase '^?' 2>/dev/null || true ;;
-        esac
-    fi
-    echo
-fi
-
-# -------------------------------------------------------------------
 # Role selection
 # -------------------------------------------------------------------
 ROLE="${1:-}"
