@@ -4,7 +4,8 @@
 # In normal use you do not edit this by hand: confettictl-setup.sh writes the file from
 # VMware guestinfo keys set on the node's VM in vCenter. Precedence for each
 # value is guestinfo -> environment variable -> interactive prompt, except
-# SUBNET, which gets one extra fallback before the prompt: confettictl-setup.sh derives
+# HUB_URL, which also falls back to /etc/confetti/template-hub-url (set when
+# the template was built) before the prompt, and SUBNET, which gets one extra fallback before the prompt: confettictl-setup.sh derives
 # it from the interface's own DHCP lease (address + prefix already give you
 # the network), so it's normally left unset entirely.
 #

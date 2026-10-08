@@ -496,6 +496,9 @@ keys set on the VM are read in-guest via `vmware-rpctool "info-get <key>"`:
 | `guestinfo.confetti.dns_query` | `example.com` (optional) |
 
 Precedence in `confettictl-setup.sh`: **guestinfo → environment → prompt**, except
+`hub_url`, which has a fallback before the prompt: `/etc/confetti/template-hub-url`,
+written by the node build from `CONFETTI_HUB_URL` (asked by `confettictl-install.sh`
+when interactive) and kept out of the cleanup so clones inherit it; and
 `subnet`, which has one extra fallback before the prompt: derived from the
 interface's own DHCP lease (address + prefix already give you the network).
 If hostname is omitted it is derived as `<HOSTNAME_PREFIX>-<group-slug>-<NODE_ID>`

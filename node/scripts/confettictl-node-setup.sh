@@ -54,8 +54,8 @@ CURRENT_IP=$(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | he
 echo "Hostname: $CURRENT_HOSTNAME"
 echo "Address:  ${CURRENT_IP:-none}"
 echo
-echo "Values come from guestinfo/environment first; this only prompts for"
-echo "whatever's still missing (HUB_URL, GROUP_NAME -- SUBNET derives from"
+echo "Values come from guestinfo/environment (HUB_URL also from the template) first;"
+echo "this only prompts for whatever's still missing (HUB_URL, GROUP_NAME -- SUBNET derives from"
 echo "the DHCP lease automatically)."
 echo
 

@@ -108,6 +108,14 @@ fi
 
 case "$RUNNOW" in
     [yY]*)
+        # Node template: offer to bake the hub URL in, so clones ask only
+        # for the group. Not with -y or without a keyboard.
+        if [ "$ROLE" = "node" ] && [ -z "${CONFETTI_HUB_URL:-}" ] && [ -t 0 ] \
+           && [ "$AUTO_YES" != "-y" ] && [ "$AUTO_YES" != "--yes" ]; then
+            printf 'Hub URL to store in the template, e.g. http://10.0.0.100 (blank = ask on each clone): '
+            read -r CONFETTI_HUB_URL || CONFETTI_HUB_URL=""
+        fi
+        export CONFETTI_HUB_URL="${CONFETTI_HUB_URL:-}"
         log "Running $BUILD_SCRIPT ..."
         sh "$BUILD_SCRIPT"
         ;;

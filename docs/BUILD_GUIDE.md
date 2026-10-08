@@ -98,7 +98,11 @@ wget -O /tmp/oi.sh https://github.com/orneh24/confetti-traffic/raw/main/online-i
 `online-install.sh` downloads the repo to `/root/confetti` and runs
 `confettictl-install.sh` from it.
 
-Pick **hub** on one clone and **node** on the other. The build enables the
+Pick **hub** on one clone and **node** on the other. For the node, the
+installer asks for the hub URL (e.g. `http://10.0.0.100`) and stores it in
+the template as `/etc/confetti/template-hub-url`, so clones ask only for the
+group. Leave it blank to be asked on each clone, or set `CONFETTI_HUB_URL`
+for an unattended build. Guestinfo and the environment still override it. The build enables the
 community repository, installs packages, installs the services and cleans
 the VM for cloning. It takes a few minutes; zeroing free space at the end is
 the slow part.

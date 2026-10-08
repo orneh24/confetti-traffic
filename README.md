@@ -2,7 +2,19 @@
 
 > **AI disclaimer:** This project was created using [Claude Code](https://claude.com/claude-code) for training/labbing purposes - use freely, but at own risk :-)
 
-**Menu:** [Tests](#tests) · [Quick start](#quick-start) ([hub](#1-install-the-hub), [nodes](#2-add-nodes), [updating](#updating), [guestinfo keys](#vmware-guestinfo-keys-optional)) · [Architecture](#architecture) ([other hypervisors](#other-hypervisors), [why not Docker?](#why-not-docker)) · [Running the hub locally](#running-the-hub-locally) · [Docs](#docs)
+**Menu**
+
+- [Tests](#tests)
+- [Quick start](#quick-start)
+  - [Install the hub](#1-install-the-hub)
+  - [Add nodes](#2-add-nodes)
+  - [Updating](#updating)
+  - [VMware guestinfo keys](#vmware-guestinfo-keys-optional)
+- [Architecture](#architecture)
+  - [Other hypervisors](#other-hypervisors)
+  - [Why not Docker?](#why-not-docker)
+- [Running the hub locally](#running-the-hub-locally)
+- [Docs](#docs)
 
 End-to-end connectivity testing between nodes on a network. It goes beyond
 ICMP: it makes real TCP connections (HTTP, SSH, SMB, SMTP, iperf3) and
@@ -10,15 +22,11 @@ measures packet loss/jitter, path MTU, DNS and traceroute. Results show on a
 web dashboard, optionally next to syslog from the network devices on the path.
 A Timeline page groups failures, route changes, syslog and bandwidth tests into incidents, and a slider replays the mesh at any earlier moment (1 hour, 6 hours or 24 hours back).
 
-![Dashboard with a synthetic 5-node mesh, one failing path selected, and its syslog correlation panel open](docs/img/dashboard-mock.jpg)
-
-*Mock data from a synthetic 5-node mesh, not a real lab. See
-[Running the hub locally](#running-the-hub-locally).*
-
 ![Animated tour of the hub's Dashboard, Syslog and Timeline pages](docs/img/hub-pages.gif)
 
 *The three hub pages: Dashboard, Syslog and Timeline, then the dashboard in
-the Confetti Night theme. Mock data from a synthetic 6-node mesh.*
+the Confetti Night theme. Mock data from a synthetic 6-node mesh, not a real
+lab. See [Running the hub locally](#running-the-hub-locally).*
 
 ## Tests
 
@@ -69,9 +77,10 @@ by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
    the hub's static IP, gateway, and optional DNS server and hostname, then
    starts the hub. If you skip it, it asks again at your next login.
 
-   Or set `guestinfo.hub.ip`, `guestinfo.hub.gateway` (and optionally
-   `guestinfo.hub.dns`, `guestinfo.hub.hostname`) on the VM in vCenter
-   before first boot, and the hub configures itself.
+   For bulk or scripted deployments, set `guestinfo.hub.ip`,
+   `guestinfo.hub.gateway` (and optionally `guestinfo.hub.dns`,
+   `guestinfo.hub.hostname`) on the VM in vCenter before first boot, and the
+   hub configures itself.
 4. **Check** that `http://<hub-ip>/` loads.
 
 ### 2. Add nodes
@@ -91,18 +100,27 @@ It downloads the node bundle from the hub, installs it, and asks for the
 group if you did not pass one. Good for a few nodes, or where a VM can't be
 cloned.
 
-**Option B: vCenter template and guestinfo.** Best for many nodes.
+**Option B: vCenter template.** Best for many nodes.
 
 1. On a second Alpine VM, run the same installer as in part 1 and pick
-   *node*. The build cleans the VM for cloning when it finishes.
+   *node*. When it asks, enter the hub URL (e.g. `http://10.0.0.100`): it is
+   stored in the template, so clones don't ask for it. (Unattended:
+   `CONFETTI_HUB_URL=http://10.0.0.100 sh /tmp/oi.sh node`.) The build
+   cleans the VM for cloning when it finishes.
 2. Shut it down and convert it to a vCenter template. Don't configure or test
    it first: that undoes the cleanup. Test on the first clone instead.
 3. Clone the template once per network segment and put each clone on its
    segment's port group.
-4. Before first boot, set `guestinfo.confetti.hub_url` and
-   `guestinfo.confetti.group` on each clone (all keys are listed under
-   [VMware guestinfo keys](#vmware-guestinfo-keys-optional)). It then configures
-   itself. Without them, log in and answer the `confettictl-node-setup.sh` prompt.
+4. Configure each clone:
+   - **A small set of nodes:** boot the clone and log in. The
+     `confettictl-node-setup.sh` prompt uses the hub URL from the template and
+     asks only for the group.
+   - **Bulk or scripted deployments (recommended):** before first boot, set
+     `guestinfo.confetti.hub_url` and `guestinfo.confetti.group` on each clone,
+     e.g. from a PowerCLI script (all keys are listed under
+     [VMware guestinfo keys](#vmware-guestinfo-keys-optional)). The clone then
+     configures itself with no login. Guestinfo wins over the template's
+     hub URL.
 
 Every node fetches its SSH keys from the hub at setup. The hub's management
 key is trusted on first use and lets the hub push updates from the dashboard.

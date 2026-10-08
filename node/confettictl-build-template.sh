@@ -539,6 +539,16 @@ rm -f /etc/confetti/config /etc/confetti/config.bak-* \
       /etc/confetti/.firstboot-done /etc/confetti/.setup-done
 rm -f /usr/local/bin/confetti/*.known-good
 
+# Optional hub URL for the clones, kept in its own file so the cleanup above
+# can't take it: confettictl-setup.sh uses it after guestinfo and the
+# environment, so a clone's setup prompt asks only for the group.
+if [ -n "${CONFETTI_HUB_URL:-}" ]; then
+    printf '%s\n' "$CONFETTI_HUB_URL" > "$CONFIG_DIR/template-hub-url"
+    log "Hub URL stored in the template: $CONFETTI_HUB_URL"
+else
+    rm -f "$CONFIG_DIR/template-hub-url"
+fi
+
 # Reset the hostname to an obviously-unconfigured value. confettictl-setup.sh replaces
 # it with a unique per-clone name; leaving a real one here invites the
 # collision this template is built to avoid.
@@ -587,5 +597,6 @@ log ""
 log "To deploy a clone (manual):"
 log "  1. Clone from template, assign to correct network"
 log "  2. Boot and log in (root / ${CONFETTI_ROOT_PASSWORD})"
-log "  3. confettictl-node-setup.sh runs automatically at first login and prompts;"
+log "  3. confettictl-node-setup.sh runs automatically at first login and prompts"
+log "     (the hub URL is already in this template if you gave one -- only the group is asked);"
 log "     or run it (or /usr/local/bin/confetti/confettictl-setup.sh) by hand any time"

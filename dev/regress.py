@@ -519,6 +519,18 @@ def _():
     return p
 
 
+@check("R35", "template hub URL: written by the build, survives cleanup, read by setup")
+def _():
+    p = []
+    body = read(NODE_BUILD)
+    need("template-hub-url" in body and "CONFETTI_HUB_URL" in body,
+         "node build no longer writes the template hub URL", p)
+    m = re.search(r"rm -f /etc/confetti/config[^\n]*\\\n[^\n]*", body)
+    need(m and "template-hub-url" not in m.group(0), "node cleanup removes template-hub-url", p)
+    need(grep(r"template-hub-url", SETUP), "confettictl-setup.sh no longer reads template-hub-url", p)
+    return p
+
+
 @check("R26", "confettictl-build-template.sh --update exits before cleanup (release-blocking)")
 def _():
     p = []

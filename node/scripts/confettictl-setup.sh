@@ -164,6 +164,11 @@ else
         log "Found configuration in VMware guestinfo"
 
     _hub_url="${_gi_hub:-${HUB_URL:-}}"
+    # Last resort before the prompt: the URL the template was built with.
+    if [ -z "$_hub_url" ] && [ -s "$CONFIG_DIR/template-hub-url" ]; then
+        _hub_url=$(head -n 1 "$CONFIG_DIR/template-hub-url")
+        log "Hub URL from template: $_hub_url"
+    fi
     _group_name="${_gi_group:-${GROUP_NAME:-}}"
     _subnet="${_gi_subnet:-${SUBNET:-}}"
     if [ -z "$_subnet" ]; then
