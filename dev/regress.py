@@ -734,6 +734,57 @@ def _():
     return p
 
 
+def py_text_between(text, start, end):
+    i = text.find(start)
+    j = text.find(end, i + 1) if i >= 0 else -1
+    return text[i:j] if i >= 0 and j > i else ""
+
+
+@check("R32", "flapping: same threshold on dashboard and node, flap_note never fails a cycle")
+def _():
+    p = []
+    dash = re.search(r"var FLAP_MIN_FLIPS = (\d+)", read(DASH))
+    node = re.search(r"^FLAP_MIN_FLIPS=(\d+)", read(CYCLE), re.M)
+    need(dash and node and dash.group(1) == node.group(1),
+         "FLAP_MIN_FLIPS differs: dashboard %s, node %s" % (dash and dash.group(1), node and node.group(1)), p)
+    for fn in ("flap_note", "result_cell"):
+        need(re.search(r"return 0\s*\n\}", sh_func(CYCLE, fn)),
+             "%s must end with 'return 0' (a cycle must never fail on the console table)" % fn, p)
+    calls = re.findall(r'result_cell "\$\w+" (?:bool|loss)(?: "[^"]+")?\)', read(CYCLE))
+    need(len(calls) == 8 and all('"' in c.split(" ", 3)[-1] for c in calls),
+         "all 8 console cells (4 mesh, 4 static) must pass a flap key to result_cell; found %d calls" % len(calls), p)
+    need(grep(r"case \"\$ROWS\" in", CYCLE) and grep(r"= flapping", CYCLE),
+         "console footer note for ~ is gone", p)
+    need(grep(r"flapLookup\[src", DASH), "renderIndicators no longer reads flapLookup", p)
+    need("ruleFor(" in py_text_between(read(DASH), "function flapMap", "function changeText"),
+         "flapMap no longer skips excluded pairs", p)
+    return p
+
+
+@check("R32-run", "flap_note: flags the 5th flip, stays quiet when steady, history capped at 60")
+def _():
+    if not shutil.which("sh") or not shutil.which("jq"):
+        raise Skip("needs sh and jq on PATH")
+    tmp = tempfile.mkdtemp(prefix="confetti-flap-").replace("\\", "/")
+    try:
+        script = ("FLAP_DIR=%s\nFLAP_MIN_FLIPS=%s\n%s\n"
+                  "for s in true false true false true false; do flap_note flip \"{\\\"success\\\":$s}\"; echo '|'; done\n"
+                  "for i in 1 2 3 4 5 6 7 8; do flap_note steady '{\"success\":true}'; echo '|'; done\n"
+                  "i=0; while [ $i -lt 70 ]; do flap_note cap \"{\\\"success\\\":$((i %% 2 == 0))}\" >/dev/null; i=$((i+1)); done\n"
+                  % (tmp, re.search(r"^FLAP_MIN_FLIPS=(\d+)", read(CYCLE), re.M).group(1), sh_func(CYCLE, "flap_note")))
+        out = subprocess.run(["sh", "-c", script], capture_output=True, text=True, timeout=60)
+        marks = [m.strip() for m in out.stdout.split("|")][:-1]
+        p = []
+        need(out.returncode == 0, "flap_note script exited %d: %s" % (out.returncode, out.stderr[:200]), p)
+        need(marks[:6] == ["", "", "", "", "", "~"], "alternating samples gave %s, want ~ only on the 6th" % marks[:6], p)
+        need(set(marks[6:]) == {""}, "steady passes were flagged: %s" % marks[6:], p)
+        cap = open(tmp + "/cap").read().strip() if os.path.exists(tmp + "/cap") else ""
+        need(len(cap) == 60, "history is %d long, want 60" % len(cap), p)
+        return p
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 # ============================================================ live tier
 
 def http(method, url, body=None, raw=None):
@@ -791,6 +842,7 @@ def run_live():
 LIVE = [("T2-live", "real node cycle posts to a live hub"),
         ("R2-live", "timestamps leave the hub as ISO-8601 Z"),
         ("R9-live", "hub still rejects latency_ms 0000"),
+        ("R33-live", "group override beats register, drives mesh rules, dies with the endpoint"),
         ("R18-live", "syslog window and filter input"),
         ("R19-live", "null row keeps the batch; bad bodies get 400"),
         ("R21", "/api/time answers 200 on every chrony failure"),
@@ -909,6 +961,55 @@ def live_checks(base, db, tmp):
         c = http("DELETE", base + "/mesh-rules?a=rt30-g1&b=rt30-g2")[0]
         need(c == 404, "deleting a missing rule returned %d, want 404" % c, p)
         for h, _g in hosts:
+            http("DELETE", base + "/endpoints/" + h)
+        return p
+
+    @check("R33-live", "group override beats register, drives mesh rules, dies with the endpoint")
+    def _():
+        p = []
+        hosts = ("rt33a", "rt33b")
+
+        def reg(h, g):
+            http("POST", base + "/register", {"hostname": h, "ip": "10.33.0.1",
+                                              "subnet": "10.33.0.0/24", "group_name": g})
+
+        def row(h):
+            rows = json.loads(http("GET", base + "/endpoints")[1])
+            return next((r for r in rows if r["hostname"] == h), {})
+
+        def peers(h):
+            rows = json.loads(http("GET", base + "/endpoints?for=" + h)[1])
+            return {r["hostname"] for r in rows} & set(hosts)
+
+        for h in hosts:
+            reg(h, "rt33-g1")
+        c = http("POST", base + "/api/nodes/rt33b/group", {"group": "rt33-g2"})[0]
+        need(c == 200, "POST group override returned %d" % c, p)
+        r = row("rt33b")
+        need((r.get("group_name"), r.get("group_overridden"), r.get("group_registered")) ==
+             ("rt33-g2", True, "rt33-g1"), "override not applied in /endpoints: %s" % r, p)
+        reg("rt33b", "rt33-g1")
+        need(row("rt33b").get("group_name") == "rt33-g2", "a re-register overwrote the override", p)
+        # Mesh rules read the overridden group: same registered group, so only the override can exclude.
+        http("POST", base + "/mesh-rules", {"group_a": "rt33-g1", "group_b": "rt33-g2"})
+        need(peers("rt33a") == {"rt33a"}, "mesh rule did not follow the override", p)
+        http("DELETE", base + "/mesh-rules?a=rt33-g1&b=rt33-g2")
+        for raw in (b"[]", b"{not json", json.dumps({"group": "x" * 65}).encode(),
+                    json.dumps({"group": "bad\x07group"}).encode()):
+            c = http("POST", base + "/api/nodes/rt33b/group", raw=raw)[0]
+            need(c == 400, "bad group body %r returned %d, want 400" % (raw[:30], c), p)
+        need(row("rt33b").get("group_name") == "rt33-g2", "a rejected request changed the override", p)
+        c = http("POST", base + "/api/nodes/rt33-nobody/group", {"group": "x"})[0]
+        need(c == 404, "unknown host returned %d, want 404" % c, p)
+        http("POST", base + "/api/nodes/rt33b/group", {"group": ""})
+        r = row("rt33b")
+        need((r.get("group_name"), r.get("group_overridden")) == ("rt33-g1", False),
+             "an empty group did not clear the override: %s" % r, p)
+        http("POST", base + "/api/nodes/rt33b/group", {"group": "rt33-g2"})
+        http("DELETE", base + "/endpoints/rt33b")
+        reg("rt33b", "rt33-g1")
+        need(row("rt33b").get("group_overridden") is False, "override survived DELETE /endpoints", p)
+        for h in hosts:
             http("DELETE", base + "/endpoints/" + h)
         return p
 

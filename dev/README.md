@@ -112,3 +112,7 @@ set. Set it.
   (the regression suite: every CLAUDE.md constraint plus a live hub and node
   round trip, about 20 s; `--static` skips the live part). The
   `regression-tester` agent runs the same script and explains failures.
+
+## README images
+
+`dev/capture/` regenerates the README screenshot and GIF; see its README, or use the `readme-image-capturer` agent.
