@@ -171,7 +171,7 @@ Set the keys on the VM before first boot. On boot, the
 `confettid-firstboot` service runs `confettictl-setup.sh` with them, and the node
 configures and registers itself with no console session.
 
-The keys are listed in the [README](../README.md#vmware-guestinfo-keys-optional).
+The keys are listed in the [README](../README.md#zero-touch-deployment-with-guestinfo).
 Only `hub_url` and `group` are required. In the vSphere Client: VM →
 **Edit Settings** → **VM Options** → **Advanced** → **Edit Configuration** →
 add one row per key.
@@ -368,7 +368,7 @@ changed. An overridden group shows a pencil mark and appears under the IP in
 the matrix headers.
 
 **Colour themes.** The menu at the right of each page's header picks one of
-eight themes: Dark, Light, Dracula, Monokai (military green), High
+seven themes: Dark, Light, Monokai (military green), High
 Contrast, Terminal green, Confetti Night and Neon Streamers. **Shuffle**
 changes to a different theme every 5–10 minutes, with a confetti rain each time. The choice is saved in your
 browser and shared by all three pages. Every theme has confetti in its
@@ -383,7 +383,8 @@ theme you pick. **Retro 95** turns every panel into a Windows 95 window on a
 teal desktop, with a taskbar and a Start menu (which also holds **Is it
 DNS..?**, **Confetti!** and a way back to Classic). It has its own colours,
 so the theme menu is greyed out while it's on. **Amber CRT** is an amber
-terminal screen with scanlines. It also has its own colours; a failing test
+terminal screen with scanlines, and **Neon Green CRT** is the same in green.
+Both have their own colours; a failing test
 shows as an inverted block so it stands out without a second colour. The
 Syslog and Timeline pages have one layout.
 

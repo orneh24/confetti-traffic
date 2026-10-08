@@ -578,7 +578,7 @@ hub/
   app/                — Flask API (app.py, config.py, pathchange.py,
                         syslog_server.py, nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
-  templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light, Dracula,
+  templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light,
                         Monokai, High Contrast, Terminal green, Confetti Night, Neon Streamers) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
                         localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. Each timer-driven change also fires confettiBlast() (rain only; not on page load or a selector pick). Adding or changing a theme means
@@ -601,8 +601,8 @@ hub/
                         variable and must stay AFTER all theme rules, since it beats Neon's
                         .section:nth-child colours only by coming later. Its .taskbar holds a
                         <details> Start menu with the footer's two buttons (footer hidden there).
-                        Amber CRT (amber) is the same own-colours pattern. One hue, so status
-                        must not rest on colour: a fail is inverted (dark on hot amber), slow is
+                        Amber CRT (amber) and Neon Green CRT (greencrt) are the same own-colours pattern, one shared block driven by --crt-* palettes. One hue, so status
+                        must not rest on colour: a fail is inverted (dark on the bright hue), slow is
                         bright + underlined. Local monospace fonts only (a hub may be offline).
   static/
   agent/              — scripts served to nodes (created at build time)

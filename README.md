@@ -9,7 +9,9 @@
   - [Install the hub](#1-install-the-hub)
   - [Add nodes](#2-add-nodes)
   - [Updating](#updating)
-  - [VMware guestinfo keys](#vmware-guestinfo-keys-optional)
+- [Advanced deployment](#advanced-deployment)
+  - [Zero-touch deployment with guestinfo](#zero-touch-deployment-with-guestinfo)
+  - [Install notes](#install-notes)
 - [Architecture](#architecture)
   - [Other hypervisors](#other-hypervisors)
   - [Why not Docker?](#why-not-docker)
@@ -55,115 +57,70 @@ Opt-in tests, mesh rules, static targets and on-demand bandwidth tests:
 
 ## Quick start
 
-Two parts: install the hub first, then add nodes. To do it by hand step
-by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
+Install the hub first, then add nodes. Step-by-step detail:
+[`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
 
 ### 1. Install the hub
 
-1. **Base VM.** Install Alpine on a new VM (`setup-alpine`). Put it on a
-   segment that every node subnet and your workstation can reach.
-2. **Run the installer** as root. It downloads the repo to `/root/confetti`
-   and starts `confettictl-install.sh`, which asks whether the VM becomes a hub
-   or a node. Pick *hub*:
+1. Install Alpine on a new VM (`setup-alpine`), on a segment that every node
+   subnet and your workstation can reach.
+2. As root, run the installer and pick *hub*:
 
    ```sh
    wget -O /tmp/oi.sh https://github.com/orneh24/confetti-traffic/raw/main/online-install.sh && sh /tmp/oi.sh
    ```
 
-   Add `hub` or `node` at the end to skip the question.
-
-3. **Configure the network.** Once the packages and services are installed,
-   the same run offers to set the hub's static IP: answer yes, then give the
-   IP with its prefix, the gateway, and an optional DNS server and hostname.
-   It restarts networking and starts the hub. If you skip it, or run the
-   installer without a keyboard, it asks again at your next login. Ignore the
-   "convert to template" message printed at the end: the hub is not cloned.
-
-   For bulk or scripted deployments, set `guestinfo.hub.ip`,
-   `guestinfo.hub.gateway` (and optionally `guestinfo.hub.dns`,
-   `guestinfo.hub.hostname`) on the VM in vCenter before first boot, and the
-   hub configures itself.
-4. **Check** that `http://<hub-ip>/` loads.
+3. When it offers to set the static IP, answer yes and give the IP with its
+   prefix, the gateway, and optionally a DNS server and hostname. Skipped it?
+   It asks again at your next login. Ignore the "convert to template"
+   message at the end.
+4. Check that `http://<hub-ip>/` loads.
 
 ### 2. Add nodes
 
-There are two ways. Both give the same result: a node that registers with the
-hub and shows up at `http://<hub-ip>/endpoints`. The hostname is set
-automatically (`ct-<group>-<ab1234>`, e.g. `ct-site-a-xd2311`).
-
-**Option A: straight from the hub (one line).** On a plain Alpine VM with
-network access to the hub, as root. No template, no GitHub access needed:
+**A few nodes: install straight from the hub.** On a plain Alpine VM, as root:
 
 ```sh
 wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
 ```
 
-It downloads the node bundle from the hub, installs it, and asks for the
-group if you did not pass one. Good for a few nodes, or where a VM can't be
-cloned.
+**Many nodes: clone a template.**
 
-**Option B: vCenter template.** Best for many nodes.
-
-1. On a second Alpine VM, run the same installer as in part 1 and pick
-   *node*. When it asks, enter the hub URL (e.g. `http://10.0.0.100`): it is
-   stored in the template, so clones don't ask for it. (Unattended:
-   `CONFETTI_HUB_URL=http://10.0.0.100 sh /tmp/oi.sh node`.) The build
-   cleans the VM for cloning when it finishes.
+1. On a second Alpine VM, run the same installer as for the hub and pick
+   *node*. Enter the hub URL when asked (e.g. `http://10.0.0.100`); it is
+   stored in the template.
 2. Shut it down and convert it to a vCenter template. Don't configure or test
-   it first: that undoes the cleanup. Test on the first clone instead.
-3. Clone the template once per network segment and put each clone on its
-   segment's port group.
-4. Configure each clone:
-   - **A small set of nodes:** boot the clone and log in. The
-     `confettictl-node-setup.sh` prompt uses the hub URL from the template and
-     asks only for the group.
-   - **Bulk or scripted deployments (recommended):** before first boot, set
-     `guestinfo.confetti.hub_url` and `guestinfo.confetti.group` on each clone,
-     e.g. from a PowerCLI script (all keys are listed under
-     [VMware guestinfo keys](#vmware-guestinfo-keys-optional)). The clone then
-     configures itself with no login. Guestinfo wins over the template's
-     hub URL.
+   it first: that undoes the cleanup.
+3. Clone it once per network segment, boot each clone, log in and answer the
+   setup prompt. Only the group is asked.
 
-Every node fetches its SSH keys from the hub at setup. The hub's management
-key is trusted on first use and lets the hub push updates from the dashboard.
-Set `HUB_MANAGED=false` in a node's config to opt it out.
-
-`confettictl-install.sh` refuses to run on a VM that is already a hub or node, because
-re-running a build wipes its config or the hub's database. Pass `hub` or
-`node` to skip the menu, and `-y` to skip the confirmation.
-
-**Single VM, no cloning.** Run the installer on a fresh Alpine VM, then
-answer *yes* when it asks to configure the VM now (for a node the default is
-*no*, since nodes are usually cloned first). Said no? Log out and back in and
-answer the setup prompt, or run `confettictl-hub-setup.sh` / `confettictl-node-setup.sh`.
-Ignore the node build's "convert to template" message.
+Each node names itself `ct-<group>-<ab1234>` and shows up on the dashboard.
+For fully automatic clones, see
+[Zero-touch deployment](#zero-touch-deployment-with-guestinfo).
 
 ### Updating
 
-Update the hub first: run `confettictl-update` on it as root. It downloads the
-latest code from GitHub, asks before changing anything, and keeps hub.env,
-the database and the root password. It also rebuilds the node bundle the hub
-serves.
+Run `confettictl-update` on the hub as root, then update the nodes from the
+dashboard (a node's update button, or **update all**). Details:
+[BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
 
-Then update the nodes from the dashboard: the update button on a node's
-row, or **update all**. The hub runs `confettictl-update` on each node over SSH,
-one at a time, and the node downloads the new code from the hub. Each node's
-build shows under its name, in yellow when it differs from what the hub
-serves.
-`confettictl-update` run on a node by hand does the same thing.
+## Advanced deployment
 
-Details: [BUILD_GUIDE §6.3](docs/BUILD_GUIDE.md#63-updating).
+### Zero-touch deployment with guestinfo
 
-### VMware guestinfo keys (Optional)
+For bulk or scripted deployments, set guestinfo keys on each VM in vCenter
+before first boot (VM Options → Advanced → Configuration Parameters, or
+PowerCLI `New-AdvancedSetting`), and the VM configures itself with no login.
 
-Set these on the VM in vCenter (VM Options → Advanced → Configuration
-Parameters, or PowerCLI `New-AdvancedSetting`) before first boot. Only the
-two marked keys are required.
+- **Nodes:** set `guestinfo.confetti.hub_url` and `guestinfo.confetti.group`
+  on each clone. Guestinfo wins over the hub URL stored in the template.
+- **Hub:** set `guestinfo.hub.ip` and `guestinfo.hub.gateway` (optionally
+  `.dns` and `.hostname`).
 
 | Key | Example | Notes |
 |---|---|---|
-| `guestinfo.confetti.hub_url` | `http://10.0.0.100` | **required** |
-| `guestinfo.confetti.group` | `site-a` | **required**; groups nodes on the dashboard |
+| `guestinfo.confetti.hub_url` | `http://10.0.0.100` | **required** for zero-touch |
+| `guestinfo.confetti.group` | `site-a` | **required** for zero-touch |
 | `guestinfo.confetti.subnet` | `10.1.1.0/24` | default: from DHCP lease |
 | `guestinfo.confetti.hostname` | `ct-site-a` | default: `ct-<group>-<ab1234>`; must be unique |
 | `guestinfo.confetti.dns_server` | `10.0.0.53` | unset skips the DNS test |
@@ -173,7 +130,19 @@ two marked keys are required.
 | `guestinfo.hub.dns` | `10.0.0.53` | needed for `confettictl-update` |
 | `guestinfo.hub.hostname` | `confetti-hub` | re-read every boot |
 
-`guestinfo.confetti.*` keys go on nodes, `guestinfo.hub.*` keys on the hub.
+### Install notes
+
+- `online-install.sh` downloads the repo to `/root/confetti` and runs
+  `confettictl-install.sh`. Pass `hub` or `node` to skip the menu and `-y` to
+  skip the confirmation. For an unattended node template, set
+  `CONFETTI_HUB_URL=http://10.0.0.100`.
+- The installer refuses to run on a VM that is already a hub or node:
+  re-running wipes its config or the hub's database.
+- **Single node VM, no cloning:** answer *yes* when the installer asks to
+  configure the VM now, or run `confettictl-node-setup.sh` later.
+- Every node fetches its SSH keys from the hub at setup. The hub's management
+  key is trusted on first use and lets the hub push updates. Set
+  `HUB_MANAGED=false` in a node's config to opt out.
 
 More: [`docs/QUICKSTART.md`](docs/QUICKSTART.md) (reference tables) and
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (checklist with verification).
