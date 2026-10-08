@@ -432,7 +432,23 @@ def set_node_group(hostname):
     else:
         db.execute("DELETE FROM group_overrides WHERE hostname = ?", (hostname,))
     db.commit()
-    return jsonify({"status": "ok", "hostname": hostname, "group": group or None})
+    resp = {"status": "ok", "hostname": hostname, "group": group or None}
+    if data.get("rename") is True:
+        # Also rename the node over SSH. The override above already applies,
+        # so a refused rename still leaves the group changed on the dashboard.
+        reason = None
+        if not group:
+            reason = "an empty group cannot name a node"
+        elif not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", group):
+            reason = "rename needs a group of letters, digits, . _ - only"
+        else:
+            reason = nodemgmt.eligible(_push_candidates(db, hostname)[0])
+            if reason is None:
+                nodemgmt.enqueue(db, hostname, group)
+        resp["rename"] = "queued" if reason is None else "skipped"
+        if reason:
+            resp["rename_reason"] = reason
+    return jsonify(resp)
 
 
 @app.route("/results", methods=["POST"])

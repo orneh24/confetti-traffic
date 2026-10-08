@@ -55,7 +55,7 @@ Opt-in tests, mesh rules, static targets and on-demand bandwidth tests:
 
 ## Quick start
 
-Two parts: install the hub first, then add nodes. To build it yourself step
+Two parts: install the hub first, then add nodes. To do it by hand step
 by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
 
 ### 1. Install the hub
@@ -70,12 +70,14 @@ by step instead, see [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
    wget -O /tmp/oi.sh https://github.com/orneh24/confetti-traffic/raw/main/online-install.sh && sh /tmp/oi.sh
    ```
 
-   Add `hub` or `node` at the end to skip the question. Save the script and
-   run it as shown; don't pipe it into `sh`, or it can't ask its questions.
+   Add `hub` or `node` at the end to skip the question.
 
-3. **Configure the network.** When the build finishes, the installer asks for
-   the hub's static IP, gateway, and optional DNS server and hostname, then
-   starts the hub. If you skip it, it asks again at your next login.
+3. **Configure the network.** Once the packages and services are installed,
+   the same run offers to set the hub's static IP: answer yes, then give the
+   IP with its prefix, the gateway, and an optional DNS server and hostname.
+   It restarts networking and starts the hub. If you skip it, or run the
+   installer without a keyboard, it asks again at your next login. Ignore the
+   "convert to template" message printed at the end: the hub is not cloned.
 
    For bulk or scripted deployments, set `guestinfo.hub.ip`,
    `guestinfo.hub.gateway` (and optionally `guestinfo.hub.dns`,

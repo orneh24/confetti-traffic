@@ -3058,7 +3058,7 @@ function syncLayoutSelect() {
             html += "<td>" + esc(ep.hostname) + "<div class='ep-build'>" + buildCell(ep) + clockCell(ep) + "</div></td>";
             html += "<td>" + esc(ep.ip) + "</td>";
             html += "<td><button type='button' class='group-badge group-edit' data-host='" + esc(ep.hostname) +
-                "' data-group='" + esc(ep.group_name) + "' title='" +
+                "' data-group='" + esc(ep.group_name) + "' data-managed='" + (ep.managed === true ? "1" : "0") + "' title='" +
                 escAttr(ep.group_overridden ? "Set on the hub; the node reports " + ep.group_registered + ". Click to change."
                                             : "Click to set this node's group on the hub") + "'>" +
                 esc(ep.group_name) + (ep.group_overridden ? " &#9998;" : "") + "</button></td>";
@@ -3096,13 +3096,19 @@ function syncLayoutSelect() {
                 var cur = e.currentTarget.getAttribute("data-group");
                 var val = prompt("Group for " + host + " (empty = use the group the node reports):", cur);
                 if (val === null) return;
+                // A managed node can also be renamed to match (ct-<group>-...)
+                // over SSH; it restarts the node's setup.
+                var managed = e.currentTarget.getAttribute("data-managed") === "1";
+                var rename = managed && val.trim() !== "" && val.trim() !== cur &&
+                    confirm("Also rename " + host + " to match the new group? This runs confettictl-setup.sh on the node over SSH.");
                 fetch("/api/nodes/" + encodeURIComponent(host) + "/group", {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({group: val})
+                    body: JSON.stringify({group: val, rename: rename})
                 }).then(function(r) { return r.json().then(function(body) { return {ok: r.ok, body: body}; }); })
                   .then(function(res) {
                       if (!res.ok) alert("Not saved: " + (res.body.error || "error"));
+                      else if (res.body.rename === "skipped") alert("Group saved, node not renamed: " + res.body.rename_reason);
                       refresh();
                   });
             });

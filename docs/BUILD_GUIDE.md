@@ -114,7 +114,7 @@ are wrong.
 
 ### 4.1 Hub
 
-When the build finishes, `confettictl-install.sh` runs `confettictl-hub-setup.sh` (or log out and back in if you skipped it). It asks for the static IP and gateway, plus
+When the install finishes, `confettictl-install.sh` runs `confettictl-hub-setup.sh` (or log out and back in if you skipped it). It asks for the static IP and gateway, plus
 an optional DNS server and hostname. Then it restarts networking and starts
 the hub. Type the IP with its prefix (e.g. `10.0.0.100/24`); the gateway
 then defaults to the subnet's first address (`10.0.0.1`), and you can type

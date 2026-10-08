@@ -29,6 +29,21 @@ from . import config
 REMOTE_CMD = ("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; "
               "export PATH; confettictl-update -y")
 
+# Group rename: the new group arrives on stdin, never on the command line, so
+# no quoting of operator input can reach a root shell. confettictl-setup.sh
+# derives ct-<group>-<NODE_ID>, renames the node and has the hub drop the old
+# name. A name set explicitly (NODE_HOSTNAME) is left alone; checked first so
+# a refused rename changes nothing.
+REMOTE_RENAME_CMD = (
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; export PATH; "
+    "C=/etc/confetti/config; read -r G; "
+    "if grep -q '^NODE_HOSTNAME=.' $C; then "
+    "echo 'hostname is set in the node config; not renamed'; exit 3; fi; "
+    "sed -i '/^GROUP_NAME=/d' $C && printf 'GROUP_NAME=%s\\n' \"$G\" >> $C && "
+    "/usr/local/bin/confetti/confettictl-setup.sh >/dev/null 2>&1; "
+    "R=$?; echo \"hostname: $(hostname)\"; exit $R"
+)
+
 _queue = queue.Queue()
 _lock = threading.Lock()
 _thread = None
@@ -68,11 +83,14 @@ def eligible(row):
     return None
 
 
-def enqueue(db, hostname):
-    """Mark queued and hand to the worker. Caller has checked eligible()."""
+def enqueue(db, hostname, group=None):
+    """Mark queued and hand to the worker. Caller has checked eligible().
+
+    With a group, the job renames the node to that group instead of updating.
+    """
     _set_state(db, hostname, "queued")
     _ensure_worker()
-    _queue.put(hostname)
+    _queue.put((hostname, group))
 
 
 def _ensure_worker():
@@ -85,9 +103,9 @@ def _ensure_worker():
 
 def _worker():
     while True:
-        hostname = _queue.get()
+        hostname, group = _queue.get()
         try:
-            _run(hostname)
+            _run(hostname, group)
         except Exception as exc:  # never let one node kill the worker
             try:
                 db = _connect()
@@ -102,7 +120,7 @@ def _tail(text, limit=600):
     return text if len(text) <= limit else "..." + text[-limit:]
 
 
-def _run(hostname):
+def _run(hostname, group=None):
     db = _connect()
     try:
         row = db.execute("SELECT ip FROM endpoints WHERE hostname = ?", (hostname,)).fetchone()
@@ -119,10 +137,11 @@ def _run(hostname):
             "-o", "UserKnownHostsFile=/dev/null",
             "-o", "LogLevel=ERROR",
             "-o", "ConnectTimeout=10",
-            "root@" + row["ip"], REMOTE_CMD,
+            "root@" + row["ip"], REMOTE_RENAME_CMD if group else REMOTE_CMD,
         ]
         try:
-            proc = subprocess.run(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            proc = subprocess.run(cmd, input=(group + "\n").encode() if group else b"",
+                                  stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, timeout=config.PUSH_TIMEOUT_S)
         except FileNotFoundError:
             _set_state(db, hostname, "failed", "ssh not installed on the hub")

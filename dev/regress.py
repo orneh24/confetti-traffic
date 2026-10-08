@@ -519,6 +519,20 @@ def _():
     return p
 
 
+@check("R36", "group rename: group travels on stdin, never in the ssh command line")
+def _():
+    p = []
+    body = read("hub/app/nodemgmt.py")
+    m = re.search(r"REMOTE_RENAME_CMD = \((.*?)\n\)", body, re.S)
+    need(m, "REMOTE_RENAME_CMD not found", p)
+    if m:
+        need("read -r G" in m.group(1), "rename command no longer reads the group from stdin", p)
+        need(".format" not in m.group(1) and "%s\" %" not in m.group(1),
+             "rename command is built from a value, not constant", p)
+    need("input=(group" in body, "group no longer passed as ssh stdin", p)
+    return p
+
+
 @check("R35", "template hub URL: written by the build, survives cleanup, read by setup")
 def _():
     p = []
@@ -1014,6 +1028,14 @@ def live_checks(base, db, tmp):
         need(row("rt33b").get("group_name") == "rt33-g2", "a rejected request changed the override", p)
         c = http("POST", base + "/api/nodes/rt33-nobody/group", {"group": "x"})[0]
         need(c == 404, "unknown host returned %d, want 404" % c, p)
+        # rename=true: the group still saves, the node is never queued for an
+        # unsafe group, an empty one, or a node that doesn't report managed.
+        for g in ("rt33 g3", "rt33;id", ""):
+            c, b = http("POST", base + "/api/nodes/rt33b/group", {"group": g, "rename": True})
+            need(c == 200 and json.loads(b).get("rename") == "skipped",
+                 "rename of group %r was not skipped: %d %s" % (g, c, b[:80]), p)
+        c, b = http("POST", base + "/api/nodes/rt33b/group", {"group": "rt33-g2", "rename": True})
+        need(json.loads(b).get("rename") == "skipped", "rename queued for a node not reporting managed", p)
         http("POST", base + "/api/nodes/rt33b/group", {"group": ""})
         r = row("rt33b")
         need((r.get("group_name"), r.get("group_overridden")) == ("rt33-g1", False),
