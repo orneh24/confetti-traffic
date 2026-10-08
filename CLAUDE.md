@@ -13,6 +13,14 @@ configuration, and deployment belong to a separate project — this system
 treats the network between nodes as an opaque path it tests, not something it
 configures.
 
+**Companion project: `../confetti-butler`** (separate repo — inventory, IPAM,
+config templates, topology). It imports `GET /endpoints` (reads `hostname`,
+`ip` and `group_name`; the group becomes the device's `site`, so a group set
+on the hub flows into it), its web UI copies this hub's look by hand
+(themes, `confettiBlast`, Shuffle), and its syslog receiver is a port of
+ours. Keep `/endpoints` a bare array with those keys. The
+`confetti-interop-checker` agent (user level) checks both sides.
+
 ## Architecture
 
 Diagram: `docs/TOPOLOGY.md`.
