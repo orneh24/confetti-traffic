@@ -99,7 +99,7 @@ wget -O /tmp/oi.sh https://github.com/orneh24/confetti-traffic/raw/main/online-i
 `confettictl-install.sh` from it.
 
 Pick **hub** on one clone and **node** on the other. For the node, the
-installer asks for the hub URL (e.g. `http://10.0.0.100`) and stores it in
+installer asks for the hub IP (e.g. `10.0.0.100`) and stores it as a URL in
 the template as `/etc/confetti/template-hub-url`, so clones ask only for the
 group. Leave it blank to be asked on each clone, or set `CONFETTI_HUB_URL`
 for an unattended build. Guestinfo and the environment still override it. The build enables the
@@ -370,7 +370,7 @@ the matrix headers.
 **Colour themes.** The menu at the right of each page's header picks one of
 seven themes: Dark, Light, Monokai (military green), High
 Contrast, Terminal green, Confetti Night and Neon Streamers. **Shuffle**
-changes to a different theme every 5–10 minutes, with a confetti rain each time. The choice is saved in your
+changes to a different theme every 5–10 minutes, with a confetti rain each time. On the dashboard it also picks a random layout each time. The choice is saved in your
 browser and shared by all three pages. Every theme has confetti in its
 header in its own colours, except Neon Streamers, which has glowing streaks.
 

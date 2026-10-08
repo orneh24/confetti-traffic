@@ -581,7 +581,7 @@ hub/
   templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light,
                         Monokai, High Contrast, Terminal green, Confetti Night, Neon Streamers) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
-                        localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. Each timer-driven change also fires confettiBlast() (rain only; not on page load or a selector pick). Adding or changing a theme means
+                        localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. On the dashboard the same state carries a `layout` pick (random, not the current one, not saved as the viewer's layout choice; a hand pick while shuffling updates it): shuffleStep calls window.onShuffleStep(st), which only dashboard.html defines. Each timer-driven change also fires confettiBlast() (rain only; not on page load or a selector pick). Adding or changing a theme means
                         editing all three pages. Each page also has one shared header-confetti rule (an SVG
                         mask over stripes of the theme's --yellow/--red/--green/--blue/--cyan), so every
                         theme but Neon (its own streaks) gets confetti in its palette with no per-theme CSS.

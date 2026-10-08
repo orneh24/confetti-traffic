@@ -200,9 +200,14 @@ else
     # before cron or services ever got installed -- worse than the tolerated
     # "hub not up yet" case below.
     if [ -z "$_hub_url" ]; then
-        printf 'Hub URL (e.g., http://10.0.0.100): '
+        printf 'Hub IP address (e.g., 10.0.0.100): '
         read -r _hub_url || _hub_url=""
     fi
+    # A bare address becomes http://<address>; a full URL is kept as typed.
+    case "$_hub_url" in
+        ""|*://*) ;;
+        *) _hub_url="http://${_hub_url}" ;;
+    esac
     if [ -z "$_group_name" ]; then
         printf 'Group name (e.g., site-a): '
         read -r _group_name || _group_name=""

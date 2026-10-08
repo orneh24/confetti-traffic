@@ -51,6 +51,8 @@ function shuffleStep(fromTimer) {
         try { localStorage.setItem('confetti-theme-shuffle', JSON.stringify(st)); } catch (e) {}
     }
     applyTheme(st.theme);
+    // The dashboard defines this to pick a layout with the theme.
+    if (typeof window.onShuffleStep === 'function') window.onShuffleStep(st);
     // The timer's change gets a confetti rain; a page load or a pick from the
     // selector does not. Another open page may have made the same change.
     if (fromTimer && typeof confettiBlast === 'function' && document.body) confettiBlast();
@@ -1664,6 +1666,13 @@ try { applyLayout(localStorage.getItem('confetti-layout')); } catch (e) {}
 function setLayout(name) {
     applyLayout(name);
     try { localStorage.setItem('confetti-layout', document.documentElement.getAttribute('data-layout') || 'classic'); } catch (e) {}
+    // While shuffling, a hand pick holds until the next change (and a reload).
+    if (shuffling) {
+        try {
+            var st = JSON.parse(localStorage.getItem('confetti-theme-shuffle'));
+            if (st) { st.layout = document.documentElement.getAttribute('data-layout') || 'classic'; localStorage.setItem('confetti-theme-shuffle', JSON.stringify(st)); }
+        } catch (e) {}
+    }
     syncLayoutSelect();
 }
 function syncLayoutSelect() {
@@ -1685,6 +1694,26 @@ function syncLayoutSelect() {
         themeSel.title = own ? 'This layout has its own colours' : '';
     }
 }
+// Shuffle picks a layout with each theme, on the same timer. The pick is kept
+// in the shared shuffle state so every open dashboard shows the same one. It
+// is not saved as the viewer's own layout choice.
+function shuffleLayout(st) {
+    var names = LAYOUTS.map(function (l) { return l[0]; });
+    if (names.indexOf(st.layout) < 0) {
+        var cur = document.documentElement.getAttribute('data-layout') || 'classic';
+        var pick;
+        do { pick = names[Math.floor(Math.random() * names.length)]; } while (pick === cur);
+        st.layout = pick;
+        try { localStorage.setItem('confetti-theme-shuffle', JSON.stringify(st)); } catch (e) {}
+    }
+    applyLayout(st.layout);
+    syncLayoutSelect();
+}
+window.onShuffleStep = shuffleLayout;
+// The theme script ran first, so catch up with the current shuffle state.
+try {
+    if (shuffling) { var st0 = JSON.parse(localStorage.getItem('confetti-theme-shuffle')); if (st0) shuffleLayout(st0); }
+} catch (e) {}
 </script>
 </head>
 <body>

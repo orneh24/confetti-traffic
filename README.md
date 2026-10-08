@@ -87,7 +87,7 @@ wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
 **Many nodes: clone a template.**
 
 1. On a second Alpine VM, run the same installer as for the hub and pick
-   *node*. Enter the hub URL when asked (e.g. `http://10.0.0.100`); it is
+   *node*. Enter the hub IP when asked (e.g. `10.0.0.100`); it is
    stored in the template.
 2. Shut it down and convert it to a vCenter template. Don't configure or test
    it first: that undoes the cleanup.
