@@ -2,6 +2,8 @@
 
 > **AI disclaimer:** This project was created using [Claude Code](https://claude.com/claude-code) for training/labbing purposes - use freely, but at own risk :-)
 
+**Menu:** [Tests](#tests) · [Quick start](#quick-start) ([hub](#1-install-the-hub), [nodes](#2-add-nodes), [updating](#updating), [guestinfo keys](#vmware-guestinfo-keys-optional)) · [Architecture](#architecture) ([other hypervisors](#other-hypervisors), [why not Docker?](#why-not-docker)) · [Running the hub locally](#running-the-hub-locally) · [Docs](#docs)
+
 End-to-end connectivity testing between nodes on a network. It goes beyond
 ICMP: it makes real TCP connections (HTTP, SSH, SMB, SMTP, iperf3) and
 measures packet loss/jitter, path MTU, DNS and traceroute. Results show on a
@@ -21,7 +23,8 @@ the Confetti Night theme. Mock data from a synthetic 6-node mesh.*
 ## Tests
 
 Every node tests every other node once a minute. Each matrix cell shows one
-letter per test: green pass, yellow slow, red fail, grey no data.
+letter per test: green pass, yellow slow, red fail, grey no data. A dashed outline means
+flapping (5+ pass/fail flips in the last hour).
 
 | Test | Checks | Runs |
 |---|---|---|

@@ -103,6 +103,14 @@ def init_db():
             created TEXT NOT NULL,
             PRIMARY KEY (group_a, group_b)
         );
+        -- Group set from the dashboard. Applied on the way out of
+        -- /endpoints, so it beats what the node registers, and lives apart
+        -- from `endpoints` so it survives the node being pruned as stale.
+        CREATE TABLE IF NOT EXISTS group_overrides (
+            hostname   TEXT PRIMARY KEY,
+            group_name TEXT NOT NULL,
+            updated    TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS bwtests (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             started_at  TEXT NOT NULL,
@@ -355,14 +363,19 @@ def list_endpoints():
     # Still a bare array (deployed nodes parse it); the management fields are
     # extra keys per element, which older nodes ignore.
     rows = db.execute(
-        """SELECT hostname, ip, subnet, group_name, last_seen,
-                  build, managed, update_state, update_msg, update_at,
-                  clock_synced, clock_offset_s
-           FROM endpoints ORDER BY group_name, hostname"""
+        """SELECT e.hostname, e.ip, e.subnet,
+                  COALESCE(o.group_name, e.group_name) AS group_name,
+                  o.group_name IS NOT NULL AS group_overridden,
+                  e.group_name AS group_registered, e.last_seen,
+                  e.build, e.managed, e.update_state, e.update_msg, e.update_at,
+                  e.clock_synced, e.clock_offset_s
+           FROM endpoints e LEFT JOIN group_overrides o ON o.hostname = e.hostname
+           ORDER BY COALESCE(o.group_name, e.group_name), e.hostname"""
     ).fetchall()
     out = []
     for r in rows:
         d = dict(r)
+        d["group_overridden"] = bool(d["group_overridden"])
         d["last_seen"] = iso(d["last_seen"])
         d["update_at"] = iso(d["update_at"])
         d["managed"] = None if d["managed"] is None else d["managed"] == "true"
@@ -384,10 +397,42 @@ def delete_endpoint(hostname):
     """Remove a stale endpoint."""
     db = get_db()
     cur = db.execute("DELETE FROM endpoints WHERE hostname = ?", (hostname,))
+    # A hand-removed node takes its override with it; the stale prune doesn't.
+    db.execute("DELETE FROM group_overrides WHERE hostname = ?", (hostname,))
     db.commit()
     if cur.rowcount == 0:
         return jsonify({"error": "not found"}), 404
     return jsonify({"status": "deleted", "hostname": hostname})
+
+
+@app.route("/api/nodes/<hostname>/group", methods=["POST"])
+def set_node_group(hostname):
+    """Set a node's group from the dashboard; an empty group clears it.
+
+    Stored as an override applied by GET /endpoints, so it wins over what
+    the node registers every 5 min. Unauthenticated, like mesh rules.
+    """
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "JSON object required"}), 400
+    group = data.get("group")
+    group = group.strip() if isinstance(group, str) else ""
+    if len(group) > 64 or any(ord(c) < 32 or ord(c) == 127 for c in group):
+        return jsonify({"error": "group must be 1-64 printable characters"}), 400
+    db = get_db()
+    if not db.execute("SELECT 1 FROM endpoints WHERE hostname = ?", (hostname,)).fetchone():
+        return jsonify({"error": "not found"}), 404
+    if group:
+        db.execute(
+            """INSERT INTO group_overrides (hostname, group_name, updated) VALUES (?, ?, ?)
+               ON CONFLICT(hostname) DO UPDATE SET group_name=excluded.group_name,
+                                                   updated=excluded.updated""",
+            (hostname, group, sqlite_now()),
+        )
+    else:
+        db.execute("DELETE FROM group_overrides WHERE hostname = ?", (hostname,))
+    db.commit()
+    return jsonify({"status": "ok", "hostname": hostname, "group": group or None})
 
 
 @app.route("/results", methods=["POST"])

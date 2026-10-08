@@ -42,7 +42,13 @@ Diagram: `docs/TOPOLOGY.md`.
   - `GET /api/results?minutes=N`, `GET /api/results/<source>/<target>`
   - `GET /api/path-changes?minutes=N` — detected traceroute path changes
     (see Syslog below); default 10, matching `/api/results`
-  - `DELETE /endpoints/<hostname>`
+  - `DELETE /endpoints/<hostname>` (also drops its group override)
+  - `POST /api/nodes/<hostname>/group` `{group}` — set a node's group from
+    the dashboard (empty clears it). A hub-side override in the
+    `group_overrides` table, applied by `GET /endpoints`, so it beats what
+    the node registers every 5 min and mesh rules follow it. The node's own
+    config and hostname are not changed. `/endpoints` adds `group_overridden`
+    and `group_registered` per element. Unauthenticated, like mesh rules.
   - `GET|POST /targets`, `DELETE /targets/<name>` — static targets
   - `GET|POST /settings` — mesh-wide switches for the opt-in tests (see
     Mesh settings below)
@@ -439,6 +445,10 @@ dropbear's minimal PATH, so the push's remote command sets PATH itself.
   of truth, but this lets an operator at the node's own console or over SSH
   see whether *this* node's tests are passing without opening it. Shown
   automatically at interactive login, next to the setup-wizard invite.
+  A `~` after an H/S/M/L cell means **flapping**: 5+ pass↔fail flips in the
+  last 60 cycles (`flap_note`, history in `/run/confetti/flap/`, tmpfs).
+  The dashboard marks the same threshold per cell (dashed outline) over the
+  last hour of results, plus a "Flapping (1 h)" tile in the Modern layout.
 
 ### Discovery
 - Hub is the registry — single source of truth
@@ -552,7 +562,7 @@ hub/
   templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light, Dracula,
                         Monokai, High Contrast, Terminal green, Confetti Night, Neon Streamers) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
-                        localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. Adding or changing a theme means
+                        localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. Each timer-driven change also fires confettiBlast() (rain only; not on page load or a selector pick). Adding or changing a theme means
                         editing all three pages. Each page also has one shared header-confetti rule (an SVG
                         mask over stripes of the theme's --yellow/--red/--green/--blue/--cyan), so every
                         theme but Neon (its own streaks) gets confetti in its palette with no per-theme CSS.

@@ -12,6 +12,13 @@ Nothing here works today. Checked against the code 2026-10-02.
   in `confettictl-setup.sh` has its own copy of the same logic, so a fix must
   cover both.
 
+- **Rename the project to `confetti-flux`.** Currently Confetti Traffic
+  (slug `confetti`, `confettid-` / `confettictl-` prefixes, node prefix `ct`).
+  Decide what changes: display name only, or also the slug, paths
+  (`/opt/confetti-hub`, `/etc/confetti`), service and command prefixes, and
+  guestinfo keys. Anything beyond the display name means existing VMs need a
+  rebuild, as with the last rename.
+
 ## Not yet verified on real VMs
 
 - **Hub as the lab's NTP source.** The hub build appends `allow all` and

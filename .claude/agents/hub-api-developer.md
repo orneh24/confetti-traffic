@@ -18,10 +18,11 @@ You develop the Confetti Traffic hub: `hub/app/app.py` (Flask), SQLite storage, 
 ## Frozen Contract
 
 - `POST /register` — requires `hostname`, `ip`, `subnet`, `group_name`; optional `build` (string), `managed` (bool), `clock_synced` (bool) and `clock_offset_s` (number) — older nodes omit them; upsert on hostname; `last_seen` set server-side; 400 on missing fields.
-- `GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, last_seen, build, managed, update_state, update_msg, update_at, clock_synced, clock_offset_s}` (the last seven may be null), ordered by group then hostname. Prunes endpoints past `STALE_ENDPOINT_HOURS` as a side effect. `?for=<hostname>` filters out peers in groups a mesh rule excludes; unknown or missing host returns the full list, same shape.
+- `GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, group_overridden, group_registered, last_seen, build, managed, update_state, update_msg, update_at, clock_synced, clock_offset_s}` (the last seven may be null; `group_name` is the override when `group_overridden`, else the registered one), ordered by group then hostname. Prunes endpoints past `STALE_ENDPOINT_HOURS` as a side effect. `?for=<hostname>` filters out peers in groups a mesh rule excludes; unknown or missing host returns the full list, same shape.
 - `GET|POST /mesh-rules`, `DELETE /mesh-rules?a=&b=` — group pairs excluded from the mesh; names 1–64 chars, pair stored sorted, POST idempotent, DELETE 404 when absent.
 - `POST /results` — `{source, results: [{target_hostname, target_ip, test_type, success, latency_ms, output, timestamp}]}`; `success` stored 0/1; `latency_ms` REAL nullable; `output` free text; 400 on missing `source` or empty `results`. Runs the retention sweep as a side effect.
-- `DELETE /endpoints/<hostname>` — 404 if unknown.
+- `DELETE /endpoints/<hostname>` — 404 if unknown; also drops its group override.
+- `POST /api/nodes/<hostname>/group` `{group}` — hub-side group override (empty clears; 400 bad group / 404 unknown node), applied by `GET /endpoints`.
 - `GET /api/results?minutes=N` (default 10), `GET /api/results/<source>/<target>` (LIMIT 200, newest first).
 - `GET /api/path-changes?minutes=N` (default 10) — detected traceroute path changes, `[{source, target, received_at, detail}]`; reads `syslog` rows tagged `host=confetti-hub`/`mnemonic=%CONFETTI-5-PATHCHANGE` written by the `POST /results` hook (`hub/app/pathchange.py`), not a separate table.
 - `GET|POST /targets`, `DELETE /targets/<name>` — static targets; each declares which tests apply. Unknown test names rejected 400 with the valid list.

@@ -26,7 +26,7 @@ The hub (`hub/app/app.py`) is the single source of truth for endpoints and resul
 
 Upsert keyed on `hostname`; `last_seen` is set server-side to UTC ISO-8601. Missing any required field → 400.
 
-`GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, last_seen, build, managed, update_state, update_msg, update_at, clock_synced, clock_offset_s}`, ordered by group then hostname. The management fields are extra keys only; never change the array shape. Nodes skip their own hostname when iterating. `?for=<hostname>` returns that node's peer list with mesh-rule exclusions applied (still a bare array; unknown or missing host = full list).
+`GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, group_overridden, group_registered, last_seen, build, managed, update_state, update_msg, update_at, clock_synced, clock_offset_s}`, ordered by group then hostname. The management fields are extra keys only; never change the array shape. Nodes skip their own hostname when iterating. `?for=<hostname>` returns that node's peer list with mesh-rule exclusions applied (still a bare array; unknown or missing host = full list).
 
 `GET /mesh-rules` — `[{group_a, group_b, created}]`, pair stored sorted. `POST /mesh-rules` `{group_a, group_b}`: non-empty strings ≤ 64 chars, else 400; idempotent. `DELETE /mesh-rules?a=&b=` (query params, since a group label may contain `/`); 404 if absent. Rules exclude group pairs from the full mesh; see CLAUDE.md, Mesh rules.
 
@@ -46,7 +46,7 @@ Bandwidth test (CLAUDE.md "On-demand bandwidth test"): `GET /api/bw`, `POST /api
 
 `success` is stored as INTEGER 0/1. `latency_ms` is REAL and may be null. `output` is free text (traceroute dumps land here — keep it, the dashboard drill-down reads it). Empty `results` or missing `source` → 400.
 
-`DELETE /endpoints/<hostname>` — for stale clones. 404 if unknown.
+`DELETE /endpoints/<hostname>` — for stale clones. 404 if unknown. `POST /api/nodes/<hostname>/group` `{"group": "..."}` — hub-side group override, empty clears (400 / 404).
 
 `GET /settings` — `{"enable_smb": bool|null, "enable_smtp": ..., "enable_iperf": ...}`, pulled by `confettictl-test-cycle.sh` each cycle; null means "use the node's own config". `POST /settings` is a partial update from the dashboard: bool or null values only, unknown keys → 400. Never fold these into `/endpoints` — that response is a bare array every deployed node parses.
 

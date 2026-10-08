@@ -39,7 +39,7 @@ function applyTheme(name) {
 function currentTheme() {
     return document.documentElement.getAttribute('data-theme') || 'dark';
 }
-function shuffleStep() {
+function shuffleStep(fromTimer) {
     var now = Date.now();
     var st = null;
     try { st = JSON.parse(localStorage.getItem('confetti-theme-shuffle')); } catch (e) {}
@@ -51,8 +51,11 @@ function shuffleStep() {
         try { localStorage.setItem('confetti-theme-shuffle', JSON.stringify(st)); } catch (e) {}
     }
     applyTheme(st.theme);
+    // The timer's change gets a confetti rain; a page load or a pick from the
+    // selector does not. Another open page may have made the same change.
+    if (fromTimer && typeof confettiBlast === 'function' && document.body) confettiBlast();
     clearTimeout(shuffleTimer);
-    shuffleTimer = setTimeout(function () { if (shuffling) shuffleStep(); }, Math.max(1000, st.until - now));
+    shuffleTimer = setTimeout(function () { if (shuffling) shuffleStep(true); }, Math.max(1000, st.until - now));
 }
 try {
     var savedTheme = localStorage.getItem('confetti-theme');

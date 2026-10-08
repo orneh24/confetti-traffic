@@ -352,10 +352,21 @@ group twice stops nodes in one group testing each other. An excluded pair
 shows as a muted dot in the matrix and isn't counted as passing or failing.
 Static targets are not affected. Remove the rule to go back to full mesh.
 
+**Flapping and groups.** A matrix cell with a dashed outline has flipped
+between pass and fail 5 or more times in the last hour (Modern layout: the
+"Flapping (1 h)" tile lists them). The node's console table and
+`confettictl-status` show the same as a `~` after the H, S, M or L cell, with
+a footer note (counted over the last 60 cycles). Recent Changes has a
+**Pair** button that cycles name / IP / name + IP. In the Endpoints list,
+click a node's group to set its group on the hub (empty clears it): it beats
+the group the node reports, mesh rules follow it, and the node itself is not
+changed. An overridden group shows a pencil mark and appears under the IP in
+the matrix headers.
+
 **Colour themes.** The menu at the right of each page's header picks one of
 eight themes: Dark, Light, Dracula, Monokai (military green), High
 Contrast, Terminal green, Confetti Night and Neon Streamers. **Shuffle**
-changes to a different theme every 5–10 minutes. The choice is saved in your
+changes to a different theme every 5–10 minutes, with a confetti rain each time. The choice is saved in your
 browser and shared by all three pages. Every theme has confetti in its
 header in its own colours, except Neon Streamers, which has glowing streaks.
 

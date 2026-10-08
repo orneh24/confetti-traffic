@@ -40,7 +40,7 @@ function applyTheme(name) {
 function currentTheme() {
     return document.documentElement.getAttribute('data-theme') || 'dark';
 }
-function shuffleStep() {
+function shuffleStep(fromTimer) {
     var now = Date.now();
     var st = null;
     try { st = JSON.parse(localStorage.getItem('confetti-theme-shuffle')); } catch (e) {}
@@ -52,8 +52,11 @@ function shuffleStep() {
         try { localStorage.setItem('confetti-theme-shuffle', JSON.stringify(st)); } catch (e) {}
     }
     applyTheme(st.theme);
+    // The timer's change gets a confetti rain; a page load or a pick from the
+    // selector does not. Another open page may have made the same change.
+    if (fromTimer && typeof confettiBlast === 'function' && document.body) confettiBlast();
     clearTimeout(shuffleTimer);
-    shuffleTimer = setTimeout(function () { if (shuffling) shuffleStep(); }, Math.max(1000, st.until - now));
+    shuffleTimer = setTimeout(function () { if (shuffling) shuffleStep(true); }, Math.max(1000, st.until - now));
 }
 try {
     var savedTheme = localStorage.getItem('confetti-theme');
@@ -505,6 +508,7 @@ a:hover { text-decoration: underline; }
 }
 .section.collapsed .section-body { display: none; }
 .section.collapsed .section-header { border-bottom: none; }
+#syslog-preview-section.collapsed #sp-viewall { display: none; }
 /* A box with nothing to show says so in its title (set by setHeaderNote()). */
 .hdr-note {
     margin-left: 10px;
@@ -514,6 +518,23 @@ a:hover { text-decoration: underline; }
     letter-spacing: 0;
 }
 .hdr-note:empty { display: none; }
+/* "?" that reveals the rest of a hint (the .info-more right after it). */
+.info-btn {
+    font: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    margin-left: 4px;
+    border: 1px solid var(--text-dim);
+    border-radius: 50%;
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    line-height: 13px;
+}
+.info-btn:hover { color: var(--text); border-color: var(--text); }
 .hdr-note code {
     background: var(--bg-hover);
     padding: 1px 4px;
@@ -581,6 +602,9 @@ a:hover { text-decoration: underline; }
     cursor: pointer;
 }
 .btn-small:hover { color: var(--text); border-color: var(--blue); }
+/* Recent Changes' Pair switch: bigger and outlined so it reads as a control. */
+.pair-bar { margin-bottom: 8px; }
+.pair-bar .btn-small { font-size: 12px; padding: 4px 12px; color: var(--text); border-color: var(--blue); }
 
 .btn-nav {
     background: var(--bg-hover);
@@ -653,7 +677,7 @@ a:hover { text-decoration: underline; }
     font-weight: 400;
     font-size: 10px;
     font-style: italic;
-    color: var(--text-dim);
+    color: var(--cyan);
     margin-left: 14px;
 }
 .matrix thead th .ip {
@@ -661,6 +685,9 @@ a:hover { text-decoration: underline; }
     margin-left: 0;
     margin-top: 4px;
 }
+/* The group label (shown only for a hub-set group) sits on its own line in
+   both headers, so it can't widen the row-header column. */
+.matrix th .ip + .ip { display: block; margin-left: 0; margin-top: 0; }
 .matrix thead th {
     top: 0;
     text-align: left;
@@ -726,12 +753,17 @@ a:hover { text-decoration: underline; }
    composes onto pass/fail/none as an inset highlight rather than replacing
    the background color. */
 .indicator.changed { box-shadow: inset 0 0 0 2px var(--yellow); }
+/* Flapping: a dashed outline (a shape, so it reads without colour) that
+   composes with pass/fail and with the path-change box-shadow. */
+.indicator.flapping, .legend-flap { outline: 2px dashed var(--cyan); outline-offset: -2px; }
+:root[data-layout="retro95"] .indicator.flapping { outline-color: #000; }
+:root[data-layout="amber"] .indicator.flapping { outline-color: #ffb000; }
 .indicator-label { font-size: 8px; letter-spacing: 0; }
 
 .th-sub {
     font-size: 9px;
     font-weight: 400;
-    color: var(--gray);
+    color: var(--cyan);
     margin-top: 2px;
 }
 .target-th { cursor: pointer; }
@@ -813,6 +845,8 @@ a:hover { text-decoration: underline; }
     font-size: 10px;
     color: var(--blue);
 }
+.ep-table button.group-badge { font-family: inherit; cursor: pointer; }
+.ep-table button.group-badge:hover { border-color: var(--blue); }
 .ep-table .btn-delete {
     background: none;
     border: none;
@@ -1119,7 +1153,7 @@ a:hover { text-decoration: underline; }
 :root[data-layout="modern"] .kpi-row {
     grid-column: 2;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 14px;
     padding: 14px 26px 0;
 }
@@ -1708,6 +1742,7 @@ function syncLayoutSelect() {
     <div class="kpi"><div class="kpi-label">Tests passing</div><div class="kpi-value" id="kpi-pass">&ndash;</div><div class="kpi-sub" id="kpi-pass-sub"></div></div>
     <div class="kpi"><div class="kpi-label">Endpoints</div><div class="kpi-value" id="kpi-ep">&ndash;</div><div class="kpi-sub" id="kpi-ep-sub"></div></div>
     <div class="kpi"><div class="kpi-label">Path changes (1 h)</div><div class="kpi-value" id="kpi-path">&ndash;</div><div class="kpi-sub" id="kpi-path-sub"></div></div>
+    <div class="kpi"><div class="kpi-label">Flapping (1 h)</div><div class="kpi-value" id="kpi-flap">&ndash;</div><div class="kpi-sub" id="kpi-flap-sub"></div></div>
     <div class="kpi"><div class="kpi-label">Hub</div><div class="kpi-value" id="kpi-hub">&ndash;</div><div class="kpi-sub" id="kpi-hub-sub"></div></div>
 </div>
 
@@ -1722,6 +1757,7 @@ function syncLayoutSelect() {
                     <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Slow</div>
                     <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Fail</div>
                     <div class="legend-item"><div class="legend-dot" style="background:var(--gray)"></div>No data</div>
+                    <div class="legend-item"><div class="legend-dot legend-flap"></div>Flapping</div>
                     <!-- Built from TYPE_LABELS so it can never drift from what
                          the cells actually render. -->
                     <span style="margin-left:8px" id="type-legend"></span>
@@ -1747,6 +1783,7 @@ function syncLayoutSelect() {
                 <span class="hdr-actions"><button type="button" class="btn-small collapse-toggle" data-section="changes-section">Collapse</button></span>
             </div>
             <div class="section-body">
+                <div class="pair-bar"><button type="button" class="btn-small" id="changes-pair-toggle" title="Click to cycle the Pair column: node names, IPs, or both"></button></div>
                 <table class="ep-table" id="changes-table">
                     <thead><tr><th>Time</th><th>Pair</th><th>Change</th></tr></thead>
                     <tbody></tbody>
@@ -1815,8 +1852,9 @@ function syncLayoutSelect() {
                 </table>
                 <div class="empty-hint" id="targets-empty">
                     No static targets configured.
+                    <button type="button" class="info-btn" title="What is this?">?</button><span class="info-more" hidden>
                     Add a gateway, an outside host, or a device loopback to test
-                    reachability to things that run no agent.
+                    reachability to things that run no agent.</span>
                 </div>
             </div>
         </div>
@@ -1832,8 +1870,10 @@ function syncLayoutSelect() {
                     <tbody></tbody>
                 </table>
                 <div class="empty-hint" id="dns-empty">
-                    No DNS tests running. Set <code>DNS_SERVER</code> in a node's
-                    config, or add a static target with the <code>dns</code> test.
+                    No DNS tests running.
+                    <button type="button" class="info-btn" title="What is this?">?</button><span class="info-more" hidden>
+                    Set <code>DNS_SERVER</code> in a node's
+                    config, or add a static target with the <code>dns</code> test.</span>
                 </div>
             </div>
         </div>
@@ -2054,6 +2094,9 @@ function syncLayoutSelect() {
     // duration reflects unanswered hops or a fixed run length, not slowness.
     // loss is the fping average RTT.
     var LATENCY_WARN_MS = {http: 500, loss: 50, dns: 1000, ssh: 2000, pmtu: 2000, smb: 3000, smtp: 2000};
+    // A test that flipped pass<->fail this many times in the last hour is
+    // "flapping". The node console uses the same number (flap_note).
+    var FLAP_MIN_FLIPS = 5;
 
     var endpoints = [];
     var targets = [];
@@ -2064,6 +2107,8 @@ function syncLayoutSelect() {
     // renderIndicators() is called for both the mesh matrix and the
     // static-targets matrix, so one change marks both correctly.
     var pathChangeLookup = {};
+    // key: src|dst|type -> {flips, passPct} for tests flapping in the last hour.
+    var flapLookup = {};
     var selectedPair = null; // {source, target}
     // Group pairs excluded from the mesh (GET /mesh-rules). Excluded pairs
     // are drawn as "excluded" and left out of every pass/fail count.
@@ -2117,6 +2162,7 @@ function syncLayoutSelect() {
             changeHistoryResults = arr[4];
             changeHistoryPathChanges = arr[5];
             pathChangeLookup = pathChangeMap();
+            flapLookup = flapMap(changeHistoryResults);
             renderLegend();
             renderMatrix();
             renderTargets();
@@ -2375,6 +2421,14 @@ function syncLayoutSelect() {
         setKpi("kpi-path", pc.length, pc.length ? "warn" : "",
                pc.length ? "latest " + pc[0].source + " → " + pc[0].target : "none");
 
+        var flapKeys = Object.keys(flapLookup);
+        var flapNames = flapKeys.map(function(k) {
+            var p = k.split("|");
+            return p[0] + " → " + p[1] + " (" + (TYPE_LABELS[p[2]] || p[2]) + ")";
+        });
+        setKpi("kpi-flap", flapKeys.length, flapKeys.length ? "warn" : "good",
+               flapKeys.length ? flapNames.slice(0, 2).join(", ") + (flapNames.length > 2 ? " …" : "") : "none");
+
         var badge = document.getElementById("side-fail-badge");
         badge.textContent = failingPairs.length;
         badge.hidden = !failingPairs.length;
@@ -2386,9 +2440,15 @@ function syncLayoutSelect() {
 
     // Small muted IP label next to a node's name in the matrix headers.
     // Endpoints always carry an ip from /register, but stay defensive since
-    // this renders straight from the API response.
+    // this renders straight from the API response. A group set on the hub
+    // (override) is shown too, in the same label style; nothing otherwise.
     function nameIp(ep) {
-        return ep && ep.ip ? "<span class='ip'>" + esc(ep.ip) + "</span>" : "";
+        var html = ep && ep.ip ? "<span class='ip'>" + esc(ep.ip) + "</span>" : "";
+        if (ep && ep.group_overridden) {
+            html += "<span class='ip' title='" + escAttr("Group set on the hub; the node reports " + ep.group_registered) +
+                "'>&#9998; " + esc(ep.group_name) + "</span>";
+        }
+        return html;
     }
 
     // The mesh rule that excludes src -> dst, or null. Only node pairs can be
@@ -2511,6 +2571,30 @@ function syncLayoutSelect() {
         return changes.slice(0, 15);
     }
 
+    // Tests that flipped pass<->fail FLAP_MIN_FLIPS+ times in the history
+    // window. Same per-(src,dst,type) grouping as computeRecentChanges, so
+    // the two panels count the same transitions. Excluded pairs are skipped.
+    function flapMap(rows) {
+        var groups = {};
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            if (ruleFor(r.source, r.target_hostname)) continue;
+            var key = r.source + "|" + r.target_hostname + "|" + r.test_type;
+            (groups[key] = groups[key] || []).push(r);
+        }
+        var out = {};
+        Object.keys(groups).forEach(function(key) {
+            var arr = groups[key], flips = 0, passed = 0;
+            arr.sort(function(a, b) { return parseTs(a.received_at) - parseTs(b.received_at); });
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i].success) passed++;
+                if (i && !!arr[i].success !== !!arr[i - 1].success) flips++;
+            }
+            if (flips >= FLAP_MIN_FLIPS) out[key] = {flips: flips, passPct: Math.round(100 * passed / arr.length)};
+        });
+        return out;
+    }
+
     function changeText(c) {
         if (c.kind === "all-down") {
             return "<span style='color:var(--red);font-weight:600'>ALL tests FAILED</span> (" + c.count + " tests)";
@@ -2532,11 +2616,51 @@ function syncLayoutSelect() {
         document.getElementById(sectionId).classList.toggle("collapsed", !!html);
     }
 
+    // A hint's "?" shows or hides the text after it. Handled here rather
+    // than on the button, because setHeaderNote() copies hints as markup.
+    document.addEventListener("click", function(ev) {
+        var btn = ev.target.closest(".info-btn");
+        if (!btn) return;
+        var more = btn.nextElementSibling;
+        if (more && more.classList.contains("info-more")) more.hidden = !more.hidden;
+    });
+
     // Recent Changes folds itself only when it goes from having entries to
     // none (or starts empty), so a viewer who expands it by hand isn't
     // overruled on every refresh. With entries again it returns to the
     // viewer's own Collapse/Expand choice.
     var changesWasEmpty = null;
+
+    // Pair column shows node names or IPs; the viewer's pick is remembered.
+    // A name with no known IP (node aged out) stays as the name.
+    var PAIR_MODES = ["name", "ip", "both"];
+    var PAIR_LABELS = {name: "Pair: name", ip: "Pair: IP", both: "Pair: name + IP"};
+    var changesPairMode = "name";
+    try {
+        var savedPair = localStorage.getItem("confetti-changes-pair");
+        if (PAIR_MODES.indexOf(savedPair) >= 0) changesPairMode = savedPair;
+    } catch (e) {}
+
+    function pairLabel(name) {
+        if (changesPairMode === "name") return name;
+        var ip = "", i;
+        for (i = 0; i < endpoints.length && !ip; i++) if (endpoints[i].hostname === name) ip = endpoints[i].ip || "";
+        for (i = 0; i < targets.length && !ip; i++) if (targets[i].name === name) ip = targets[i].ip || "";
+        if (!ip) return name;
+        return changesPairMode === "ip" ? ip : name + " (" + ip + ")";
+    }
+
+    (function() {
+        var btn = document.getElementById("changes-pair-toggle");
+        function label() { btn.textContent = PAIR_LABELS[changesPairMode]; }
+        label();
+        btn.addEventListener("click", function() {
+            changesPairMode = PAIR_MODES[(PAIR_MODES.indexOf(changesPairMode) + 1) % PAIR_MODES.length];
+            try { localStorage.setItem("confetti-changes-pair", changesPairMode); } catch (e) {}
+            label();
+            renderRecentChanges();
+        });
+    })();
 
     function renderRecentChanges() {
         var changes = computeRecentChanges(changeHistoryResults, changeHistoryPathChanges);
@@ -2552,7 +2676,7 @@ function syncLayoutSelect() {
             lastWhen = when;
             html += "<tr class='clickable" + (stripe ? " stripe" : "") + "' data-src='" + esc(c.source) + "' data-dst='" + esc(c.target) + "'>";
             html += "<td title='" + esc(c.received_at) + "'>" + esc(when) + "</td>";
-            html += "<td>" + esc(c.source) + " &rarr; " + esc(c.target) + "</td>";
+            html += "<td>" + esc(pairLabel(c.source)) + " &rarr; " + esc(pairLabel(c.target)) + "</td>";
             html += "<td class='wrap'>" + changeText(c) + "</td>";
             html += "</tr>";
         }
@@ -2759,6 +2883,11 @@ function syncLayoutSelect() {
                 cls = "slow";
                 tip += " (slow: " + Math.round(res.latency_ms) + " ms, warning above " + warnMs + " ms)";
             }
+            var flap = flapLookup[src + "|" + dst + "|" + types[t]];
+            if (flap) {
+                cls += " flapping";
+                tip += " — flapping: " + flap.flips + " flips in 1 h, " + flap.passPct + "% pass";
+            }
             // A path change is orthogonal to pass/fail — composed onto the
             // traceroute cell's class rather than replacing it.
             if (types[t] === "traceroute") {
@@ -2928,7 +3057,11 @@ function syncLayoutSelect() {
             // for another column.
             html += "<td>" + esc(ep.hostname) + "<div class='ep-build'>" + buildCell(ep) + clockCell(ep) + "</div></td>";
             html += "<td>" + esc(ep.ip) + "</td>";
-            html += "<td><span class='group-badge'>" + esc(ep.group_name) + "</span></td>";
+            html += "<td><button type='button' class='group-badge group-edit' data-host='" + esc(ep.hostname) +
+                "' data-group='" + esc(ep.group_name) + "' title='" +
+                escAttr(ep.group_overridden ? "Set on the hub; the node reports " + ep.group_registered + ". Click to change."
+                                            : "Click to set this node's group on the hub") + "'>" +
+                esc(ep.group_name) + (ep.group_overridden ? " &#9998;" : "") + "</button></td>";
             html += "<td>" + agoStr + (stale ? " !" : "") + "</td>";
             html += "<td>";
             html += "<button class='btn-push' data-host='" + esc(ep.hostname) + "'" +
@@ -2952,6 +3085,26 @@ function syncLayoutSelect() {
                         if (!res.ok) alert("Not queued: " + (res.body.error || "error"));
                         refresh();
                     });
+            });
+        }
+
+        // Group badge: set the group on the hub; empty clears it.
+        var groupBtns = tbody.querySelectorAll(".group-edit");
+        for (var g = 0; g < groupBtns.length; g++) {
+            groupBtns[g].addEventListener("click", function(e) {
+                var host = e.currentTarget.getAttribute("data-host");
+                var cur = e.currentTarget.getAttribute("data-group");
+                var val = prompt("Group for " + host + " (empty = use the group the node reports):", cur);
+                if (val === null) return;
+                fetch("/api/nodes/" + encodeURIComponent(host) + "/group", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({group: val})
+                }).then(function(r) { return r.json().then(function(body) { return {ok: r.ok, body: body}; }); })
+                  .then(function(res) {
+                      if (!res.ok) alert("Not saved: " + (res.body.error || "error"));
+                      refresh();
+                  });
             });
         }
 

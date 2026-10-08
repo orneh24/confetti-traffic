@@ -107,6 +107,27 @@ result_cell() {
             printf 'FAIL'
         fi
     fi
+    # $3 = "<target>.<test>": record this sample, then "~" if it is flapping.
+    [ -n "$3" ] && flap_note "$3" "$1"
+    return 0
+}
+
+# Flapping = 5+ pass<->fail flips in the last 60 cycles (~1 h), the same
+# threshold as the dashboard's matrix marker. History is one line of 0/1
+# per target+test in tmpfs, so a reboot just starts it over. Prints "~" when
+# flapping. Every step is best-effort: a cycle must never fail on this
+# (self-update would roll the script back), so it always returns 0.
+FLAP_DIR="${FLAP_DIR:-/run/confetti/flap}"
+FLAP_MIN_FLIPS=5
+flap_note() {
+    _ff="$FLAP_DIR/$1"
+    mkdir -p "$FLAP_DIR" 2>/dev/null || return 0
+    if [ "$(printf '%s' "$2" | jq -r '.success' 2>/dev/null)" = "true" ]; then _fb=1; else _fb=0; fi
+    { tail -c 59 "$_ff" 2>/dev/null | tr -d '\n'; printf '%s' "$_fb"; } > "$_ff.tmp" 2>/dev/null \
+        && mv -f "$_ff.tmp" "$_ff" 2>/dev/null
+    _fn=$(awk '{ n = 0; for (i = 2; i <= length($0); i++) if (substr($0, i, 1) != substr($0, i - 1, 1)) n++; print n }' "$_ff" 2>/dev/null)
+    [ "${_fn:-0}" -ge "$FLAP_MIN_FLIPS" ] 2>/dev/null && printf '~'
+    return 0
 }
 
 append_row() {
@@ -883,10 +904,10 @@ while [ "$i" -lt "$ENDPOINT_COUNT" ]; do
     # the console table can never drift from what the dashboard shows.
     append_row "$(printf '%-14s %-15s %-5s %-5s %-5s %-6s %-3s' \
         "$EP_HOSTNAME" "$EP_IP" \
-        "$(result_cell "$HTTP_RESULT" bool)" \
-        "$(result_cell "$SSH_RESULT" bool)" \
-        "$(result_cell "$PMTU_RESULT" bool)" \
-        "$(result_cell "$LOSS_RESULT" loss)" \
+        "$(result_cell "$HTTP_RESULT" bool "$EP_HOSTNAME.http")" \
+        "$(result_cell "$SSH_RESULT" bool "$EP_HOSTNAME.ssh")" \
+        "$(result_cell "$PMTU_RESULT" bool "$EP_HOSTNAME.pmtu")" \
+        "$(result_cell "$LOSS_RESULT" loss "$EP_HOSTNAME.loss")" \
         "$([ -n "$TRACE_RESULT" ] && printf '*' || printf -- '-')")"
 
     # iperf3 (optional). A skipped run returns nothing, and appending that
@@ -988,10 +1009,10 @@ while [ "$j" -lt "$TARGET_COUNT" ]; do
     # declare naturally stay "-" since TG_* was reset empty for this target.
     append_row "$(printf '%-14s %-15s %-5s %-5s %-5s %-6s %-3s' \
         "$TG_NAME" "$TG_IP" \
-        "$(result_cell "$TG_HTTP" bool)" \
-        "$(result_cell "$TG_SSH" bool)" \
-        "$(result_cell "$TG_PMTU" bool)" \
-        "$(result_cell "$TG_LOSS" loss)" \
+        "$(result_cell "$TG_HTTP" bool "$TG_NAME.http")" \
+        "$(result_cell "$TG_SSH" bool "$TG_NAME.ssh")" \
+        "$(result_cell "$TG_PMTU" bool "$TG_NAME.pmtu")" \
+        "$(result_cell "$TG_LOSS" loss "$TG_NAME.loss")" \
         "$([ -n "$TG_TRACE" ] && printf '*' || printf -- '-')")"
 
     TESTED=$((TESTED + 1))
@@ -1055,6 +1076,11 @@ FAIL_COUNT=$(printf '%s' "$PAYLOAD" | jq '[.results[] | select(.success == false
 SUMMARY_TITLE=$(printf '%s   %s   %d targets' "$MY_HOSTNAME" "$(date -u '+%Y-%m-%d %H:%M:%SZ')" "$TESTED")
 SUMMARY_HEADER=$(printf '%-14s %-15s %-5s %-5s %-5s %-6s %-3s' "TARGET" "IP" "H" "S" "M" "L" "T")
 SUMMARY_FOOTER=$(printf '%s ok / %s fail   ->  hub %s' "$OK_COUNT" "$FAIL_COUNT" "$HTTP_CODE")
+
+case "$ROWS" in
+    *'~'*) SUMMARY_FOOTER="$SUMMARY_FOOTER
+~ = flapping (5+ flips in the last 60 cycles)" ;;
+esac
 
 render_summary "$(printf '%s\n%s\n%s\n%s' "$SUMMARY_TITLE" "$SUMMARY_HEADER" "$ROWS" "$SUMMARY_FOOTER")"
 
