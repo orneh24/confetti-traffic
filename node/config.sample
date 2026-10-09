@@ -22,6 +22,8 @@ HUB_URL=http://10.0.0.100
 
 # Group label for this node — an arbitrary tag used to cluster nodes on the
 # dashboard and to filter syslog by sender. Example: site-a, site-b, rack1.
+# Optional: leave empty and the hub files the node under "Undefined" (the
+# hostname is then ct-<id>, with no group part).
 GROUP_NAME=site-a
 
 # Subnet of this node's interface (CIDR notation). Leave empty -- confettictl-setup.sh
@@ -36,7 +38,8 @@ SUBNET=
 # ---------------------------------------------------------------------
 
 # Explicit hostname for this node. Leave empty to derive it as
-# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. ct-site-a-xd2311.
+# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. ct-site-a-xd2311 (with no group:
+# <HOSTNAME_PREFIX>-<NODE_ID>).
 #
 # It must be unique across the lab: the hub keys its endpoint table by
 # hostname, so two nodes sharing a name overwrite each other and the mesh

@@ -82,13 +82,12 @@ start() {
     fi
 
     _hub=$(_guestinfo "confetti.hub_url")
-    _group=$(_guestinfo "confetti.group")
 
     case "$_hub" in *"No value found"*) _hub="" ;; esac
-    case "$_group" in *"No value found"*) _group="" ;; esac
 
-    if [ -z "$_hub" ] || [ -z "$_group" ]; then
-        ewarn "guestinfo.confetti.hub_url / guestinfo.confetti.group not set"
+    # The group is optional: without one the node registers as "Undefined".
+    if [ -z "$_hub" ]; then
+        ewarn "guestinfo.confetti.hub_url not set"
         ewarn "skipping auto-setup -- run $SETUP by hand to configure"
         return 0
     fi

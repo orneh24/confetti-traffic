@@ -55,7 +55,7 @@ echo "Hostname: $CURRENT_HOSTNAME"
 echo "Address:  ${CURRENT_IP:-none}"
 echo
 echo "Values come from guestinfo/environment (HUB_URL also from the template) first;"
-echo "this only prompts for whatever's still missing (HUB_URL, GROUP_NAME -- SUBNET derives from"
+echo "this only prompts for whatever's still missing (HUB_URL, GROUP_NAME, optional -- SUBNET derives from"
 echo "the DHCP lease automatically)."
 echo
 

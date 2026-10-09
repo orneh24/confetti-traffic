@@ -91,7 +91,7 @@ For each network segment:
 - [ ] Clone the template and set its NIC to that segment's port group
 - [ ] Configure it, one of:
       - **guestinfo:** set `guestinfo.confetti.hub_url` and
-        `guestinfo.confetti.group` before first boot. It configures itself.
+        `guestinfo.confetti.group` (optional) before first boot. It configures itself.
       - **At login:** boot, log in, and answer the `confettictl-node-setup.sh` prompt.
 - [ ] The node shows in `http://<hub-ip>/endpoints` with a recent `last_seen`
 
@@ -104,7 +104,7 @@ On the first clone, also check:
 - [ ] With `ENABLE_SMTP=true`: `grep -n relay /etc/smtpd/smtpd.conf` shows
       only comments
 
-The hostname is set automatically (`ct-<group>-<ab1234>`), so clones don't
+The hostname is set automatically (`ct-<group>-<ab1234>`, or `ct-<ab1234>` with no group), so clones don't
 collide. If you set `guestinfo.confetti.hostname` yourself, make it unique:
 two nodes with one name overwrite each other on the hub.
 

@@ -51,7 +51,8 @@ powered on with the right keys set before it ever boots.
   boot only applied together with ip/gateway). With ip/gateway absent, the hub's
   firstboot service stands down and `confettictl-hub-setup.sh` prompts at first login
   instead.
-- Node keys: `guestinfo.confetti.hub_url`, `guestinfo.confetti.group`,
+- Node keys: `guestinfo.confetti.hub_url`, `guestinfo.confetti.group`
+  (optional; without it the node is "Undefined" and named `ct-<NODE_ID>`),
   `guestinfo.confetti.subnet` (optional — falls back to the DHCP lease),
   `guestinfo.confetti.hostname` (optional — derived as
   `<HOSTNAME_PREFIX>-<group-slug>-<NODE_ID>` when unset, NODE_ID two random

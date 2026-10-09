@@ -209,7 +209,7 @@ else
         *) _hub_url="http://${_hub_url}" ;;
     esac
     if [ -z "$_group_name" ]; then
-        printf 'Group name (e.g., site-a): '
+        printf 'Group name (e.g., site-a; Enter for none = "Undefined"): '
         read -r _group_name || _group_name=""
     fi
     if [ -z "$_subnet" ]; then
@@ -226,7 +226,8 @@ GROUP_NAME=${_group_name}
 SUBNET=${_subnet}
 
 # Explicit hostname. If empty, the hostname is derived as
-# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. ct-site-a-xd2311.
+# <HOSTNAME_PREFIX>-<group>-<NODE_ID>, e.g. ct-site-a-xd2311 (with no group:
+# <HOSTNAME_PREFIX>-<NODE_ID>).
 # NODE_ID is random, generated once; keep it and the name stays put.
 NODE_HOSTNAME=${_hostname}
 HOSTNAME_PREFIX=ct
@@ -368,7 +369,12 @@ else
         sed -i '/^NODE_ID=/d' "$CONFIG_FILE"
         printf 'NODE_ID=%s\n' "$NODE_ID" >> "$CONFIG_FILE"
     fi
-    DESIRED_HOSTNAME="${HOSTNAME_PREFIX}-${_slug}-${NODE_ID}"
+    # No group (or one that slugs to nothing): ct-<id>, not ct--<id>.
+    if [ -n "$_slug" ]; then
+        DESIRED_HOSTNAME="${HOSTNAME_PREFIX}-${_slug}-${NODE_ID}"
+    else
+        DESIRED_HOSTNAME="${HOSTNAME_PREFIX}-${NODE_ID}"
+    fi
 fi
 
 CURRENT_HOSTNAME=$(hostname)
@@ -481,7 +487,7 @@ MY_HOSTNAME=$(hostname)
 
 log "Hostname: $MY_HOSTNAME"
 log "IP: ${MY_IP:-none}"
-log "Group: $GROUP_NAME"
+log "Group: ${GROUP_NAME:-Undefined}"
 
 # -------------------------------------------------------------------
 # Create identity web page
@@ -506,7 +512,7 @@ cat > "${WEB_ROOT}/index.html" <<EOF
   <table>
     <tr><td>Hostname</td><td>${MY_HOSTNAME}</td></tr>
     <tr><td>IP Address</td><td>${MY_IP}</td></tr>
-    <tr><td>Group</td><td>${GROUP_NAME}</td></tr>
+    <tr><td>Group</td><td>${GROUP_NAME:-Undefined}</td></tr>
     <tr><td>Subnet</td><td>${SUBNET}</td></tr>
     <tr><td>Generated</td><td>$(date -u '+%Y-%m-%dT%H:%M:%SZ')</td></tr>
   </table>

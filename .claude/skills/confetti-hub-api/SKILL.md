@@ -17,7 +17,7 @@ The hub (`hub/app/app.py`) is the single source of truth for endpoints and resul
 
 ## Contract (do not break without reflashing nodes)
 
-`POST /register` — body must contain the first four; `build`, `managed`, `clock_synced` and `clock_offset_s` are optional (older nodes omit them; a non-bool / non-number clock value is stored as null):
+`POST /register` — body must contain `hostname`, `ip` and `subnet`; `group_name` is optional (missing/null/blank becomes `Undefined`); `build`, `managed`, `clock_synced` and `clock_offset_s` are optional (older nodes omit them; a non-bool / non-number clock value is stored as null):
 
 ```json
 {"hostname": "ct-site-a-xd2311", "ip": "10.1.1.50", "subnet": "10.1.1.0/24", "group_name": "site-a",

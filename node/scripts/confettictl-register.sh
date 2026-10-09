@@ -29,7 +29,10 @@ fi
 . "$CONFIG"
 
 # Validate required variables
-for var in HUB_URL GROUP_NAME SUBNET; do
+# GROUP_NAME is optional: empty registers as no group and the hub files the
+# node under "Undefined".
+GROUP_NAME="${GROUP_NAME:-}"
+for var in HUB_URL SUBNET; do
     eval val=\$$var
     if [ -z "$val" ]; then
         log "ERROR: $var is not set in $CONFIG"
@@ -143,7 +146,7 @@ if [ -d "$WEB_ROOT" ]; then
   <table>
     <tr><td>Hostname</td><td>${HOSTNAME}</td></tr>
     <tr><td>IP Address</td><td>${IP}</td></tr>
-    <tr><td>Group</td><td>${GROUP_NAME}</td></tr>
+    <tr><td>Group</td><td>${GROUP_NAME:-Undefined}</td></tr>
     <tr><td>Subnet</td><td>${SUBNET}</td></tr>
     <tr><td>Updated</td><td>$(date -u '+%Y-%m-%dT%H:%M:%SZ')</td></tr>
   </table>

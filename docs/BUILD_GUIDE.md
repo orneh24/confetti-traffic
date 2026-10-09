@@ -101,7 +101,7 @@ wget -O /tmp/oi.sh https://github.com/orneh24/confetti-traffic/raw/main/online-i
 Pick **hub** on one clone and **node** on the other. For the node, the
 installer asks for the hub IP (e.g. `10.0.0.100`) and stores it as a URL in
 the template as `/etc/confetti/template-hub-url`, so clones ask only for the
-group. Leave it blank to be asked on each clone, or set `CONFETTI_HUB_URL`
+group (Enter = Undefined). Leave it blank to be asked on each clone, or set `CONFETTI_HUB_URL`
 for an unattended build. Guestinfo and the environment still override it. The build enables the
 community repository, installs packages, installs the services and cleans
 the VM for cloning. It takes a few minutes; zeroing free space at the end is
@@ -172,7 +172,8 @@ Set the keys on the VM before first boot. On boot, the
 configures and registers itself with no console session.
 
 The keys are listed in the [README](../README.md#zero-touch-deployment-with-guestinfo).
-Only `hub_url` and `group` are required. In the vSphere Client: VM →
+Only `hub_url` is required; without a `group` the node is filed under
+`Undefined` and named `ct-<id>`. In the vSphere Client: VM →
 **Edit Settings** → **VM Options** → **Advanced** → **Edit Configuration** →
 add one row per key.
 
@@ -223,7 +224,7 @@ again; `confettictl-node-setup.sh --force` asks again later.
 
 Each value comes from guestinfo first, then an environment variable, then a
 prompt. `SUBNET` is taken from the DHCP lease before prompting. The hostname
-is `ct-<group>-<ab1234>` (e.g. `ct-site-a-xd2311`) unless you set one. The
+is `ct-<group>-<ab1234>` (e.g. `ct-site-a-xd2311`; `ct-<ab1234>` with no group) unless you set one. The
 random part is generated once and kept in the config as `NODE_ID`, so the
 name never changes on reboot or a new DHCP lease.
 
@@ -267,7 +268,7 @@ wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
 
 It downloads the node bundle from the hub, installs the packages and scripts,
 and runs `confettictl-setup.sh` with the hub URL already filled in. It asks only for what
-is still missing, such as the group if you didn't pass it. Don't pipe it into
+is still missing, such as the group if you didn't pass it (optional). Don't pipe it into
 `sh`, because the prompts need the terminal.
 
 ### 5.6 Check

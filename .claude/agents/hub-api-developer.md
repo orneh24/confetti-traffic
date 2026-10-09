@@ -17,7 +17,7 @@ You develop the Confetti Traffic hub: `hub/app/app.py` (Flask), SQLite storage, 
 
 ## Frozen Contract
 
-- `POST /register` — requires `hostname`, `ip`, `subnet`, `group_name`; optional `build` (string), `managed` (bool), `clock_synced` (bool) and `clock_offset_s` (number) — older nodes omit them; upsert on hostname; `last_seen` set server-side; 400 on missing fields.
+- `POST /register` — requires `hostname`, `ip`, `subnet`; `group_name` is optional (absent, null or blank is stored as `config.DEFAULT_GROUP`, "Undefined"); optional `build` (string), `managed` (bool), `clock_synced` (bool) and `clock_offset_s` (number) — older nodes omit them; upsert on hostname; `last_seen` set server-side; 400 on missing fields.
 - `GET /endpoints` — bare array of `{hostname, ip, subnet, group_name, group_overridden, group_registered, last_seen, build, managed, update_state, update_msg, update_at, clock_synced, clock_offset_s}` (the last seven may be null; `group_name` is the override when `group_overridden`, else the registered one), ordered by group then hostname. Prunes endpoints past `STALE_ENDPOINT_HOURS` as a side effect. `?for=<hostname>` filters out peers in groups a mesh rule excludes; unknown or missing host returns the full list, same shape.
 - `GET|POST /mesh-rules`, `DELETE /mesh-rules?a=&b=` — group pairs excluded from the mesh; names 1–64 chars, pair stored sorted, POST idempotent, DELETE 404 when absent.
 - `POST /results` — `{source, results: [{target_hostname, target_ip, test_type, success, latency_ms, output, timestamp}]}`; `success` stored 0/1; `latency_ms` REAL nullable; `output` free text; 400 on missing `source` or empty `results`. Runs the retention sweep as a side effect.

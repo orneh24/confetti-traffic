@@ -69,9 +69,9 @@ The root password (`confetti`) is set at build time. Override it with
 | Key | Required | Notes |
 |---|---|---|
 | `HUB_URL` | yes | no trailing slash |
-| `GROUP_NAME` | yes | label that groups nodes on the dashboard |
+| `GROUP_NAME` | no | label that groups nodes on the dashboard; empty = `Undefined` |
 | `SUBNET` | yes | filled in from the DHCP lease by `confettictl-setup.sh` |
-| `NODE_HOSTNAME` | no | if empty: `<HOSTNAME_PREFIX>-<group>-<NODE_ID>` |
+| `NODE_HOSTNAME` | no | if empty: `<HOSTNAME_PREFIX>-<group>-<NODE_ID>` (no group: `<HOSTNAME_PREFIX>-<NODE_ID>`) |
 | `HOSTNAME_PREFIX` | no | default `ct` |
 | `NODE_ID` | no | two random letters + four random digits (e.g. `xd2311`), generated once by `confettictl-setup.sh` |
 | `HUB_MANAGED` | no | default true; false removes the hub's management key (no push-update) |
@@ -82,8 +82,9 @@ The root password (`confetti`) is set at build time. Override it with
 | `HUB_NTP` | no | default true; `confettictl-setup.sh` points chrony at the hub. false leaves `chrony.conf` alone |
 | `AGENT_AUTOUPDATE` | no | default true |
 
-If `HUB_URL`, `GROUP_NAME` or `SUBNET` is empty, `confettictl-register.sh` exits and the
-node never appears on the hub. There is no other error.
+If `HUB_URL` or `SUBNET` is empty, `confettictl-register.sh` exits and the
+node never appears on the hub. There is no other error. An empty
+`GROUP_NAME` is fine: the hub files the node under `Undefined`.
 
 After editing, re-run `/usr/local/bin/confetti/confettictl-setup.sh`. It keeps the
 config and starts any service you enabled.

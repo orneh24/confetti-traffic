@@ -423,7 +423,9 @@ def _():
     f = "node/services/firstboot.initd"
     p = []
     need(grep(r'_guestinfo "confetti\.hub_url"', f), "hub_url not checked", p)
-    need(grep(r'_guestinfo "confetti\.group"', f), "group not checked", p)
+    # The group is optional (hub files a node without one under "Undefined"),
+    # so firstboot must NOT stand down for want of it.
+    need(not grep(r'_group=\$\(_guestinfo "confetti\.group"\)', f), "group is checked again; it is optional", p)
     for n, l in grep(r'"\$SETUP"', f):
         if "-x" in l or is_comment(l):
             continue

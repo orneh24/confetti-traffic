@@ -42,7 +42,8 @@ Diagram: `docs/TOPOLOGY.md`.
   port into the init script's `command_args`: OpenRC expands that at parse
   time, before `start_pre` sources `hub.env`, so the setting would be ignored.
 - API endpoints:
-  - `POST /register` — hostname, ip, subnet, group_name
+  - `POST /register` — hostname, ip, subnet, group_name (optional: absent,
+    null or blank is stored as `Undefined`, `config.DEFAULT_GROUP`)
   - `GET /endpoints` — mesh list (prunes stale endpoints as a side effect);
     `?for=<hostname>` is that node's peer list with mesh-rule exclusions
     applied (see Mesh rules below). Without `for`, always the full list
@@ -510,11 +511,12 @@ when interactive) and kept out of the cleanup so clones inherit it; and
 `subnet`, which has one extra fallback before the prompt: derived from the
 interface's own DHCP lease (address + prefix already give you the network).
 If hostname is omitted it is derived as `<HOSTNAME_PREFIX>-<group-slug>-<NODE_ID>`
-(e.g. `ct-site-a-xd2311`), where `NODE_ID` is two random letters and
+(e.g. `ct-site-a-xd2311`; `ct-xd2311` when there is no group), where `NODE_ID` is two random letters and
 four random digits, generated once and stored in the config — so two nodes in one
 group never collide (constraint 1), and an IP change never renames a node.
 Template cleanup deletes the config, so every clone draws its own.
-`group` is an arbitrary operator-chosen label — it clusters nodes on the
+`group` is optional: a node without one registers as `Undefined` (the hub
+does the defaulting, so nodes not yet updated still work). It is an arbitrary operator-chosen label — it clusters nodes on the
 dashboard and filters syslog by sender; it carries no network-topology
 meaning to the hub.
 
@@ -648,7 +650,7 @@ These were live bugs that a review caught; each has a comment at the site.
 1. **Hostnames must be unique per clone.** `endpoints.hostname` is the PRIMARY
    KEY, so duplicate names make clones overwrite each other and the mesh
    collapses to one entry — which every node then skips as "self". `confettictl-setup.sh`
-   sets the hostname (`ct-<group>-<NODE_ID>`, random, stored in the config);
+   sets the hostname (`ct-<group>-<NODE_ID>`, or `ct-<NODE_ID>` with no group; random, stored in the config);
    the template ships as `confetti-template` and its cleanup deletes the config,
    so no two clones share a `NODE_ID`.
 2. **Timestamps: the hub stamps `received_at` and filters on that.** Nodes
@@ -738,8 +740,8 @@ These were live bugs that a review caught; each has a comment at the site.
    `.claude/agents/` overrides `~/.claude/agents/` on a name collision.
 16. **The first-boot service stands down without guestinfo.** `confettictl-setup.sh`
    prompts interactively, so auto-running it with no keys present would block
-   the boot forever waiting on input. It checks for `confetti.hub_url` and
-   `confetti.group` first and redirects to `/dev/null`. The interactive
+   the boot forever waiting on input. It checks for `confetti.hub_url` first
+   (the group is optional) and redirects to `/dev/null`. The interactive
    counterpart — `confettictl-hub-setup.sh` / `confettictl-node-setup.sh`, invited at login — has its
    own guard: `case "$-" in *i*)` (interactive shell only) plus `[ -t 0 ]`
    (real tty), so it never fires for `ssh host cmd` or scp/rsync's

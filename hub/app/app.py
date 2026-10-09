@@ -289,9 +289,17 @@ def _note_path_change(db, source, target, target_ip, prev_row, cur_output, recei
 def register():
     """Register or update a node endpoint."""
     data = request.get_json(force=True)
-    required = ("hostname", "ip", "subnet", "group_name")
-    if not all(k in data for k in required):
+    required = ("hostname", "ip", "subnet")
+    if not isinstance(data, dict) or not all(k in data for k in required):
         return jsonify({"error": "Missing required fields", "required": list(required)}), 400
+
+    # group_name is optional: absent, null or blank all mean "no group" and
+    # land in DEFAULT_GROUP. An explicit None check, not .get(k, default),
+    # because {"group_name": null} would otherwise reach the NOT NULL column
+    # (constraint 19).
+    group = data.get("group_name")
+    group = str(group).strip() if group is not None else ""
+    data["group_name"] = group or config.DEFAULT_GROUP
 
     # Optional: older nodes don't send these. Stored as text, "true"/"false"
     # for managed; None when absent.

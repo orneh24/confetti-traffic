@@ -92,9 +92,9 @@ wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
 2. Shut it down and convert it to a vCenter template. Don't configure or test
    it first: that undoes the cleanup.
 3. Clone it once per network segment, boot each clone, log in and answer the
-   setup prompt. Only the group is asked.
+   setup prompt. Only the group is asked (Enter = Undefined).
 
-Each node names itself `ct-<group>-<ab1234>` and shows up on the dashboard.
+Each node names itself `ct-<group>-<ab1234>` (`ct-<ab1234>` with no group) and shows up on the dashboard.
 For fully automatic clones, see
 [Zero-touch deployment](#zero-touch-deployment-with-guestinfo).
 
@@ -112,7 +112,7 @@ For bulk or scripted deployments, set guestinfo keys on each VM in vCenter
 before first boot (VM Options → Advanced → Configuration Parameters, or
 PowerCLI `New-AdvancedSetting`), and the VM configures itself with no login.
 
-- **Nodes:** set `guestinfo.confetti.hub_url` and `guestinfo.confetti.group`
+- **Nodes:** set `guestinfo.confetti.hub_url` (and optionally `guestinfo.confetti.group`)
   on each clone. Guestinfo wins over the hub URL stored in the template.
 - **Hub:** set `guestinfo.hub.ip` and `guestinfo.hub.gateway` (optionally
   `.dns` and `.hostname`).
@@ -120,9 +120,9 @@ PowerCLI `New-AdvancedSetting`), and the VM configures itself with no login.
 | Key | Example | Notes |
 |---|---|---|
 | `guestinfo.confetti.hub_url` | `http://10.0.0.100` | **required** for zero-touch |
-| `guestinfo.confetti.group` | `site-a` | **required** for zero-touch |
+| `guestinfo.confetti.group` | `site-a` | optional; unset files the node under `Undefined` |
 | `guestinfo.confetti.subnet` | `10.1.1.0/24` | default: from DHCP lease |
-| `guestinfo.confetti.hostname` | `ct-site-a` | default: `ct-<group>-<ab1234>`; must be unique |
+| `guestinfo.confetti.hostname` | `ct-site-a` | default: `ct-<group>-<ab1234>`, or `ct-<ab1234>` with no group; must be unique |
 | `guestinfo.confetti.dns_server` | `10.0.0.53` | unset skips the DNS test |
 | `guestinfo.confetti.dns_query` | `example.com` | name the DNS test looks up |
 | `guestinfo.hub.ip` | `10.0.0.100/24` | unset: asked at login |

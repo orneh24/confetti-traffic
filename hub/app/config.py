@@ -8,6 +8,8 @@ RESULT_RETENTION_HOURS = int(os.environ.get("HUB_RESULT_RETENTION_HOURS", "24"))
 # Nodes re-register every 5 minutes, so this is generously long.
 STALE_ENDPOINT_HOURS = int(os.environ.get("HUB_STALE_ENDPOINT_HOURS", "6"))
 PORT = int(os.environ.get("HUB_PORT", "80"))
+# Group given to a node that registers without one.
+DEFAULT_GROUP = "Undefined"
 
 # ---------------------------------------------------------------------------
 # Syslog receiver
