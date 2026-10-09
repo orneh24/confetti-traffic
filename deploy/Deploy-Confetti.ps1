@@ -63,19 +63,26 @@
     Number of nodes to deploy. Default: 3.
 
 .PARAMETER NodeNamePrefix
-    Prefix for each node's vCenter VM name (<prefix>-<group>). guestinfo.confetti.
+    Prefix for each node's vCenter VM name (<prefix>-<group>, or
+    <prefix>-node<N> for a node with no group). guestinfo.confetti.
     hostname is deliberately never set by this script — each node derives its
     in-guest hostname as <prefix>-<group>-<NODE_ID> (see CLAUDE.md), i.e. the
     VM name plus 2 random letters and 4 random digits, which -WaitForRegistration
-    relies on to match nodes to VMs. Keep this equal to HOSTNAME_PREFIX in the node
-    template's config (default in node/config.sample: ct) or that
+    relies on to match nodes to VMs (<prefix>-<NODE_ID> for a node with no
+    group, matched by being new on the hub). Keep this equal to HOSTNAME_PREFIX
+    in the node template's config (default in node/config.sample: ct) or that
     matching breaks.
 
 .PARAMETER NodeGroups
     One group label per node (guestinfo.confetti.group) — an arbitrary tag that
     clusters nodes on the dashboard and filters syslog by sender; it carries
     no network-topology meaning to the hub. Must supply at least $NodeCount
-    entries. Default: site-a, site-b, site-c.
+    entries. Default: site-a, site-b, site-c. An empty entry ("") leaves that
+    node without a group: it registers as "Undefined".
+
+.PARAMETER NoGroup
+    Deploy every node without a group (ignores -NodeGroups). The nodes
+    register under "Undefined" and can be grouped later from the dashboard.
 
 .PARAMETER NodeSubnets
     Optional, one entry per node (CIDR, e.g. "10.1.1.0/24"), written to
@@ -148,6 +155,7 @@ param(
     [ValidateRange(1, 64)] [int] $NodeCount = 3,
     [string] $NodeNamePrefix = "ct",
     [string[]] $NodeGroups = @("site-a", "site-b", "site-c"),
+    [switch] $NoGroup,
     [string[]] $NodeSubnets,
     [string] $DnsServer,
     [string] $DnsQuery = "example.com",
@@ -165,9 +173,12 @@ $ErrorActionPreference = "Stop"
 if (-not $global:DefaultVIServers -or $global:DefaultVIServers.Count -eq 0) {
     throw "Not connected to vCenter. Run Connect-VIServer first."
 }
-if ($NodeGroups.Count -lt $NodeCount) {
+if ($NoGroup) {
+    $NodeGroups = @("") * $NodeCount
+} elseif ($NodeGroups.Count -lt $NodeCount) {
     throw "NodeGroups has $($NodeGroups.Count) entries but NodeCount is $NodeCount — " +
-          "supply at least one group label per node."
+          "supply one group label per node (an empty `"`" entry means no group), " +
+          "or pass -NoGroup."
 }
 if ($NodeSubnets -and $NodeSubnets.Count -lt $NodeCount) {
     throw "NodeSubnets was supplied but only has $($NodeSubnets.Count) entries for " +
@@ -230,16 +241,25 @@ if ($PSCmdlet.ShouldProcess($HubVMName, "Clone from $HubTemplate")) {
 $nodeVMs = @()
 for ($i = 0; $i -lt $NodeCount; $i++) {
     $group = $NodeGroups[$i]
-    $nodeName = "$NodeNamePrefix-$group"
+    if ($group) {
+        $nodeName = "$NodeNamePrefix-$group"
+    } else {
+        # No group: nothing to name the VM after, so number it.
+        $nodeName = "$NodeNamePrefix-node$($i + 1)"
+    }
+    $groupLabel = if ($group) { "group '$group'" } else { "no group" }
 
-    Write-Host "Cloning node '$nodeName' (group '$group') from template '$NodeTemplate'..."
+    Write-Host "Cloning node '$nodeName' ($groupLabel) from template '$NodeTemplate'..."
     if (-not $PSCmdlet.ShouldProcess($nodeName, "Clone from $NodeTemplate")) { continue }
 
     $nodeCloneParams = New-CloneParams -Name $nodeName -Template $NodeTemplate
     $nodeVM = New-VM @nodeCloneParams
 
     Set-Guestinfo -VM $nodeVM -Key "guestinfo.confetti.hub_url" -Value $hubUrl
-    Set-Guestinfo -VM $nodeVM -Key "guestinfo.confetti.group" -Value $group
+    # No group key at all: the node registers as "Undefined".
+    if ($group) {
+        Set-Guestinfo -VM $nodeVM -Key "guestinfo.confetti.group" -Value $group
+    }
     if ($NodeSubnets) {
         Set-Guestinfo -VM $nodeVM -Key "guestinfo.confetti.subnet" -Value $NodeSubnets[$i]
     }
@@ -261,7 +281,10 @@ for ($i = 0; $i -lt $NodeCount; $i++) {
 Write-Host ""
 Write-Host "Deployed:"
 if ($hubVM) { Write-Host "  Hub:   $HubVMName  ($HubIP via $HubGateway)  ->  $hubUrl" }
-foreach ($n in $nodeVMs) { Write-Host "  Node:  $($n.Name)  (group $($n.Group))" }
+foreach ($n in $nodeVMs) {
+    $g = if ($n.Group) { "group $($n.Group)" } else { "no group" }
+    Write-Host "  Node:  $($n.Name)  ($g)"
+}
 
 # ---------------------------------------------------------------------
 # Optional: wait for nodes to register
@@ -277,12 +300,28 @@ if ($WaitForRegistration -and $PowerOn -and $nodeVMs.Count -gt 0) {
     $pending = [System.Collections.Generic.HashSet[string]]::new()
     foreach ($n in $nodeVMs) { [void]$pending.Add($n.Name) }
 
+    # A node with no group registers as <prefix>-<2 letters + 4 digits>, which
+    # says nothing about its VM. This script cloned the hub just now, so every
+    # such name on it is ours: count them off against the ungrouped VMs (only
+    # the count is reliable, not which VM a name belongs to).
+    $ungroupedPending = [System.Collections.Generic.Queue[string]]::new()
+    foreach ($n in $nodeVMs) { if (-not $n.Group) { $ungroupedPending.Enqueue($n.Name) } }
+    $ungroupedRe = '^' + [regex]::Escape($NodeNamePrefix) + '-[a-z]{2}[0-9]{4}$'
+    $seenUngrouped = [System.Collections.Generic.HashSet[string]]::new()
+
     while ($pending.Count -gt 0 -and (Get-Date) -lt $deadline) {
         try {
             $endpoints = Invoke-RestMethod -Uri "$hubUrl/endpoints" -TimeoutSec 10
-            # A node left to derive its own hostname registers as
-            # <VM name>-<2 letters + 4 digits>; an explicit one as the VM name.
             foreach ($ep in $endpoints) {
+                if ($ungroupedPending.Count -gt 0 -and $ep.hostname -match $ungroupedRe -and
+                    $seenUngrouped.Add($ep.hostname)) {
+                    $name = $ungroupedPending.Dequeue()
+                    Write-Host "  registered: $($ep.hostname) ($($ep.ip)) - no group"
+                    [void]$pending.Remove($name)
+                    continue
+                }
+                # A node left to derive its own hostname registers as
+                # <VM name>-<2 letters + 4 digits>; an explicit one as the VM name.
                 foreach ($name in @($pending)) {
                     $derived = '^' + [regex]::Escape($name) + '-[a-z]{2}[0-9]{4}$'
                     if ($ep.hostname -eq $name -or $ep.hostname -match $derived) {

@@ -33,6 +33,13 @@ up (best-effort — a slow node is reported, not treated as failure).
 Add `-HubDns 10.0.0.53` so the hub can resolve names (`confettictl-update`
 needs this), and `-HubHostname` to name the hub's guest OS.
 
+Groups are optional. `-NoGroup` deploys every node without one (they
+register as `Undefined`; VMs are named `ct-node1`, `ct-node2`, ...), and an
+empty `""` entry in `-NodeGroups` does the same for that one node. With
+`-WaitForRegistration`, ungrouped nodes are counted off as they appear on
+the freshly cloned hub; only the count is reliable, not which VM is which.
+A hand-built ungrouped node registering on that hub meanwhile is counted too.
+
 Full parameter reference: `Get-Help ./Deploy-Confetti.ps1 -Full`.
 
 ## Multi-segment labs
