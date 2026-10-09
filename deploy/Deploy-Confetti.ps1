@@ -180,6 +180,20 @@ if ($NoGroup) {
           "supply one group label per node (an empty `"`" entry means no group), " +
           "or pass -NoGroup."
 }
+$NodeGroups = @($NodeGroups | ForEach-Object { "$_".Trim() })
+
+# Every VM needs its own vCenter name (<prefix>-<group>, or <prefix>-node<N>
+# without a group), or New-VM fails partway through the run, after the hub
+# and earlier nodes already exist. Check before cloning anything.
+$vmNames = for ($i = 0; $i -lt $NodeCount; $i++) {
+    if ($NodeGroups[$i]) { "$NodeNamePrefix-$($NodeGroups[$i])" } else { "$NodeNamePrefix-node$($i + 1)" }
+}
+$dupes = @($vmNames | Group-Object | Where-Object { $_.Count -gt 1 } | ForEach-Object { $_.Name })
+if ($dupes.Count -gt 0) {
+    throw "These node VM names would clash: $($dupes -join ', '). " +
+          "Give each node a distinct group (a group named 'nodeN' also clashes " +
+          "with an ungrouped node's name)."
+}
 if ($NodeSubnets -and $NodeSubnets.Count -lt $NodeCount) {
     throw "NodeSubnets was supplied but only has $($NodeSubnets.Count) entries for " +
           "$NodeCount nodes. Omit it entirely to let every node derive its subnet " +

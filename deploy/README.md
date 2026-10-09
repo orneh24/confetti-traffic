@@ -40,6 +40,9 @@ empty `""` entry in `-NodeGroups` does the same for that one node. With
 the freshly cloned hub; only the count is reliable, not which VM is which.
 A hand-built ungrouped node registering on that hub meanwhile is counted too.
 
+The script checks the node VM names for clashes (a repeated group, or a
+group called `node1` next to an ungrouped node) before cloning anything.
+
 Full parameter reference: `Get-Help ./Deploy-Confetti.ps1 -Full`.
 
 ## Multi-segment labs
