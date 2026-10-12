@@ -24,6 +24,8 @@ EXCLUDE = ("branch-7", "site-b")       # one mesh rule, shown in the tour
 REROUTE_AT = 12          # dc-core <-> site-b path change
 BLIP_AT = 28             # ssh blip site-a-bf6313 -> site-b
 MTU_FROM = 44           # branch-7 <-> site-a mtu break, still failing now
+FLAP_PAIR = ("ct-site-a-xd2311", "ct-dc-core-ta5580")   # ssh fails every 2nd round 38-48, passes now
+FLAP_ROUNDS = range(38, 50, 2)
 DEVICE_LOG = {
     REROUTE_AT - 1: [
         "<189>core-sw01: %OSPF-5-ADJCHG: Process 1, Nbr 10.255.0.7 on Tunnel7 from FULL to DOWN, Neighbor Down: Interface down or detached",
@@ -62,6 +64,7 @@ def pair_state(rnd, src, dst):
     mtu = rnd >= MTU_FROM and groups == {"site-a", "branch-7"}
     rerouted = rnd >= REROUTE_AT and groups == {"dc-core", "site-b"}
     blip = rnd == BLIP_AT and (src, dst) == ("ct-site-a-bf6313", "ct-site-b-hq4971")
+    blip = blip or ((src, dst) == FLAP_PAIR and rnd in FLAP_ROUNDS)
     return mtu, rerouted, blip
 
 
@@ -105,6 +108,11 @@ def main():
                            "group_name": group, "build": "unknown", "managed": True,
                            "clock_synced": True, "clock_offset_s": -0.0012})
     post("/mesh-rules", {"group_a": EXCLUDE[0], "group_b": EXCLUDE[1]})
+    for host, _, group in NODES:
+        post("/lldp", {"source": host, "neighbors": [{
+            "local_port": "eth0", "chassis_id": "00:1b:54:%02x:00:01" % (len(group) * 7),
+            "port_id": "Gi1/0/%d" % (len(host) % 24 + 1), "port_descr": "GigabitEthernet1/0/%d" % (len(host) % 24 + 1),
+            "sys_name": "access-sw-%s" % group, "sys_descr": "Demo access switch", "mgmt_ip": "10.0.0.%d" % (len(group) + 10)}]})
     db = sqlite3.connect(DB)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     for rnd in range(ROUNDS):

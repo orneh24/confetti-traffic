@@ -74,11 +74,21 @@ def backdate(db, table, after, minutes):
                ("-%d minutes" % minutes, after))
 
 
+def seed_lldp():
+    for i in range(1, 6):
+        post("/lldp", {"source": "node-%d" % i, "neighbors": [{
+            "local_port": "eth0", "chassis_id": "00:1b:54:00:00:%02x" % i,
+            "port_id": "Gi1/0/%d" % (i + 2), "port_descr": "GigabitEthernet1/0/%d" % (i + 2),
+            "sys_name": "access-sw%d" % ((i + 1) // 2), "sys_descr": "Demo access switch",
+            "mgmt_ip": "10.0.0.%d" % (10 + (i + 1) // 2)}]})
+
+
 def main():
     for host, ip, group in NODES:
         post("/register", {"hostname": host, "ip": ip, "subnet": ip.rsplit(".", 1)[0] + ".0/24",
                            "group_name": group, "build": "unknown", "managed": True,
                            "clock_synced": True, "clock_offset_s": -0.0012})
+    seed_lldp()
     # A group set on the hub, so the matrix header and Endpoints list show the pencil mark.
     post("/api/nodes/node-4/group", {"group": "edge"})
     db = sqlite3.connect(DB)
