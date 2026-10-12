@@ -451,6 +451,12 @@ below it if it only prepares a template. Scripts that cron may be running
 are installed via temp file + `mv`, never `cp` over the live file (sh reads
 a script as it runs).
 
+The hub's login banner shows the installed build, and "New version available" when
+`confettictl-check-update.sh` (started in the background by `confettid-hub`'s
+`start_post`, once per service start) found a newer `main` commit on GitHub and left it
+in `/run/confetti-hub-latest`. Silent without internet; `HUB_UPDATE_CHECK=false` turns it
+off. It only tells: updating stays manual.
+
 Afterwards the hub restarts; a configured node re-runs `confettictl-setup.sh`. Update
 the hub first, then push the nodes: they can only get what the hub's bundle
 holds, so a node can't get ahead of its hub.

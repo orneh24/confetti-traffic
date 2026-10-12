@@ -20,6 +20,20 @@ case "$-" in
                 echo
             fi
             unset _ct_ip _ct_port
+            # Installed build, and a newer one if the start-up check found it
+            # (confettictl-check-update.sh). Only says "new" when the installed
+            # commit is known and is not a prefix of the latest.
+            _ct_cur=$(sed -n 's/^commit=//p' /etc/confetti-release 2>/dev/null | head -n 1 | tr -cd '0-9a-z')
+            _ct_new=$(head -n 1 /run/confetti-hub-latest 2>/dev/null | tr -cd '0-9a-f')
+            echo "Installed build: $(printf '%.7s' "${_ct_cur:-unknown}")"
+            if [ -n "$_ct_new" ] && [ -n "$_ct_cur" ] && [ "$_ct_cur" != "unknown" ]; then
+                case "$_ct_new" in
+                    "$_ct_cur"*) ;;
+                    *) echo "New version available: $(printf '%.7s' "$_ct_new")  -> run: confettictl-update" ;;
+                esac
+            fi
+            echo
+            unset _ct_cur _ct_new
         fi
         ;;
 esac

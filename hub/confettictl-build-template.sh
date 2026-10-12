@@ -179,6 +179,8 @@ cp -f "${SCRIPT_DIR}/requirements.txt" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/serve.py" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/confettictl-run.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/confettictl-hub-setup.sh" "$HUB_INSTALL_DIR/"
+cp -f "${SCRIPT_DIR}/scripts/confettictl-check-update.sh" "$HUB_INSTALL_DIR/"
+chmod +x "$HUB_INSTALL_DIR/confettictl-check-update.sh"
 # Served at /confettictl-install.sh: installs a plain Alpine VM as a node from this hub.
 cp -f "${SCRIPT_DIR}/scripts/confettictl-node-install.sh" "$HUB_INSTALL_DIR/"
 chmod +x "$HUB_INSTALL_DIR/confettictl-run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/confettictl-hub-setup.sh"
@@ -344,6 +346,12 @@ HUB_HEALTH_SERVICE_TIMEOUT_S=3
 # gates whether a change gets written.
 HUB_PATH_CHANGE_ENABLED=true
 
+# --- Update check -------------------------------------------------------
+# At service start the hub asks GitHub which commit main is at, so the login
+# banner can say a newer build exists. Set false for a hub that must not
+# call out (the check is silent when there is no internet anyway).
+HUB_UPDATE_CHECK=true
+
 # --- Push-update (dashboard) -------------------------------------------
 # Time limit for one node's update (it re-runs confettictl-setup.sh and may install
 # packages), and how recently a node must have registered to be pushed to.
@@ -398,6 +406,12 @@ start_pre() {
         ssh-keygen -q -t ed25519 -N '' -C confetti-hub -f /etc/confetti-hub/keys/id_hub
     [ -f /etc/confetti-hub/keys/id_confetti ] || \
         ssh-keygen -q -t ed25519 -N '' -C confetti-mesh -f /etc/confetti-hub/keys/id_confetti
+}
+
+# Once the hub is up, look in the background for a newer build on GitHub; the
+# login banner shows the answer. Never blocks or fails the start.
+start_post() {
+    ( /opt/confetti-hub/confettictl-check-update.sh >/dev/null 2>&1 & )
 }
 
 depend() {
@@ -458,6 +472,9 @@ cat > /etc/motd <<'MOTDEOF'
   |   If IP needs changing later:                          |
   |     confettictl-set-static-ip <ip/cidr> <gateway> [dns] [hostname] |
   |     rc-service networking restart                      |
+  |                                                        |
+  |   Update the hub to the latest code:                   |
+  |     confettictl-update                                 |
   +--------------------------------------------------------+
 
 MOTDEOF
