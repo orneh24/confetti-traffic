@@ -13,7 +13,13 @@ NODES = [("node-%d" % i, "10.%d.1.10" % i, "site-" + "abcde"[i - 1]) for i in ra
 BROKEN = ("node-3", "node-5")
 BROKEN_FROM = ROUNDS - 2                 # last two rounds fail
 FLAP = ("node-1", "node-4", 7)           # one earlier SSH blip, recovered
-FLAP2 = ("node-2", "node-4", (8, 10, 12, 14))   # SSH flapping: 7 flips, shows the flapping marker
+# Flapping tests (5+ flips in the hour shows the stripes and "~"): (src, dst, test, failing rounds).
+FLAPS = [
+    ("node-2", "node-4", "ssh", (8, 10, 12, 14)),
+    ("node-1", "node-2", "http", (9, 11, 13, 15)),
+    ("node-4", "node-1", "ssh", (6, 8, 10, 12, 14)),
+    ("node-5", "node-2", "smb", (10, 12, 14, 16)),
+]
 
 
 def post(path, body):
@@ -37,24 +43,30 @@ def results(rnd, src, sip):
             continue
         di = int(dip.split(".")[1])
         broken = (src, dst) == BROKEN and rnd >= BROKEN_FROM
-        flap = ((src, dst) == FLAP[:2] and rnd == FLAP[2]) or \
-               ((src, dst) == FLAP2[:2] and rnd in FLAP2[2])
+        def flaps(t):
+            return any((src, dst, t) == f[:3] and rnd in f[3] for f in FLAPS)
+
+        blip = (src, dst) == FLAP[:2] and rnd == FLAP[2]
+        flap = blip or any((src, dst) == f[:2] and rnd in f[3] for f in FLAPS)
         ok = not broken
 
         def r(t, success, ms, text):
             out.append({"target_hostname": dst, "target_ip": dip, "test_type": t,
                         "success": success, "latency_ms": ms, "output": text})
 
-        r("http", ok, 4.2 + si * 0.3 if ok else 5001.0,
-          "probe site: 5 files OK" if ok else "index.html: timeout after 5s")
-        r("ssh", ok and not flap, 0 if ok and not flap else 5000,
-          "ok" if ok and not flap else "ssh: connect to host %s port 22: Connection timed out" % dip)
+        hok = ok and not flaps("http")
+        r("http", hok, 4.2 + si * 0.3 if hok else 5001.0,
+          "probe site: 5 files OK" if hok else "index.html: timeout after 5s")
+        sok = ok and not (blip or flaps("ssh"))
+        r("ssh", sok, 0 if sok else 5000,
+          "ok" if sok else "ssh: connect to host %s port 22: Connection timed out" % dip)
         if rnd % 5 == 0 or broken or flap:
             r("traceroute", ok, 0 if ok else 20000, trace(si, di, broken))
         r("pmtu", ok, 0 if ok else 2000,
           "1500 bytes OK (DF set)" if ok else "no reply at 1472/1400/1200/576 bytes")
-        r("smb", ok, 1000 if ok else 10000,
-          "probe.bin 8388608 bytes OK" if ok else "smbclient: NT_STATUS_IO_TIMEOUT")
+        mok = ok and not flaps("smb")
+        r("smb", mok, 1000 if mok else 10000,
+          "probe.bin 8388608 bytes OK" if mok else "smbclient: NT_STATUS_IO_TIMEOUT")
         r("smtp", ok, 0 if ok else 5000,
           "220 banner, 250 EHLO, RCPT 250" if ok else "no banner within 5s")
         r("loss", ok, 0.6 if ok else None,
