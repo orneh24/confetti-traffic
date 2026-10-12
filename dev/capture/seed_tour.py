@@ -24,8 +24,13 @@ EXCLUDE = ("branch-7", "site-b")       # one mesh rule, shown in the tour
 REROUTE_AT = 12          # dc-core <-> site-b path change
 BLIP_AT = 28             # ssh blip site-a-bf6313 -> site-b
 MTU_FROM = 44           # branch-7 <-> site-a mtu break, still failing now
-FLAP_PAIR = ("ct-site-a-xd2311", "ct-dc-core-ta5580")   # ssh fails every 2nd round 38-48, passes now
-FLAP_ROUNDS = range(38, 50, 2)
+# Flapping tests: (src, dst, test, failing rounds); each passes again at the end.
+# Early in the hour, so Recent Changes still leads with the router-change story.
+FLAPS = [
+    ("ct-site-a-xd2311", "ct-dc-core-ta5580", "ssh", range(8, 20, 2)),
+    ("ct-dc-core-me0925", "ct-site-a-bf6313", "http", range(14, 20, 2)),
+    ("ct-site-b-hq4971", "ct-dc-core-ta5580", "ssh", range(20, 26, 2)),
+]
 DEVICE_LOG = {
     REROUTE_AT - 1: [
         "<189>core-sw01: %OSPF-5-ADJCHG: Process 1, Nbr 10.255.0.7 on Tunnel7 from FULL to DOWN, Neighbor Down: Interface down or detached",
@@ -64,9 +69,8 @@ def pair_state(rnd, src, dst):
     mtu = rnd >= MTU_FROM and groups == {"site-a", "branch-7"}
     rerouted = rnd >= REROUTE_AT and groups == {"dc-core", "site-b"}
     blip = rnd == BLIP_AT and (src, dst) == ("ct-site-a-bf6313", "ct-site-b-hq4971")
-    blip = blip or ((src, dst) == FLAP_PAIR and rnd in FLAP_ROUNDS)
-    return mtu, rerouted, blip
-
+    flaps = {f[2] for f in FLAPS if (src, dst) == f[:2] and rnd in f[3]}
+    return mtu, rerouted, blip, flaps
 
 def results(rnd, src, sip):
     out = []
@@ -75,17 +79,20 @@ def results(rnd, src, sip):
             continue
         if {GROUP[src], GROUP[dst]} == set(EXCLUDE):
             continue                     # mesh rule: these groups don't test each other
-        mtu, rerouted, blip = pair_state(rnd, src, dst)
+        mtu, rerouted, blip, flaps = pair_state(rnd, src, dst)
 
         def r(t, ok, ms, text):
             out.append({"target_hostname": dst, "target_ip": dip, "test_type": t,
                         "success": ok, "latency_ms": ms, "output": text})
 
-        r("http", not mtu, 5001.0 if mtu else 6.3,
-          "report.html: timeout after 5s (16384 of 57653 bytes)" if mtu else "probe site: 5 files OK")
-        r("ssh", not blip, 5000 if blip else 0,
-          "ssh: connect to host %s port 22: Connection timed out" % dip if blip else "ok")
-        if rnd % 5 == 0 or (rnd == REROUTE_AT and rerouted) or blip:
+        hbad = mtu or "http" in flaps
+        sbad = blip or "ssh" in flaps
+        r("http", not hbad, 5001.0 if hbad else 6.3,
+          ("report.html: timeout after 5s (16384 of 57653 bytes)" if mtu else "index.html: timeout after 5s")
+          if hbad else "probe site: 5 files OK")
+        r("ssh", not sbad, 5000 if sbad else 0,
+          "ssh: connect to host %s port 22: Connection timed out" % dip if sbad else "ok")
+        if rnd % 5 == 0 or (rnd == REROUTE_AT and rerouted) or sbad:
             r("traceroute", True, 0, trace(sip, dip, rerouted))
         r("pmtu", not mtu, 2000 if mtu else 0,
           "MTU 1500 failed, 1472 failed, 1400 ok" if mtu else "1500 bytes OK (DF set)")
