@@ -733,6 +733,10 @@ a:hover { text-decoration: underline; }
 /* Flapping: a dashed outline (a shape, so it reads without colour) that
    composes with pass/fail and with the path-change box-shadow. */
 .indicator.flapping, .legend-flap { outline: 2px dashed var(--cyan); outline-offset: -2px; }
+/* Plus diagonal stripes over the fill and a ~ after the letter (as on the node
+   console), so a flapping cell no longer reads as plain green. background-image
+   leaves each layout's own background-colour alone. */
+.indicator.flapping, .legend-flap { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.4) 0 3px, transparent 3px 6px); }
 :root[data-layout="retro95"] .indicator.flapping { outline-color: #000; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.flapping { outline-color: var(--crt-hi); }
 .indicator-label { font-size: 8px; letter-spacing: 0; }
@@ -1580,6 +1584,12 @@ a:hover { text-decoration: underline; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.slow { background: var(--crt-hover); color: var(--crt-slow); text-decoration: underline; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.fail { background: var(--crt-fail); color: var(--crt-bg); text-shadow: none; box-shadow: 0 0 6px rgba(var(--crt-fail-rgb), .8); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.none { color: var(--crt-gray); text-shadow: none; }
+/* The layouts above set .pass/.fail/.slow with the background shorthand, which
+   resets the flapping stripes; same specificity, so this comes after them. */
+:root[data-layout="retro95"] .indicator.flapping,
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.flapping {
+    background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.4) 0 3px, transparent 3px 6px);
+}
 /* A fail anywhere else is inverted too, so it reads without colour. */
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .detail-test-status.fail,
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .health-bad { background: var(--crt-fail); color: var(--crt-bg); text-shadow: none; padding: 0 4px; }
@@ -2719,6 +2729,7 @@ try {
         for (var r = 0; r < rows.length; r++) {
             rows[r].addEventListener("click", function() {
                 selectedPair = {source: this.getAttribute("data-src"), target: this.getAttribute("data-dst")};
+                markSelectedCell(selectedPair.source, selectedPair.target);
                 loadDetail(selectedPair.source, selectedPair.target);
             });
         }
@@ -2923,7 +2934,7 @@ try {
                     tip += " — path changed: " + change.detail;
                 }
             }
-            html += "<div class='indicator " + cls + "' title='" + esc(tip) + "'>" + TYPE_LABELS[types[t]] + "</div>";
+            html += "<div class='indicator " + cls + "' title='" + esc(tip) + "'>" + TYPE_LABELS[types[t]] + (flap ? "~" : "") + "</div>";
         }
         return html + "</div>";
     }
@@ -3047,6 +3058,15 @@ try {
             html += "</tr>";
         }
         tbody.innerHTML = html;
+    }
+
+    // Highlight the matrix cell of a pair (also when it was picked elsewhere,
+    // e.g. from Recent Changes). Two matrices share the class, so clear all.
+    function markSelectedCell(src, dst) {
+        var cells = document.querySelectorAll(".matrix td[data-src]");
+        for (var c = 0; c < cells.length; c++) {
+            cells[c].classList.toggle("selected", cells[c].getAttribute("data-src") === src && cells[c].getAttribute("data-dst") === dst);
+        }
     }
 
     function onCellClick(e) {
