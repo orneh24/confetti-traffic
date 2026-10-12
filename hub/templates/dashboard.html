@@ -3764,8 +3764,7 @@ try {
             var r = rows[i];
             var who = r.sys_name || r.chassis_id;
             var tip = [r.sys_descr, "chassis " + r.chassis_id, r.mgmt_ip ? "mgmt " + r.mgmt_ip : "",
-                       "seen " + new Date(r.updated).toLocaleString()].filter(Boolean).join("
-");
+                       "seen " + new Date(r.updated).toLocaleString()].filter(Boolean).join("\n");
             html += "<tr><td>" + esc(r.node) + "</td><td>" + esc(r.local_port) + "</td>" +
                     "<td title='" + escAttr(tip) + "'>" + esc(who) + "</td>" +
                     "<td>" + esc(r.port_descr || r.port_id) + "</td></tr>";

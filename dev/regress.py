@@ -768,6 +768,27 @@ def py_text_between(text, start, end):
     return text[i:j] if i >= 0 and j > i else ""
 
 
+@check("R37", "hub pages: every inline script parses")
+def _():
+    # One raw line break inside a JS string (a lost escape) kills the whole
+    # script, so the matrix never renders. Needs node; nothing else parses JS.
+    import shutil, subprocess, tempfile
+    node = shutil.which("node")
+    if not node:
+        raise Skip("node not found")
+    p = []
+    for n in ("dashboard", "syslog", "timeline"):
+        f = "hub/templates/%s.html" % n
+        for i, m in enumerate(re.finditer(r"<script>(.*?)</script>", read(f), re.S)):
+            with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as t:
+                t.write(m.group(1))
+            r = subprocess.run([node, "--check", t.name], capture_output=True, text=True)
+            os.unlink(t.name)
+            if r.returncode:
+                p.append("%s script #%d: %s" % (f, i, (r.stderr.strip().splitlines() or ["syntax error"])[-1]))
+    return p
+
+
 @check("R32", "flapping: same threshold on dashboard and node, flap_note never fails a cycle")
 def _():
     p = []
