@@ -320,7 +320,7 @@ and the hub serves plain HTTP, so the copy normally goes through a hidden
 textarea + `execCommand("copy")`; if the browser refuses both, the text is
 shown selected to copy by hand. Both are dashboard-only, on existing APIs.
 
-The admin panels — Static Targets, Mesh Settings, Bandwidth Test — start
+The admin panels — Static Targets, Mesh Settings, Bandwidth Test, LLDP Neighbors — start
 folded (`data-default="collapsed"` on their toggle; the viewer's Expand is
 remembered in localStorage `confetti-expanded`). Static Targets carries its
 verdict in the folded header ("2 targets, 1 path failing") so a failing
@@ -461,7 +461,9 @@ The hub's login banner shows the installed build, and "New version available" wh
 in `/run/confetti-hub-latest`. Silent without internet; `HUB_UPDATE_CHECK=false` turns it
 off. It only tells: updating stays manual.
 
-`/etc/confetti-release` records the commit, read from the tarball's pax
+`/etc/confetti-release` records the commit (written by `confettictl-update` and the
+node install, not by a fresh hub build: the banner shows "unknown" until the hub's
+first `confettictl-update`), read from the tarball's pax
 header (GitHub) or the bundle's `RELEASE` file (hub). An ssh command gets
 dropbear's minimal PATH, so the push's remote command sets PATH itself.
 
@@ -485,7 +487,8 @@ dropbear's minimal PATH, so the push's remote command sets PATH itself.
   automatically at interactive login, next to the setup-wizard invite.
   A `~` after an H/S/M/L cell means **flapping**: 5+ pass↔fail flips in the
   last 60 cycles (`flap_note`, history in `/run/confetti/flap/`, tmpfs).
-  The dashboard marks the same threshold per cell (dashed outline) over the
+  The dashboard marks the same threshold per cell (dashed outline, diagonal stripes
+  and a `~` after the letter) over the
   last hour of results, plus a "Flapping (1 h)" tile in the Modern layout.
 
 ### Discovery
@@ -767,7 +770,8 @@ These were live bugs that a review caught; each has a comment at the site.
    counterpart — `confettictl-hub-setup.sh` / `confettictl-node-setup.sh`, invited at login — has its
    own guard: `case "$-" in *i*)` (interactive shell only) plus `[ -t 0 ]`
    (real tty), so it never fires for `ssh host cmd` or scp/rsync's
-   non-interactive shell either.
+   non-interactive shell either. The hub's hook nests the stamp check inside the
+   tty check, since its banner needs the tty too; same three layers.
 17. **The syslog listener is a second writer, so `busy_timeout` is required.**
    It writes to the same SQLite file as the results API from its own thread.
    WAL permits one writer at a time; without a busy timeout on *both*

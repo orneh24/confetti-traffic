@@ -46,7 +46,7 @@ Bandwidth test (CLAUDE.md "On-demand bandwidth test"): `GET /api/bw`, `POST /api
 
 `success` is stored as INTEGER 0/1. `latency_ms` is REAL and may be null. `output` is free text (traceroute dumps land here — keep it, the dashboard drill-down reads it). Empty `results` or missing `source` → 400.
 
-`DELETE /endpoints/<hostname>` — for stale clones. 404 if unknown. `POST /api/nodes/<hostname>/group` `{"group": "..."}` — hub-side group override, empty clears (400 / 404).
+`DELETE /endpoints/<hostname>` — for stale clones. 404 if unknown. `POST /api/nodes/<hostname>/group` `{"group": "...", "rename": true}` — hub-side group override, empty clears (400 / 404); `rename: true` also queues a node rename (response `rename` = queued|skipped, plus `rename_reason`). The dashboard sends it for every new non-empty group.
 
 `GET /settings` — `{"enable_smb": bool|null, "enable_smtp": ..., "enable_iperf": ...}`, pulled by `confettictl-test-cycle.sh` each cycle; null means "use the node's own config". `POST /settings` is a partial update from the dashboard: bool or null values only, unknown keys → 400. Never fold these into `/endpoints` — that response is a bare array every deployed node parses.
 

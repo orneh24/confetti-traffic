@@ -335,7 +335,9 @@ uses one probe per hop and at most 10 hops, so it can't overrun the
 **Bandwidth on demand.** The dashboard's **Bandwidth Test** panel measures
 throughput when you ask. It isn't part of the minute-by-minute tests. Like
 Static Targets and Mesh Settings, it starts folded: press **Expand**, and
-the dashboard remembers that in your browser.
+the dashboard remembers that in your browser. The **LLDP Neighbors** panel
+(also folded) lists the switch and port each node reports; the switch must send
+LLDP.
 
 - **Two nodes:** pick From and To, a duration (5–30 s) and 1–8 TCP streams.
   The hub runs `iperf3` on both nodes over SSH: From sends, then To sends.
@@ -412,7 +414,8 @@ name gets a 400.
 
 ### 6.3 Updating
 
-The hub's login banner shows the installed build. At each service start the hub
+The hub's login banner shows the installed build (`unknown` until the first
+`confettictl-update`). At each service start the hub
 asks GitHub for the newest commit (`HUB_UPDATE_CHECK=false` turns that off) and
 the banner adds "New version available" when there is one.
 

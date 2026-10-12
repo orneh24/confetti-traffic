@@ -31,7 +31,8 @@ reachable.
 | Login-prompt stamp | `/etc/confetti-hub/.setup-done` | `/etc/confetti/.setup-done` |
 
 The stamp file says why the login prompt stopped asking: `configured`,
-`skipped`, `configured (guestinfo)` or `configured (existing config)`.
+`skipped`, `configured (guestinfo)`, `configured (existing config)` or
+`configured (installed from hub)`.
 Delete it, or run `confettictl-node-setup.sh --force` / `confettictl-hub-setup.sh --force`, to be
 asked again.
 
@@ -131,7 +132,8 @@ node's `/var/log/confetti/` before the network.
 **See one node's results from the node itself:** `confettictl-status` (`-f` to
 follow, `-n N` for history).
 
-**Update to the latest code:** the hub's login banner shows the installed build and
+**Update to the latest code:** the hub's login banner shows the installed build (`unknown` until its first
+`confettictl-update`) and
 says "New version available" when GitHub has a newer one. First run `confettictl-update` on the hub, which
 downloads from GitHub. Then use the dashboard's update button per node, or
 **update all**: the hub pushes its own build to each node over SSH. It keeps
