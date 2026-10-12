@@ -62,6 +62,11 @@ NODE_ID=
 # has just failed, which is when the path detail is actually wanted.
 TRACEROUTE_INTERVAL=300
 
+# How often to report LLDP neighbors (which switch and port this node sits on)
+# to the hub, in seconds. Needs the switch to send LLDP; nothing is reported
+# if lldpd is down.
+LLDP_INTERVAL=300
+
 # Maximum traceroute hops. Keep this tight: every unanswered hop costs
 # roughly the probe timeout, so a large value makes a black-holed path
 # expensive to measure.

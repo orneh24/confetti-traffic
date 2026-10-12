@@ -50,6 +50,8 @@ Bandwidth test (CLAUDE.md "On-demand bandwidth test"): `GET /api/bw`, `POST /api
 
 `GET /settings` — `{"enable_smb": bool|null, "enable_smtp": ..., "enable_iperf": ...}`, pulled by `confettictl-test-cycle.sh` each cycle; null means "use the node's own config". `POST /settings` is a partial update from the dashboard: bool or null values only, unknown keys → 400. Never fold these into `/endpoints` — that response is a bare array every deployed node parses.
 
+`POST /lldp` `{source, neighbors:[{local_port, chassis_id, port_id, port_descr, sys_name, sys_descr, mgmt_ip}]}` replaces that node's rows in `lldp_neighbors` (empty list valid; non-object body/neighbor → 400); `GET /api/lldp` returns every node's latest rows. Posted by `report_lldp` in the cycle; display data only.
+
 `GET /api/results?minutes=N` (default 10) — dashboard matrix. `GET /api/results/<source>/<target>` — drill-down, newest first, LIMIT 200.
 
 `GET /api/path-changes?minutes=N` (default 10) — detected traceroute path changes, `[{source, target, received_at, detail}]`. Reads `syslog` rows tagged `host=confetti-hub`/`mnemonic=%CONFETTI-5-PATHCHANGE`, written by `hub/app/pathchange.py` via a hook inside `push_results` (see Path-change detection below), not a new table.

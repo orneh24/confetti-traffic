@@ -1032,6 +1032,41 @@ fi
 log "Tested $TESTED targets"
 
 # -------------------------------------------------------------------
+# LLDP neighbors. Every LLDP_INTERVAL seconds, tell the hub what lldpd sees
+# (which switch and port this node is plugged into). Rationed with a stamp
+# like traceroute. Silent on every failure: no lldpcli (dev toolkit), lldpd
+# down, bad JSON, old hub without /lldp. Only a successful read is posted,
+# so a failed read never wipes the hub's last known neighbors; an empty
+# list from a working lldpd is posted (it means "none seen").
+# -------------------------------------------------------------------
+LLDP_INTERVAL="${LLDP_INTERVAL:-300}"
+LLDP_STAMP="/run/confetti-last-lldp"
+# json0 always uses arrays, so every field is an array of {value}.
+LLDP_JQ='def f: if type == "array" then (.[0] // {}) else (. // {}) end;
+  def v: f | if type == "object" then (.value // "") else . end | tostring;
+  [ (.lldp // []) | f | (.interface // []) | (if type == "array" then .[] else . end)
+    | { local_port: (.name // ""), chassis_id: (.chassis | f | .id | v),
+        port_id: (.port | f | .id | v), port_descr: (.port | f | .descr | v),
+        sys_name: (.chassis | f | .name | v), sys_descr: (.chassis | f | .descr | v),
+        mgmt_ip: (.chassis | f | ."mgmt-ip" | v) } ]'
+
+report_lldp() {
+    command -v lldpcli >/dev/null 2>&1 || return 0
+    if [ -f "$LLDP_STAMP" ]; then
+        _last=$(cat "$LLDP_STAMP" 2>/dev/null || echo 0)
+        [ "$(( $(date +%s) - _last ))" -ge "$LLDP_INTERVAL" ] || return 0
+    fi
+    date +%s > "$LLDP_STAMP" 2>/dev/null || true
+    _lj=$(timeout 10 lldpcli -f json0 show neighbors 2>/dev/null) || return 0
+    printf '%s' "$_lj" | jq -e 'has("lldp")' >/dev/null 2>&1 || return 0
+    _ln=$(printf '%s' "$_lj" | jq -c "$LLDP_JQ" 2>/dev/null) || return 0
+    [ -n "$_ln" ] || return 0
+    jq -n -c --arg s "$MY_HOSTNAME" --argjson n "$_ln" '{source: $s, neighbors: $n}'         | curl -s -o /dev/null --connect-timeout 5 --max-time 10 -X POST             -H "Content-Type: application/json" -d @- "${HUB_URL}/lldp" 2>/dev/null || true
+    log "LLDP: reported $(printf '%s' "$_ln" | jq 'length') neighbor(s)"
+}
+report_lldp || true
+
+# -------------------------------------------------------------------
 # POST results to hub
 # -------------------------------------------------------------------
 # Guard on RESULTS rather than TESTED: a cycle with no peers can still have

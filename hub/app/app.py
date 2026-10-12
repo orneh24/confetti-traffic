@@ -125,6 +125,20 @@ def init_db():
             rev_mbps    REAL,
             msg         TEXT
         );
+        -- Latest LLDP neighbors each node reports; replaced wholesale on every
+        -- POST /lldp, so a neighbor that went away disappears.
+        CREATE TABLE IF NOT EXISTS lldp_neighbors (
+            node       TEXT NOT NULL,
+            local_port TEXT NOT NULL,
+            chassis_id TEXT NOT NULL,
+            port_id    TEXT NOT NULL,
+            port_descr TEXT NOT NULL,
+            sys_name   TEXT NOT NULL,
+            sys_descr  TEXT NOT NULL,
+            mgmt_ip    TEXT NOT NULL,
+            updated    TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_lldp_node ON lldp_neighbors(node);
         CREATE INDEX IF NOT EXISTS idx_results_received ON results(received_at);
         CREATE INDEX IF NOT EXISTS idx_results_source_target ON results(source, target_hostname);
         CREATE INDEX IF NOT EXISTS idx_results_trace ON results(source, target_hostname, test_type, received_at);
@@ -221,6 +235,7 @@ def prune_stale_endpoints(db):
         "DELETE FROM endpoints WHERE last_seen < datetime('now', ? || ' hours')",
         (f"-{config.STALE_ENDPOINT_HOURS}",),
     )
+    db.execute("DELETE FROM lldp_neighbors WHERE node NOT IN (SELECT hostname FROM endpoints)")
 
 
 # ---------------------------------------------------------------------------
@@ -407,6 +422,7 @@ def delete_endpoint(hostname):
     cur = db.execute("DELETE FROM endpoints WHERE hostname = ?", (hostname,))
     # A hand-removed node takes its override with it; the stale prune doesn't.
     db.execute("DELETE FROM group_overrides WHERE hostname = ?", (hostname,))
+    db.execute("DELETE FROM lldp_neighbors WHERE node = ?", (hostname,))
     db.commit()
     if cur.rowcount == 0:
         return jsonify({"error": "not found"}), 404
@@ -633,6 +649,60 @@ def api_path_changes():
             "received_at": iso(r["received_at"]),
             "detail": parsed["detail"],
         })
+    return jsonify(out)
+
+
+# ---------------------------------------------------------------------------
+# LLDP neighbors
+#
+# Each node runs `lldpcli` every few minutes and posts what it sees. The hub
+# keeps only the latest set per node (a neighbor that went away must
+# disappear), so this is a "which switch port am I on" view, not history. The
+# values come from frames anything on the wire can send: data to display,
+# never to trust.
+# ---------------------------------------------------------------------------
+
+LLDP_FIELDS = ("local_port", "chassis_id", "port_id", "port_descr",
+               "sys_name", "sys_descr", "mgmt_ip")
+LLDP_MAX_NEIGHBORS = 64
+
+
+@app.route("/lldp", methods=["POST"])
+def push_lldp():
+    """Replace one node's neighbor list. An empty list is valid (none seen)."""
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict) or not data.get("source")             or not isinstance(data.get("neighbors"), list):
+        return jsonify({"error": "source and neighbors list required"}), 400
+    rows = []
+    for n in data["neighbors"][:LLDP_MAX_NEIGHBORS]:
+        if not isinstance(n, dict):
+            return jsonify({"error": "each neighbor must be an object"}), 400
+        # A missing key and an explicit null are different (constraint 19).
+        rows.append([("" if n.get(k) is None else str(n.get(k)))[:512] for k in LLDP_FIELDS])
+    db = get_db()
+    now = sqlite_now()
+    db.execute("DELETE FROM lldp_neighbors WHERE node = ?", (data["source"],))
+    db.executemany(
+        "INSERT INTO lldp_neighbors (node, local_port, chassis_id, port_id, port_descr,"
+        " sys_name, sys_descr, mgmt_ip, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [[data["source"]] + r + [now] for r in rows],
+    )
+    db.commit()
+    return jsonify({"status": "ok", "neighbors": len(rows)})
+
+
+@app.route("/api/lldp", methods=["GET"])
+def api_lldp():
+    """Latest LLDP neighbors of every node, ordered by node and port."""
+    rows = get_db().execute(
+        "SELECT node, local_port, chassis_id, port_id, port_descr, sys_name,"
+        " sys_descr, mgmt_ip, updated FROM lldp_neighbors ORDER BY node, local_port, chassis_id"
+    ).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["updated"] = iso(d["updated"])
+        out.append(d)
     return jsonify(out)
 
 

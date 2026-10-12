@@ -66,6 +66,9 @@ Diagram: `docs/TOPOLOGY.md`.
     its config is not renamed. The old name's results age out; they are not
     carried over. `/endpoints` adds `group_overridden`
     and `group_registered` per element. Unauthenticated, like mesh rules.
+  - `POST /lldp` `{source, neighbors:[{local_port, chassis_id, port_id, port_descr,
+    sys_name, sys_descr, mgmt_ip}]}` — replaces that node's LLDP neighbors (an empty
+    list is valid); `GET /api/lldp` — all nodes' latest neighbors. See LLDP below
   - `GET|POST /targets`, `DELETE /targets/<name>` — static targets
   - `GET|POST /settings` — mesh-wide switches for the opt-in tests (see
     Mesh settings below)
@@ -206,6 +209,17 @@ a muted "excluded" cell and leaves it out of the pass/fail summary and Recent
 Changes; the timeline leaves it out of its ribbon and path counts, using the
 rules as they stand now, not as they stood at each moment. Static targets are
 not affected.
+
+### LLDP neighbors
+`lldpd` runs on every node; every `LLDP_INTERVAL` seconds (default 300) the cycle
+(`report_lldp` in `confettictl-test-cycle.sh`, so it self-updates) reads
+`lldpcli -f json0 show neighbors` and POSTs it to `/lldp`. The hub keeps only the
+latest set per node (`lldp_neighbors` table), so a neighbor that went away
+disappears; rows go with the node when it is deleted or pruned as stale. Shown in
+the dashboard's folded "LLDP Neighbors" panel. Every failure is silent, and a failed
+read posts nothing, so it never wipes the last known neighbors or fails a cycle.
+Neighbor text comes from frames anything on the wire can send: render it escaped,
+never trust it. Not a test: no result type, never in the matrix.
 
 ### Static targets
 Addresses that run no agent — gateways, device loopbacks, outside hosts —

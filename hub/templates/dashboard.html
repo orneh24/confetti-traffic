@@ -2059,6 +2059,21 @@ try {
             </div>
         </div>
 
+        <div class="section collapsed" id="lldp-section">
+            <div class="section-header">
+                <span>LLDP Neighbors<span class="hdr-note" id="lldp-note"></span></span>
+                <span class="hdr-actions">
+                    <button type="button" class="btn-small collapse-toggle" data-section="lldp-section" data-default="collapsed">Expand</button>
+                </span>
+            </div>
+            <div class="section-body">
+                <table class="ep-table" id="lldp-table">
+                    <thead><tr><th>Node</th><th>Port</th><th>Neighbor</th><th>Its port</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="section detail-section">
             <div class="section-header">
                 <span>Test Detail</span>
@@ -2186,8 +2201,10 @@ try {
             fetchJSON("/api/path-changes?minutes=60"),
             fetchJSON("/api/syslog?" + syslogQuery),
             fetchJSON("/node/release"),
-            fetchJSON("/mesh-rules").catch(function() { return []; })
+            fetchJSON("/mesh-rules").catch(function() { return []; }),
+            fetchJSON("/api/lldp").catch(function() { return []; })
         ]).then(function(arr) {
+            renderLldp(Array.isArray(arr[9]) ? arr[9] : []);
             hubRelease = arr[7] ? arr[7].commit : null;
             meshRules = Array.isArray(arr[8]) ? arr[8] : [];
             renderMeshRules();
@@ -3736,6 +3753,26 @@ try {
             clearInterval(bwPollTimer);
             bwPollTimer = null;
         }
+    }
+
+    // LLDP neighbors each node last reported: the switch and port it sits on.
+    // Text from frames anyone on the wire can send, so everything goes
+    // through esc() (escAttr() inside the title attribute).
+    function renderLldp(rows) {
+        var html = "";
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            var who = r.sys_name || r.chassis_id;
+            var tip = [r.sys_descr, "chassis " + r.chassis_id, r.mgmt_ip ? "mgmt " + r.mgmt_ip : "",
+                       "seen " + new Date(r.updated).toLocaleString()].filter(Boolean).join("
+");
+            html += "<tr><td>" + esc(r.node) + "</td><td>" + esc(r.local_port) + "</td>" +
+                    "<td title='" + escAttr(tip) + "'>" + esc(who) + "</td>" +
+                    "<td>" + esc(r.port_descr || r.port_id) + "</td></tr>";
+        }
+        document.querySelector("#lldp-table tbody").innerHTML = html ||
+            "<tr><td colspan='4' class='detail-empty'>No neighbors reported</td></tr>";
+        document.getElementById("lldp-note").textContent = rows.length ? " — " + rows.length + " neighbor" + (rows.length !== 1 ? "s" : "") : "";
     }
 
     function loadBw() {
