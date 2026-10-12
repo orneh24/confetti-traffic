@@ -52,6 +52,7 @@ Restart the hub after editing: `rc-service confettid-hub restart`.
 | `HUB_SYSLOG_RETENTION_HOURS` | 0 | optional syslog age limit in hours on top of the row cap; 0 = off |
 | `HUB_BUSY_TIMEOUT_MS` | 5000 | |
 | `HUB_PATH_CHANGE_ENABLED` | true | log traceroute path changes to syslog |
+| `HUB_UPDATE_CHECK` | true | at service start, check GitHub for a newer main commit so the login banner can say so; false = never call out |
 | `HUB_HEALTH_SERVICES` | `confettid-hub,chronyd,dropbear,open-vm-tools,lldpd` | shown in Hub Health |
 | `HUB_HEALTH_SERVICE_TIMEOUT_S` | 3 | time limit for each service check in Hub Health |
 | `HUB_PUSH_TIMEOUT_S` | 600 | time limit for one node's push-update |
@@ -81,6 +82,8 @@ The root password (`confetti`) is set at build time. Override it with
 | `HUB_SETTINGS` | no | default true; false ignores the dashboard's Mesh Settings |
 | `HUB_NTP` | no | default true; `confettictl-setup.sh` points chrony at the hub. false leaves `chrony.conf` alone |
 | `AGENT_AUTOUPDATE` | no | default true |
+| `TRACEROUTE_INTERVAL` | no | default 300; seconds between scheduled traceroutes |
+| `LLDP_INTERVAL` | no | default 300; seconds between LLDP neighbor reports to the hub (shown in the dashboard's LLDP Neighbors panel) |
 
 If `HUB_URL` or `SUBNET` is empty, `confettictl-register.sh` exits and the
 node never appears on the hub. There is no other error. An empty
@@ -128,7 +131,8 @@ node's `/var/log/confetti/` before the network.
 **See one node's results from the node itself:** `confettictl-status` (`-f` to
 follow, `-n N` for history).
 
-**Update to the latest code:** first run `confettictl-update` on the hub, which
+**Update to the latest code:** the hub's login banner shows the installed build and
+says "New version available" when GitHub has a newer one. First run `confettictl-update` on the hub, which
 downloads from GitHub. Then use the dashboard's update button per node, or
 **update all**: the hub pushes its own build to each node over SSH. It keeps
 configs, the database and the root password. The dashboard shows the

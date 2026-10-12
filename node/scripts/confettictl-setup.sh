@@ -190,6 +190,7 @@ else
     _dns_query="${_dns_query:-${DNS_QUERY:-example.com}}"
     _pmtu_size="${PMTU_SIZE:-1472}"
     _traceroute_interval="${TRACEROUTE_INTERVAL:-300}"
+    _lldp_interval="${LLDP_INTERVAL:-300}"
     _autoupdate="${AGENT_AUTOUPDATE:-true}"
 
     # `|| _var=""` guards each read: firstboot only checks guestinfo.confetti.hub_url
@@ -245,6 +246,9 @@ HUB_NTP=${HUB_NTP:-true}
 # expensive; it also runs on demand whenever HTTP or SSH to a target fails.
 TRACEROUTE_INTERVAL=${_traceroute_interval}
 TRACEROUTE_MAX_HOPS=10
+
+# Seconds between LLDP neighbor reports to the hub (report_lldp in the cycle).
+LLDP_INTERVAL=${_lldp_interval}
 
 # Path-MTU probe payload. 1472 + 28 bytes of header = 1500.
 PMTU_SIZE=${_pmtu_size}

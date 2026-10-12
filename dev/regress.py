@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """dev/regress.py - the regression suite, as one script.
 
-Runs every check the regression-tester agent guards (R1-R27, the dynamic
+Runs every check the regression-tester agent guards (R1-R37, the dynamic
 tier and the wire contract) and prints one line per check. Details are
 printed only for a failure, so a clean run is short.
 

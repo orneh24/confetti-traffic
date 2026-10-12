@@ -451,15 +451,16 @@ below it if it only prepares a template. Scripts that cron may be running
 are installed via temp file + `mv`, never `cp` over the live file (sh reads
 a script as it runs).
 
+Afterwards the hub restarts; a configured node re-runs `confettictl-setup.sh`. Update
+the hub first, then push the nodes: they can only get what the hub's bundle
+holds, so a node can't get ahead of its hub.
+
 The hub's login banner shows the installed build, and "New version available" when
 `confettictl-check-update.sh` (started in the background by `confettid-hub`'s
 `start_post`, once per service start) found a newer `main` commit on GitHub and left it
 in `/run/confetti-hub-latest`. Silent without internet; `HUB_UPDATE_CHECK=false` turns it
 off. It only tells: updating stays manual.
 
-Afterwards the hub restarts; a configured node re-runs `confettictl-setup.sh`. Update
-the hub first, then push the nodes: they can only get what the hub's bundle
-holds, so a node can't get ahead of its hub.
 `/etc/confetti-release` records the commit, read from the tarball's pax
 header (GitHub) or the bundle's `RELEASE` file (hub). An ssh command gets
 dropbear's minimal PATH, so the push's remote command sets PATH itself.
@@ -629,8 +630,9 @@ hub/
   static/
   agent/              — scripts served to nodes (created at build time)
   bundle/             — node bundle + RELEASE (created at build time)
-  services/           — firstboot.initd, confettictl-login-setup.sh
-  scripts/            — confettictl-hub-setup.sh, confettictl-node-install.sh (served as /confettictl-install.sh)
+  services/           — firstboot.initd, confettictl-login-setup.sh (also prints the installed build)
+  scripts/            — confettictl-hub-setup.sh, confettictl-node-install.sh (served as /confettictl-install.sh),
+                        confettictl-check-update.sh (started by confettid-hub's start_post; writes /run/confetti-hub-latest)
 node/
   confettictl-build-template.sh   — builds the node golden template
   web/probe/          — fixed site the HTTP test fetches and hashes

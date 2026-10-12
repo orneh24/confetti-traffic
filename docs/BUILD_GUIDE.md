@@ -357,15 +357,20 @@ group twice stops nodes in one group testing each other. An excluded pair
 shows as a muted dot in the matrix and isn't counted as passing or failing.
 Static targets are not affected. Remove the rule to go back to full mesh.
 
-**Flapping and groups.** A matrix cell with a dashed outline has flipped
-between pass and fail 5 or more times in the last hour (Modern layout: the
+**Flapping and groups.** A matrix cell with a dashed outline, diagonal stripes
+and a `~` after its letter has flipped between pass and fail 5 or more times
+in the last hour (Modern layout: the
 "Flapping (1 h)" tile lists them). The node's console table and
 `confettictl-status` show the same as a `~` after the H, S, M or L cell, with
 a footer note (counted over the last 60 cycles). Recent Changes has a
 **Pair** button that cycles name / IP / name + IP. In the Endpoints list,
 click a node's group to set its group on the hub (empty clears it): it beats
-the group the node reports, mesh rules follow it, and the node itself is not
-changed. An overridden group shows a pencil mark and appears under the IP in
+the group the node reports and mesh rules follow it. Setting a new group also
+renames the node to `ct-<group>-<NODE_ID>`: this needs a managed node seen in
+the last 10 minutes, otherwise only the hub-side group is saved and the
+dashboard says why. Clearing a group never renames. A node with
+`NODE_HOSTNAME` set is not renamed, and the old name's results age out. Click a
+Recent Changes row to select that pair's cell in the matrix. An overridden group shows a pencil mark and appears under the IP in
 the matrix headers.
 
 **Colour themes.** The menu at the right of each page's header picks one of
@@ -406,6 +411,10 @@ Test names: `http ssh traceroute pmtu dns iperf3 smb loss smtp`. An unknown
 name gets a 400.
 
 ### 6.3 Updating
+
+The hub's login banner shows the installed build. At each service start the hub
+asks GitHub for the newest commit (`HUB_UPDATE_CHECK=false` turns that off) and
+the banner adds "New version available" when there is one.
 
 **1. The hub, from GitHub.** Run as root on the hub:
 

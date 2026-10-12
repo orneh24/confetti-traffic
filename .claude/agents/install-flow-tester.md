@@ -73,7 +73,7 @@ lifecycle, VMware guestinfo, real networking changes.
     hub/node setup prompts.
 - Guards: fake the markers (`mkdir -p /opt/confetti-hub`,
   `touch /usr/local/bin/confetti/confettictl-setup.sh`,
-  `mkdir -p /usr/local/bin/pervium`) one at a time in fresh containers and
+  `mkdir -p /usr/local/bin/pervium`, the old-name path the guard in `confettictl-install.sh` deliberately tests) one at a time in fresh containers and
   confirm each refusal and its message.
 - Capture exit codes for every run.
 

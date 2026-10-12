@@ -21,7 +21,7 @@ needs a look in each:
 - Retro 95 and the CRT layouts bring their own colours (Amber and Neon Green share one block, palettes in `--crt-*`); add overrides next to their
   `.indicator` / `.btn-small` rules. Retro 95 must stay after all theme rules.
 - The CRT layouts are one hue, so status must not rest on colour: use shape, underline
-  or inversion (the flapping marker is a dashed outline for this reason).
+  or inversion (the flapping marker is a dashed outline, stripes and a `~`, not colour).
 - `.kpi-row` and `.side-nav` exist only in Modern. A new KPI tile means
   changing `grid-template-columns: repeat(N, …)` too.
 

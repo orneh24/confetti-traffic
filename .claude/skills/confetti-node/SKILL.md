@@ -28,7 +28,7 @@ Nodes are ~128 MB Alpine clones from one golden image. They get an IP by DHCP, r
 
 ## Config
 
-`/etc/confetti/config` (from `node/config.sample`), sourced by both scripts: `HUB_URL` (no trailing slash) and `SUBNET` — plus optional `GROUP_NAME` (empty registers as "Undefined"), `NODE_HOSTNAME`, `HOSTNAME_PREFIX`, `NODE_ID` (random, generated once; hostname is `<prefix>-<group>-<NODE_ID>`, or `<prefix>-<NODE_ID>` with no group), `HUB_MANAGED` (default true; false removes the hub's pinned management key), `ENABLE_IPERF`, `ENABLE_SMB`, `ENABLE_SMTP`, `TRACEROUTE_INTERVAL`, `TRACEROUTE_MAX_HOPS`, `PMTU_SIZE`, `DNS_SERVER`, `DNS_QUERY`, `AGENT_AUTOUPDATE`, `HUB_SETTINGS`.
+`/etc/confetti/config` (from `node/config.sample`), sourced by both scripts: `HUB_URL` (no trailing slash) and `SUBNET` — plus optional `GROUP_NAME` (empty registers as "Undefined"), `NODE_HOSTNAME`, `HOSTNAME_PREFIX`, `NODE_ID` (random, generated once; hostname is `<prefix>-<group>-<NODE_ID>`, or `<prefix>-<NODE_ID>` with no group), `HUB_MANAGED` (default true; false removes the hub's pinned management key), `ENABLE_IPERF`, `ENABLE_SMB`, `ENABLE_SMTP`, `TRACEROUTE_INTERVAL`, `LLDP_INTERVAL`, `TRACEROUTE_MAX_HOPS`, `PMTU_SIZE`, `DNS_SERVER`, `DNS_QUERY`, `AGENT_AUTOUPDATE`, `HUB_SETTINGS`.
 
 **Peer list.** The cycle fetches `/endpoints?for=<its hostname>`; the hub leaves out peers in groups a mesh rule excludes, and returns the full list if it can't (old hub, unknown host). No rule logic lives on the node.
 
@@ -75,7 +75,7 @@ clock is in `/api/time` and the `/syslog` header.
 
 Servers on each node: dropbear (SSH), busybox httpd (`confettid-httpd.conf`), iperf3 (`iperf3.initd`), smbd (`smbd.initd` → `confettid-smbd`, opt-in via `ENABLE_SMB`), and smtpd (`smtpd.initd` → `confettid-smtpd`, opt-in via `ENABLE_SMTP` — OpenSMTPD, never the `opensmtpd-openrc` package, whose bare `smtpd` service name would bypass our gate). They exist so *other* nodes can test *this* one — a node that fails only inbound tests usually has a service down, not a routing problem.
 
-`lldpd` also runs on every node, always-on and not gated by any flag. It isn't part of the test harness — no result type, never in the matrix — it's there for `lldpcli show neighbors` when troubleshooting cabling or a wrong port-group assignment.
+`lldpd` also runs on every node, always-on and not gated by any flag. It isn't part of the test harness — no result type, never in the matrix — it's there for `lldpcli show neighbors` when troubleshooting cabling or a wrong port-group assignment. The cycle also reports its neighbors to the hub every `LLDP_INTERVAL` seconds (`report_lldp`, silent on every failure, never fails a cycle; shown in the dashboard's LLDP Neighbors panel).
 
 `node/services/confettictl-login-setup.sh` is installed to `/etc/profile.d/confettictl-login-setup.sh` — sourced at interactive login, not a service, not chmod +x. It invites `confettictl-node-setup.sh` (symlinked onto PATH, same as `confettictl-set-static-ip`/`confettictl-hub-setup.sh` on the hub) behind a three-layer guard: interactive shell, real tty, `.setup-done` absent.
 
