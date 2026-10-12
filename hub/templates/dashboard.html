@@ -3159,11 +3159,10 @@ try {
                 var cur = e.currentTarget.getAttribute("data-group");
                 var val = prompt("Group for " + host + " (empty = use the group the node reports):", cur);
                 if (val === null) return;
-                // A managed node can also be renamed to match (ct-<group>-...)
-                // over SSH; it restarts the node's setup.
-                var managed = e.currentTarget.getAttribute("data-managed") === "1";
-                var rename = managed && val.trim() !== "" && val.trim() !== cur &&
-                    confirm("Also rename " + host + " to match the new group? This runs confettictl-setup.sh on the node over SSH.");
+                // A new group also renames the node to match (ct-<group>-...)
+                // over SSH, re-running its setup. The hub says why when it
+                // can't (not managed, not seen lately, odd characters).
+                var rename = val.trim() !== "" && val.trim() !== cur;
                 fetch("/api/nodes/" + encodeURIComponent(host) + "/group", {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},

@@ -57,7 +57,7 @@ Diagram: `docs/TOPOLOGY.md`.
     `group_overrides` table, applied by `GET /endpoints`, so it beats what
     the node registers every 5 min and mesh rules follow it. The node's own
     config and hostname are not changed, unless the body carries
-    `rename: true`: then, for a managed, recently seen node and a group of
+    `rename: true` (the dashboard sends it, unasked, whenever it sets a new group): then, for a managed, recently seen node and a group of
     `A-Za-z0-9._-`, the push-update worker also SSHes in, sets `GROUP_NAME`
     and re-runs `confettictl-setup.sh`, which renames the node to
     `ct-<group>-<NODE_ID>` and has the hub drop the old name (the response

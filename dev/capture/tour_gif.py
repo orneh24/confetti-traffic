@@ -1,6 +1,6 @@
 """Capture the Dashboard / Syslog / Timeline tour -> docs/img/hub-pages.gif.
 
-Pages render at 1440x969 and are scaled to 960x646, with a caption bar under
+Pages render at 1600x1077 (wide enough for the 6-node matrix) and are scaled to 960x646, with a caption bar under
 each frame, matching the earlier GIF (960x690, 2.8 s per frame).
 """
 import sys
@@ -11,7 +11,7 @@ os.makedirs("dev/run", exist_ok=True)   # temp PNGs; gitignored
 from PIL import Image, ImageDraw, ImageFont
 
 HUB = "http://127.0.0.1:8199"
-W, H, BAR = 1440, 969, 44
+W, H, BAR = 1600, 1077, 44
 FAILING = "td[data-src='ct-branch-7-wz1204'][data-dst='ct-site-a-xd2311']"
 
 
@@ -46,14 +46,14 @@ def frames(pg):
     scrub(pg, int(sys.argv[1]) if len(sys.argv) > 1 else 300)
     yield "Timeline: drag the slider to replay any earlier moment"
     scrub(pg, int(sys.argv[2]) if len(sys.argv) > 2 else 850)
-    yield "Timeline: four paths fail after a router change"
+    yield "Timeline: paths start failing after a router change"
     scrub(pg, 1000)
     yield "Timeline: incidents, with nearby syslog"
     pg.evaluate("localStorage.setItem('confetti-theme', 'confetti-night')")
     pg.goto(HUB + "/")
     pg.wait_for_selector(FAILING)
     pg.wait_for_timeout(1200)
-    yield "Eight colour themes, each with its own confetti; this is Confetti Night"
+    yield "Seven colour themes, each with its own confetti; this is Confetti Night"
     pg.evaluate("localStorage.removeItem('confetti-theme')")
 
 
