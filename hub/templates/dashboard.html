@@ -736,8 +736,11 @@ a:hover { text-decoration: underline; }
    right now is a fixed bright cyan (not a theme variable: Neon's --cyan is dark and
    Light's low-contrast) instead of green, so it can't pass for a healthy one. */
 .indicator.flapping, .legend-flap { outline: 2px dashed #fff; outline-offset: -2px;
-    background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.4) 0 3px, transparent 3px 6px); }
-.indicator.pass.flapping, .legend-flap { background-color: #22d3ee; color: #000; text-shadow: none; }
+    background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.35) 0 2px, transparent 2px 6px); }
+/* A passing flapper has black text, so its stripes are light and thin: dark
+   ones swallowed the letter at README size. */
+.indicator.pass.flapping, .legend-flap { background-color: #22d3ee; color: #000; text-shadow: none;
+    background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.6) 0 2px, transparent 2px 6px); }
 :root[data-layout="retro95"] .indicator.flapping { outline-color: #000; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.flapping { outline-color: var(--crt-hi); }
 .indicator-label { font-size: 8px; letter-spacing: 0; }
@@ -1590,12 +1593,13 @@ a:hover { text-decoration: underline; }
    Retro 95 needs its own rule to beat its fill shorthand; the CRT layouts are one
    hue, so they rest on the stripes, outline and ~ alone. */
 :root[data-layout="retro95"] .indicator.flapping {
-    background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.4) 0 3px, transparent 3px 6px);
+    background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.35) 0 2px, transparent 2px 6px);
 }
-:root[data-layout="retro95"] .indicator.pass.flapping { background-color: #22d3ee; }
+:root[data-layout="retro95"] .indicator.pass.flapping { background-color: #22d3ee;
+    background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.6) 0 2px, transparent 2px 6px); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.flapping,
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .legend-flap {
-    background-image: repeating-linear-gradient(45deg, rgba(var(--crt-rgb), .5) 0 3px, transparent 3px 6px);
+    background-image: repeating-linear-gradient(45deg, rgba(var(--crt-rgb), .3) 0 2px, transparent 2px 6px);
 }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .legend-flap {
     background-color: var(--crt-hover); outline-color: var(--crt-hi);
