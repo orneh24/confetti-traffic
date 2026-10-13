@@ -89,7 +89,7 @@ function syncThemeSelect() {
     }
     sel.value = shuffling ? 'shuffle' : currentTheme();
 }
-// "Confetti!" button: a burst from the button, then rain from the top, in the
+// "Make it rain!" button: a burst from the button, then rain from the top, in the
 // current theme's colours. Plain canvas, no library (the hub may be offline).
 // Each click gets its own overlay canvas, removed when the last piece falls off.
 function confettiBlast(btn) {
@@ -546,7 +546,7 @@ td.sevcol { white-space: nowrap; }
 
 <div class="page-footer">
     <a class="btn-small" href="https://isitdns.com/" target="_blank" rel="noopener noreferrer">Is it DNS..?</a>
-    <button class="btn-small" type="button" onclick="confettiBlast(this)">Confetti!</button>
+    <button class="btn-small" type="button" onclick="confettiBlast(this)">Make it rain!</button>
 </div>
 
 <script>

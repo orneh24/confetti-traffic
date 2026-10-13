@@ -372,7 +372,9 @@ renames the node to `ct-<group>-<NODE_ID>`: this needs a managed node seen in
 the last 10 minutes, otherwise only the hub-side group is saved and the
 dashboard says why. Clearing a group never renames. A node with
 `NODE_HOSTNAME` set is not renamed, and the old name's results age out. Click a
-Recent Changes row to select that pair's cell in the matrix. An overridden group shows a pencil mark and appears under the IP in
+Recent Changes row to select that pair's cell in the matrix. In Test Detail, click one of a test's small history squares to read
+that specific poll (time, result, latency, full output, a syslog link for that moment);
+click it again to close. An overridden group shows a pencil mark and appears under the IP in
 the matrix headers.
 
 **Colour themes.** The menu at the right of each page's header picks one of
@@ -389,7 +391,7 @@ path changes, hub state) and rounded panels in two columns; Test Detail opens
 on the right when you click a matrix cell. Modern uses whichever colour
 theme you pick. **Retro 95** turns every panel into a Windows 95 window on a
 teal desktop, with a taskbar and a Start menu (which also holds **Is it
-DNS..?**, **Confetti!** and a way back to Classic). It has its own colours,
+DNS..?**, **Make it rain!** and a way back to Classic). It has its own colours,
 so the theme menu is greyed out while it's on. **Amber CRT** is an amber
 terminal screen with scanlines, and **Neon Green CRT** is the same in green.
 Both have their own colours; a failing test

@@ -316,7 +316,10 @@ last hour's `/api/path-changes` only, so an older failure shows syslog but no
 path change) — the start
 of the failure run, not the newest sample, because that is when the cause was
 logged. The pair endpoint returns the newest 200 rows, so a longer run says
-"was already failing". **Copy summary** puts a plain-text version of the pair
+"was already failing". Each test card's history squares are buttons: one opens that poll's own detail
+(`pollHtml`: hub and node timestamps, latency, full output, a syslog link pinned to
+that sample) from the 200 rows the pair endpoint returns, and it survives the 30 s refresh.
+**Copy summary** puts a plain-text version of the pair
 (every test, path change, related syslog, UTC times, links back) on the
 clipboard for a ticket. `navigator.clipboard` only exists in a secure context
 and the hub serves plain HTTP, so the copy normally goes through a hidden
@@ -614,7 +617,7 @@ hub/
                         editing all three pages. Each page also has one shared header-confetti rule (an SVG
                         mask over stripes of the theme's --yellow/--red/--green/--blue/--cyan), so every
                         theme but Neon (its own streaks) gets confetti in its palette with no per-theme CSS.
-                        Each page's footer has "Is it DNS..?" and a "Confetti!" button that calls confettiBlast(),
+                        Each page's footer has "Is it DNS..?" and a "Make it rain!" button that calls confettiBlast(),
                         a canvas overlay in the same five colours; its block is identical in all three pages.
                         syslog.html and timeline.html use the smaller
                         variable set (--row-line, and --gray is a text grey there, not a fill).

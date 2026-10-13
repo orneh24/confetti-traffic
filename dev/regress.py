@@ -664,7 +664,7 @@ def _():
         m = re.search(r'<div class="page-footer">(.*?)</div>', read(f), re.S)
         foot = m.group(1) if m else ""
         need("https://isitdns.com/" in foot, "%s: footer has no 'Is it DNS..?' link" % f, p)
-        need("confettiBlast(this)" in foot, "%s: footer has no Confetti! button" % f, p)
+        need("confettiBlast(this)" in foot, "%s: footer has no Make it rain! button" % f, p)
     return p
 
 

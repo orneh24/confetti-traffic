@@ -90,7 +90,7 @@ function syncThemeSelect() {
     }
     sel.value = shuffling ? 'shuffle' : currentTheme();
 }
-// "Confetti!" button: a burst from the button, then rain from the top, in the
+// "Make it rain!" button: a burst from the button, then rain from the top, in the
 // current theme's colours. Plain canvas, no library (the hub may be offline).
 // Each click gets its own overlay canvas, removed when the last piece falls off.
 function confettiBlast(btn) {
@@ -985,6 +985,15 @@ a:hover { text-decoration: underline; }
     line-height: 1.6;
 }
 .detail-test-output.open { display: block; }
+/* History squares: one per poll, clickable to read that poll. */
+.hist-dot { display: inline-block; width: 10px; height: 10px; padding: 0; margin: 0 1px; border: 0;
+    border-radius: 0; cursor: pointer; vertical-align: middle; }
+.hist-dot:hover { outline: 1px solid var(--text-dim); outline-offset: 1px; }
+.hist-dot.sel { outline: 2px solid var(--text); outline-offset: 1px; }
+.detail-poll { padding: 8px 12px; border-top: 1px dashed var(--border); background: var(--bg-muted); font-size: 11px; line-height: 1.6; }
+.detail-poll-title { font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.detail-poll-meta span { margin-right: 14px; }
+.detail-poll .detail-test-output { display: block; margin-top: 6px; }
 .latency-val { color: var(--yellow); font-weight: 600; }
 
 /* Hub health */
@@ -2066,7 +2075,7 @@ try {
 
         <div class="page-footer">
             <a class="btn-small" href="https://isitdns.com/" target="_blank" rel="noopener noreferrer">Is it DNS..?</a>
-            <button class="btn-small" type="button" onclick="confettiBlast(this)">Confetti!</button>
+            <button class="btn-small" type="button" onclick="confettiBlast(this)">Make it rain!</button>
         </div>
     </div>
 
@@ -2138,7 +2147,7 @@ try {
                 <a href="/timeline">Timeline</a>
                 <hr>
                 <a href="https://isitdns.com/" target="_blank" rel="noopener noreferrer">Is it DNS..?</a>
-                <button type="button" onclick="confettiBlast(this)">Confetti!</button>
+                <button type="button" onclick="confettiBlast(this)">Make it rain!</button>
                 <hr>
                 <button type="button" onclick="setLayout('classic')">Back to Classic layout</button>
             </div>
@@ -3396,11 +3405,26 @@ try {
                     var histCount = Math.min(items.length, 20);
                     for (var h = 0; h < histCount; h++) {
                         var hc = items[h].success ? "var(--green)" : "var(--red)";
-                        html += "<span style='display:inline-block;width:8px;height:8px;border-radius: 0;background:" + hc +
-                                ";margin:0 1px' title='" + esc(formatWhen(items[h].received_at || items[h].timestamp)) + "'></span>";
+                        var hAt = items[h].received_at || items[h].timestamp;
+                        var hSel = selectedPoll && selectedPoll.src === src && selectedPoll.dst === dst &&
+                                   selectedPoll.type === type && selectedPoll.at === hAt;
+                        html += "<button type='button' class='hist-dot" + (hSel ? " sel" : "") + "' data-type='" + escAttr(type) +
+                                "' data-at='" + escAttr(hAt) + "' style='background:" + hc + "' title='" +
+                                escAttr(formatWhen(hAt) + (items[h].success ? " - pass" : " - FAIL") + " - click to read this poll") +
+                                "' aria-label='Read the poll from " + escAttr(formatWhen(hAt)) + "'></button>";
                     }
                 }
                 html += "</div>";
+
+                // The poll the viewer picked from the history squares, if it is
+                // one of this test's.
+                var picked = null;
+                if (selectedPoll && selectedPoll.src === src && selectedPoll.dst === dst && selectedPoll.type === type) {
+                    for (var pi = 0; pi < items.length; pi++) {
+                        if ((items[pi].received_at || items[pi].timestamp) === selectedPoll.at) { picked = items[pi]; break; }
+                    }
+                }
+                if (picked) html += pollHtml(type, picked);
 
                 // Path change, traceroute only — same correlation pattern as
                 // every other syslog link on this panel, not a new one.
@@ -3447,6 +3471,50 @@ try {
                 if (out) out.classList.toggle("open");
             });
         }
+
+        // History squares: read one specific poll. A second click on the same
+        // square (or "back to latest") puts it away.
+        var dots = body.querySelectorAll(".hist-dot");
+        for (var d = 0; d < dots.length; d++) {
+            dots[d].addEventListener("click", function(e) {
+                var type = e.currentTarget.getAttribute("data-type");
+                var at = e.currentTarget.getAttribute("data-at");
+                var same = selectedPoll && selectedPoll.src === src && selectedPoll.dst === dst &&
+                           selectedPoll.type === type && selectedPoll.at === at;
+                selectedPoll = same ? null : {src: src, dst: dst, type: type, at: at};
+                renderDetail(src, dst, rows);
+            });
+        }
+        var backs = body.querySelectorAll(".poll-back");
+        for (var k = 0; k < backs.length; k++) {
+            backs[k].addEventListener("click", function() {
+                selectedPoll = null;
+                renderDetail(src, dst, rows);
+            });
+        }
+    }
+
+    // One specific poll of a test: what the matrix cell and the latest-result
+    // card cannot show once a newer sample has replaced it. The output is
+    // free text from the node, so it is escaped like everything else here.
+    function pollHtml(type, r) {
+        var at = r.received_at || r.timestamp;
+        var when = parseTs(at);
+        var h = "<div class='detail-poll'>";
+        h += "<div class='detail-poll-title'>" + esc(TYPE_NAMES[type] || type) + " poll, " +
+             esc(when ? when.toLocaleString() : at) + " <span class='detail-test-status " +
+             (r.success ? "pass'>PASS" : "fail'>FAIL") + "</span> " +
+             "<button type='button' class='btn-small poll-back'>back to latest</button></div>";
+        h += "<div class='detail-poll-meta'>";
+        if (r.latency_ms !== null && r.latency_ms !== undefined) h += "<span>" + formatLatency(type, r.latency_ms) + "</span>";
+        h += "<span>target " + esc(r.target_ip || "") + "</span>";
+        h += "<span title='When the hub stored it (UTC); filtering and syslog links use this'>hub: " + esc(at) + "</span>";
+        if (r.timestamp && r.timestamp !== at) h += "<span title='The clock on the node when it ran the test'>node: " + esc(r.timestamp) + "</span>";
+        h += "<span class='detail-test-syslog'><a href='" + syslogUrl(at) + "' target='_blank' rel='noopener'>syslog &plusmn;" +
+             SYSLOG_PIN_MINUTES + " min</a></span>";
+        h += "</div>";
+        h += "<div class='detail-test-output'>" + esc(r.output || "(no output)") + "</div>";
+        return h + "</div>";
     }
 
     // ---------------------------------------------------------------
@@ -3459,6 +3527,7 @@ try {
     // like every other syslog row on this page.
     // ---------------------------------------------------------------
     var detailState = null; // the pair on screen, for the summary
+    var selectedPoll = null; // {src, dst, type, at}: one history square opened in Test Detail
     var RELATED_MAX = 8;
 
     // Oldest sample of the current failure run across the failing tests. The
@@ -3638,6 +3707,7 @@ try {
     document.getElementById("detail-close").addEventListener("click", function() {
         selectedPair = null;
         detailState = null;
+        selectedPoll = null;
         document.body.classList.remove("has-detail");
         document.getElementById("detail-body").innerHTML = "<div class='detail-empty'>Click a matrix cell to inspect test results</div>";
         this.style.display = "none";
