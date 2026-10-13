@@ -336,7 +336,7 @@ uses one probe per hop and at most 10 hops, so it can't overrun the
 throughput when you ask. It isn't part of the minute-by-minute tests. Like
 Static Targets and Mesh Settings, it starts folded: press **Expand**, and
 the dashboard remembers that in your browser. The **LLDP Neighbors** panel
-(also folded) lists the switch and port each node reports; the switch must send
+(open by default) lists the switch and port each node reports; the switch must send
 LLDP.
 
 - **Two nodes:** pick From and To, a duration (5–30 s) and 1–8 TCP streams.

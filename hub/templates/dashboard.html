@@ -1610,6 +1610,22 @@ a:hover { text-decoration: underline; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .legend-flap {
     background-color: var(--crt-hover); outline-color: var(--crt-hi);
 }
+/* One hue, so each state is a different shape: pass = a boxed cell, fail = a
+   solid inverted block, slow = underlined, flapping = a thick dashed box that
+   blinks (a plain pass cell and a flapper looked alike). */
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.pass { outline: 1px solid var(--crt-mid); outline-offset: -1px; }
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.flapping {
+    outline: 2px dashed var(--crt-hi); outline-offset: -2px;
+    animation: crt-flap 1.2s steps(1) infinite;
+}
+/* A failing flapper is a bright block whose outline would vanish into its own
+   fill, so its dashes are dark and sit inside it. Slow gets a dotted box. */
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.fail.flapping { outline-color: var(--crt-bg); outline-offset: -3px; }
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.slow { outline: 1px dotted var(--crt-slow); outline-offset: -1px; }
+@keyframes crt-flap { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) {
+    :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.flapping { animation: none; }
+}
 /* A fail anywhere else is inverted too, so it reads without colour. */
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .detail-test-status.fail,
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .health-bad { background: var(--crt-fail); color: var(--crt-bg); text-shadow: none; padding: 0 4px; }
@@ -2079,11 +2095,11 @@ try {
             </div>
         </div>
 
-        <div class="section collapsed" id="lldp-section">
+        <div class="section" id="lldp-section">
             <div class="section-header">
                 <span>LLDP Neighbors<span class="hdr-note" id="lldp-note"></span></span>
                 <span class="hdr-actions">
-                    <button type="button" class="btn-small collapse-toggle" data-section="lldp-section" data-default="collapsed">Expand</button>
+                    <button type="button" class="btn-small collapse-toggle" data-section="lldp-section">Collapse</button>
                 </span>
             </div>
             <div class="section-body">

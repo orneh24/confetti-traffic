@@ -219,7 +219,7 @@ not affected.
 `lldpcli -f json0 show neighbors` and POSTs it to `/lldp`. The hub keeps only the
 latest set per node (`lldp_neighbors` table), so a neighbor that went away
 disappears; rows go with the node when it is deleted or pruned as stale. Shown in
-the dashboard's folded "LLDP Neighbors" panel. Every failure is silent, and a failed
+the dashboard's "LLDP Neighbors" panel (open by default; the viewer's Collapse is remembered). Every failure is silent, and a failed
 read posts nothing, so it never wipes the last known neighbors or fails a cycle.
 Neighbor text comes from frames anything on the wire can send: render it escaped,
 never trust it. Not a test: no result type, never in the matrix.
@@ -323,7 +323,7 @@ and the hub serves plain HTTP, so the copy normally goes through a hidden
 textarea + `execCommand("copy")`; if the browser refuses both, the text is
 shown selected to copy by hand. Both are dashboard-only, on existing APIs.
 
-The admin panels — Static Targets, Mesh Settings, Bandwidth Test, LLDP Neighbors — start
+The admin panels — Static Targets, Mesh Settings, Bandwidth Test — start
 folded (`data-default="collapsed"` on their toggle; the viewer's Expand is
 remembered in localStorage `confetti-expanded`). Static Targets carries its
 verdict in the folded header ("2 targets, 1 path failing") so a failing

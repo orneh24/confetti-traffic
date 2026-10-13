@@ -34,7 +34,7 @@ lab. See [Running the hub locally](#running-the-hub-locally).*
 
 Every node tests every other node once a minute. Each matrix cell shows one
 letter per test: green pass, yellow slow, red fail, grey no data. A dashed, striped cell with a
-`~` after its letter means flapping (5+ pass/fail flips in the last hour). A folded
+`~` after its letter means flapping (5+ pass/fail flips in the last hour). An
 **LLDP Neighbors** panel lists the switch and port each node reports. The hub's login
 banner shows the installed build (`unknown` until the first `confettictl-update`) and
 says when a newer one exists.
