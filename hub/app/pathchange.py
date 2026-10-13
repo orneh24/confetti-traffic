@@ -169,3 +169,52 @@ def split_message(message):
         }
     except Exception:
         return None
+
+
+# ---------------------------------------------------------------------------
+# Asymmetric routing: compare A->B with B->A.
+#
+# A hint, not proof. A router shows a different interface address in each
+# direction, so addresses are never compared directly. Two rules, both
+# deliberately conservative (a false alarm costs more trust than a miss):
+#   length: the destination answered at a different hop number each way.
+#   routers: both ways have 2+ router hops and share no /24 at all. A
+#           symmetric path shares the links between its routers; with a single
+#           router each way the two sides sit on different subnets anyway, so
+#           that case is never judged.
+# ---------------------------------------------------------------------------
+
+def _subnet24(addr):
+    return ".".join(addr.split(".")[:3])
+
+
+def _side(output, target_ip):
+    """(hop number the target answered at, router addresses) or None."""
+    hops = parse_hops(output)
+    if not hops or hops[-1][1] != target_ip:
+        return None
+    return hops[-1][0], [a for _, a in hops[:-1]]
+
+
+def compare_paths(fwd_output, fwd_target_ip, rev_output, rev_target_ip):
+    """Compare a traceroute and its reverse. Never raises.
+
+    Returns {"comparable": False, "reason"} when either trace did not reach
+    its target, else {"comparable": True, "asymmetric": bool, "reasons": [...],
+    "fwd_hops": n, "rev_hops": n, "fwd": [addr], "rev": [addr]}.
+    """
+    try:
+        f = _side(fwd_output, fwd_target_ip)
+        r = _side(rev_output, rev_target_ip)
+        if f is None or r is None:
+            return {"comparable": False, "reason": "a trace did not reach its target"}
+        reasons = []
+        if f[0] != r[0]:
+            reasons.append("%d hops one way, %d the other" % (f[0], r[0]))
+        if len(f[1]) >= 2 and len(r[1]) >= 2:
+            if not ({_subnet24(a) for a in f[1]} & {_subnet24(a) for a in r[1]}):
+                reasons.append("the two directions share no subnet between their routers")
+        return {"comparable": True, "asymmetric": bool(reasons), "reasons": reasons,
+                "fwd_hops": f[0], "rev_hops": r[0], "fwd": f[1], "rev": r[1]}
+    except Exception:
+        return {"comparable": False, "reason": "could not compare"}

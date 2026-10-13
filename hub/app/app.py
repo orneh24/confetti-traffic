@@ -652,6 +652,47 @@ def api_path_changes():
     return jsonify(out)
 
 
+@app.route("/api/asymmetry", methods=["GET"])
+def api_asymmetry():
+    """Pairs whose forward and reverse traceroute differ. ?minutes=N (default 60).
+
+    Hub-side only: it compares the latest traceroute each way (see
+    pathchange.compare_paths, a hint and not proof) and notes any test that
+    passes one way and fails the other (a one-way failure, which a stateful
+    device that sees only half a flow produces). One row per pair, a < b.
+    """
+    try:
+        minutes = abs(int(request.args.get("minutes", "60")))
+    except ValueError:
+        minutes = 60
+    db = get_db()
+    rows = db.execute(
+        """SELECT r.source, r.target_hostname, r.target_ip, r.test_type, r.success, r.output
+           FROM results r JOIN (
+               SELECT MAX(id) AS mid FROM results
+               WHERE received_at >= datetime('now', ? || ' minutes')
+               GROUP BY source, target_hostname, test_type) m ON r.id = m.mid""",
+        (f"-{minutes}",),
+    ).fetchall()
+    trace, ok = {}, {}
+    for r in rows:
+        key = (r["source"], r["target_hostname"])
+        if r["test_type"] == "traceroute":
+            trace[key] = (r["output"], r["target_ip"])
+        ok.setdefault(key, {})[r["test_type"]] = bool(r["success"])
+    out = []
+    for (a, b) in sorted(set(k for k in list(trace) + list(ok) if k[0] < k[1])):
+        fwd, rev = ok.get((a, b), {}), ok.get((b, a), {})
+        one_way = sorted(t for t in fwd if t != "traceroute" and t in rev and fwd[t] != rev[t])
+        cmp = {"comparable": False, "reason": "no traceroute both ways"}
+        if (a, b) in trace and (b, a) in trace:
+            cmp = pathchange.compare_paths(trace[(a, b)][0], trace[(a, b)][1],
+                                           trace[(b, a)][0], trace[(b, a)][1])
+        if cmp.get("asymmetric") or one_way:
+            out.append(dict(cmp, a=a, b=b, one_way=one_way))
+    return jsonify(out)
+
+
 # ---------------------------------------------------------------------------
 # LLDP neighbors
 #

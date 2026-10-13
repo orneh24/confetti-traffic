@@ -783,6 +783,30 @@ def _():
     return p
 
 
+@check("R39", "asymmetry compare: mirrored path is quiet, different path is flagged, never raises")
+def _():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("pc", "hub/app/pathchange.py")
+    pc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(pc)
+    tr = lambda *a: "".join(" %d  %s  1 ms" % (i + 1, x) + chr(10) for i, x in enumerate(a))
+    p = []
+    # A-R1-R2-B: the shared link subnet appears both ways, only interfaces differ.
+    fwd = tr("10.1.1.1", "10.0.12.2", "10.2.1.10")
+    rev = tr("10.2.1.1", "10.0.12.1", "10.1.1.10")
+    c = pc.compare_paths(fwd, "10.2.1.10", rev, "10.1.1.10")
+    need(c.get("comparable") and not c.get("asymmetric"), "mirrored path flagged: %s" % c, p)
+    c = pc.compare_paths(tr("10.1.1.1", "10.2.1.10"), "10.2.1.10", tr("10.2.1.1", "10.1.1.10"), "10.1.1.10")
+    need(c.get("comparable") and not c.get("asymmetric"), "single router each way flagged: %s" % c, p)
+    c = pc.compare_paths(fwd, "10.2.1.10", tr("10.2.1.1", "10.9.9.1", "10.8.8.1", "10.1.1.10"), "10.1.1.10")
+    need(c.get("asymmetric") and len(c["reasons"]) == 2, "different path not flagged: %s" % c, p)
+    c = pc.compare_paths(fwd, "10.2.1.10", tr("10.2.1.1", "*"), "10.1.1.10")
+    need(c.get("comparable") is False, "unreached trace was compared", p)
+    need(pc.compare_paths(None, None, 5, "x").get("comparable") is False, "bad input did not degrade", p)
+    need(grep(r'"/api/asymmetry"', APP), "/api/asymmetry route missing", p)
+    return p
+
+
 @check("R37", "hub pages: every inline script parses")
 def _():
     # One raw line break inside a JS string (a lost escape) kills the whole

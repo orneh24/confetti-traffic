@@ -51,6 +51,12 @@ Diagram: `docs/TOPOLOGY.md`.
   - `GET /api/results?minutes=N`, `GET /api/results/<source>/<target>`
   - `GET /api/path-changes?minutes=N` — detected traceroute path changes
     (see Syslog below); default 10, matching `/api/results`
+  - `GET /api/asymmetry?minutes=N` (default 60) � pairs whose forward and reverse
+    traceroute differ (hop count, or no shared subnet between 2+ routers each way) or
+    that pass a test one way and fail it the other. A hint, not proof: router
+    interfaces differ per direction, so addresses are never compared. Hub-side only;
+    shown on the pair's traceroute card. Rows: `a`, `b`, `comparable`, `asymmetric`,
+    `reasons`, `one_way`, `fwd`/`rev` hops
   - `DELETE /endpoints/<hostname>` (also drops its group override)
   - `POST /api/nodes/<hostname>/group` `{group}` — set a node's group from
     the dashboard (empty clears it). A hub-side override in the
@@ -639,7 +645,7 @@ hub/
                         .section:nth-child colours only by coming later. Its .taskbar holds a
                         <details> Start menu with the footer's two buttons (footer hidden there).
                         Amber CRT (amber) and Neon Green CRT (greencrt) are the same own-colours pattern, one shared block driven by --crt-* palettes. One hue, so status
-                        must not rest on colour: a fail is an inverted solid block (red, in the matrix), slow is
+                        must not rest on colour: a pass is a green boxed cell, a fail is an inverted solid block (red, in the matrix), slow is
                         bright + underlined. Local monospace fonts only (a hub may be offline).
   static/
   agent/              — scripts served to nodes (created at build time)

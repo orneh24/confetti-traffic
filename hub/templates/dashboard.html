@@ -1621,10 +1621,11 @@ a:hover { text-decoration: underline; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .legend-flap {
     background-color: var(--crt-hover); outline-color: var(--crt-hi);
 }
-/* One hue, so each state is a different shape: pass = a boxed cell, fail = a
+/* Passing cells are green in both (like fails are red), so Amber still reads pass/fail by colour.
+   One hue, so each state is a different shape: pass = a boxed cell, fail = a
    solid inverted block, slow = underlined, flapping = a thick dashed box that
    blinks (a plain pass cell and a flapper looked alike). */
-:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.pass { outline: 1px solid var(--crt-mid); outline-offset: -1px; }
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.pass { outline: 1px solid #22b84a; outline-offset: -1px; color: #33ff66; text-shadow: 0 0 3px rgba(51, 255, 102, .7); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.flapping {
     outline: 2px dashed var(--crt-hi); outline-offset: -2px;
     animation: crt-flap 1.2s steps(1) infinite;
@@ -2205,6 +2206,9 @@ try {
     // renderIndicators() is called for both the mesh matrix and the
     // static-targets matrix, so one change marks both correctly.
     var pathChangeLookup = {};
+    // Pairs whose forward and reverse traceroute differ, or that fail one way
+    // only (/api/asymmetry), keyed both "a|b" and "b|a".
+    var asymLookup = {};
     // key: src|dst|type -> {flips, passPct} for tests flapping in the last hour.
     var flapLookup = {};
     var selectedPair = null; // {source, target}
@@ -2249,8 +2253,11 @@ try {
             fetchJSON("/api/syslog?" + syslogQuery),
             fetchJSON("/node/release"),
             fetchJSON("/mesh-rules").catch(function() { return []; }),
-            fetchJSON("/api/lldp").catch(function() { return []; })
+            fetchJSON("/api/lldp").catch(function() { return []; }),
+            fetchJSON("/api/asymmetry?minutes=60").catch(function() { return []; })
         ]).then(function(arr) {
+            asymLookup = {};
+            (Array.isArray(arr[10]) ? arr[10] : []).forEach(function(x) { asymLookup[x.a + "|" + x.b] = x; asymLookup[x.b + "|" + x.a] = x; });
             renderLldp(Array.isArray(arr[9]) ? arr[9] : []);
             hubRelease = arr[7] ? arr[7].commit : null;
             meshRules = Array.isArray(arr[8]) ? arr[8] : [];
@@ -3436,6 +3443,14 @@ try {
                                 syslogUrl(pathChange.received_at) + "' target='_blank' rel='noopener'>syslog &plusmn;" +
                                 SYSLOG_PIN_MINUTES + " min</a></div>";
                     }
+                }
+
+                if (type === "traceroute" && asymLookup[src + "|" + dst]) {
+                    var asym = asymLookup[src + "|" + dst];
+                    var why = (asym.reasons || []).slice();
+                    if (asym.one_way && asym.one_way.length) why.push("passes one way only: " + asym.one_way.join(", "));
+                    html += "<div class='detail-test-meta' style='color:var(--yellow)'>Asymmetric routing suspected: " +
+                            esc(why.join("; ")) + " (compares this trace with the reverse one; a hint, not proof)</div>";
                 }
 
                 html += "<div class='detail-test-output' id='output-" + type + "'>" + esc(latest.output || "(no output)") + "</div>";
