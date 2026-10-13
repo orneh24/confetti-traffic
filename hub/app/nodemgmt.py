@@ -33,15 +33,16 @@ REMOTE_CMD = ("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # no quoting of operator input can reach a root shell. confettictl-setup.sh
 # derives ct-<group>-<NODE_ID>, renames the node and has the hub drop the old
 # name. A name set explicitly (NODE_HOSTNAME) is left alone; checked first so
-# a refused rename changes nothing.
+# a refused rename changes nothing. CONFETTI_HUB_RENAME=1 tells setup to keep
+# this group over a vCenter guestinfo group (which it would otherwise restore).
 REMOTE_RENAME_CMD = (
     "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; export PATH; "
     "C=/etc/confetti/config; read -r G; "
     "if grep -q '^NODE_HOSTNAME=.' $C; then "
     "echo 'hostname is set in the node config; not renamed'; exit 3; fi; "
     "sed -i '/^GROUP_NAME=/d' $C && printf 'GROUP_NAME=%s\\n' \"$G\" >> $C && "
-    "/usr/local/bin/confetti/confettictl-setup.sh >/dev/null 2>&1; "
-    "R=$?; echo \"hostname: $(hostname)\"; exit $R"
+    "H=$(hostname) && CONFETTI_HUB_RENAME=1 /usr/local/bin/confetti/confettictl-setup.sh >/dev/null 2>&1; "
+    "R=$?; echo \"hostname: $H -> $(hostname)\"; exit $R"
 )
 
 _queue = queue.Queue()

@@ -62,7 +62,10 @@ Diagram: `docs/TOPOLOGY.md`.
     and re-runs `confettictl-setup.sh`, which renames the node to
     `ct-<group>-<NODE_ID>` and has the hub drop the old name (the response
     says `rename: queued` or `skipped` with `rename_reason`). The group goes
-    over ssh stdin, never the command line. A node with `NODE_HOSTNAME` set in
+    over ssh stdin, never the command line. The rename runs setup with `CONFETTI_HUB_RENAME=1`, which keeps the hub's
+    group over a vCenter `guestinfo.confetti.group` until vCenter changes it
+    (marker `/etc/confetti/.group-hub`); without that, setup's guestinfo loop
+    restored the old group and the node was never renamed. A node with `NODE_HOSTNAME` set in
     its config is not renamed. The old name's results age out; they are not
     carried over. `/endpoints` adds `group_overridden`
     and `group_registered` per element. Unauthenticated, like mesh rules.

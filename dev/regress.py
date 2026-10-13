@@ -768,6 +768,21 @@ def py_text_between(text, start, end):
     return text[i:j] if i >= 0 and j > i else ""
 
 
+@check("R38", "hub-started rename beats a guestinfo group (setup keeps the hub's group)")
+def _():
+    # Without this, confettictl-setup.sh's guestinfo loop writes the vCenter
+    # group straight back over the one the dashboard just set, so the node is
+    # never renamed and nothing says why.
+    p = []
+    need(grep(r"CONFETTI_HUB_RENAME=1", "hub/app/nodemgmt.py"),
+         "nodemgmt's rename command must set CONFETTI_HUB_RENAME=1", p)
+    need(grep(r'CONFETTI_HUB_RENAME:-\}" = "1"', "node/scripts/confettictl-setup.sh"),
+         "setup must read CONFETTI_HUB_RENAME", p)
+    need(grep(r"\.group-hub", "node/scripts/confettictl-setup.sh"),
+         "setup must keep the hub's group (.group-hub marker) over guestinfo", p)
+    return p
+
+
 @check("R37", "hub pages: every inline script parses")
 def _():
     # One raw line break inside a JS string (a lost escape) kills the whole

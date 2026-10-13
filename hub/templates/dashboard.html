@@ -743,6 +743,8 @@ a:hover { text-decoration: underline; }
     background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.6) 0 2px, transparent 2px 6px); }
 :root[data-layout="retro95"] .indicator.flapping { outline-color: #000; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.flapping { outline-color: var(--crt-hi); }
+/* The ~ in a flapping cell: bigger than the 9px letter, which made it a 2px dash. */
+.flap-mark { font-size: 14px; font-weight: 900; line-height: 1; margin-left: -2px; }
 .indicator-label { font-size: 8px; letter-spacing: 0; }
 
 .th-sub {
@@ -2965,7 +2967,7 @@ try {
                     tip += " — path changed: " + change.detail;
                 }
             }
-            html += "<div class='indicator " + cls + "' title='" + esc(tip) + "'>" + TYPE_LABELS[types[t]] + (flap ? "~" : "") + "</div>";
+            html += "<div class='indicator " + cls + "' title='" + esc(tip) + "'>" + TYPE_LABELS[types[t]] + (flap ? "<span class='flap-mark'>~</span>" : "") + "</div>";
         }
         return html + "</div>";
     }

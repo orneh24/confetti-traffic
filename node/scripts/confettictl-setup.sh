@@ -133,11 +133,23 @@ if [ -f "$CONFIG_FILE" ]; then
     # when any of these differ, so a changed key applies on the next reboot.
     # Only non-empty guestinfo values count: an unset key leaves the config
     # alone (a DHCP-derived SUBNET, for example).
+    # A rename started from the hub's dashboard (CONFETTI_HUB_RENAME=1, see
+    # nodemgmt.py) must beat guestinfo: the loop below would put a vCenter
+    # group straight back over the one the hub just wrote, and the node would
+    # never be renamed. Remember the guestinfo group as it is now and skip it
+    # until vCenter changes it.
+    if [ "${CONFETTI_HUB_RENAME:-}" = "1" ]; then
+        read_guestinfo "confetti.group" > "$CONFIG_DIR/.group-hub"
+    fi
     for _pair in hub_url:HUB_URL group:GROUP_NAME subnet:SUBNET \
                  hostname:NODE_HOSTNAME dns_server:DNS_SERVER dns_query:DNS_QUERY; do
         _gi=$(read_guestinfo "confetti.${_pair%%:*}")
         _key="${_pair#*:}"
         [ -n "$_gi" ] || continue
+        if [ "$_key" = "GROUP_NAME" ] && [ -f "$CONFIG_DIR/.group-hub" ]; then
+            [ "$_gi" = "$(cat "$CONFIG_DIR/.group-hub")" ] && continue
+            rm -f "$CONFIG_DIR/.group-hub"      # vCenter changed it: it wins again
+        fi
         _cur=$(sed -n "s/^${_key}=//p" "$CONFIG_FILE" | head -n 1)
         [ "$_gi" = "$_cur" ] && continue
         _esc=$(printf '%s' "$_gi" | sed 's/[&|\\]/\\&/g')
