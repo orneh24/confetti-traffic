@@ -414,6 +414,10 @@ a:hover { text-decoration: underline; }
     display: flex;
     align-items: center;
     justify-content: space-between;
+    /* A long clock line ("... via 185.248.189.10") used to wrap inside the status
+       box and run into the nav buttons; wrap the whole status under the title instead. */
+    flex-wrap: wrap;
+    gap: 6px 24px;
 }
 .header-left {
     display: flex;
