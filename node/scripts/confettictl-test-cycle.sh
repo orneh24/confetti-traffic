@@ -9,9 +9,35 @@ CONFIG="/etc/confetti/config"
 LOG_TAG="confetti-test"
 
 # -------------------------------------------------------------------
+# Single-test mode: run one test against one target, print the result and
+# exit. Nothing is posted to the hub and the cycle's lock, snapshot and
+# traceroute stamp are left alone. No arguments = the normal cycle.
+# -------------------------------------------------------------------
+ONE_TEST=""
+ONE_TARGET=""
+one_usage() {
+    echo "usage: $0 [--test TYPE --target HOSTNAME|IP]"
+    echo "  TYPE: http ssh traceroute pmtu loss dns smb smtp iperf3"
+    echo "  no arguments runs the normal cycle against every peer"
+}
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --test)   [ $# -ge 2 ] || { one_usage; exit 2; }; ONE_TEST="$2"; shift 2 ;;
+        --target) [ $# -ge 2 ] || { one_usage; exit 2; }; ONE_TARGET="$2"; shift 2 ;;
+        -h|--help) one_usage; exit 0 ;;
+        *) one_usage; exit 2 ;;
+    esac
+done
+if [ -n "$ONE_TEST$ONE_TARGET" ] && { [ -z "$ONE_TEST" ] || [ -z "$ONE_TARGET" ]; }; then
+    one_usage
+    exit 2
+fi
+
+# -------------------------------------------------------------------
 # Logging helper
 # -------------------------------------------------------------------
 log() {
+    [ -n "$ONE_TEST" ] && return 0
     printf '%s [%s] %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$LOG_TAG" "$1"
 }
 
@@ -62,6 +88,7 @@ SNAPSHOT_FILE="${SNAPSHOT_FILE:-/run/confetti/last-cycle.txt}"
 snapshot_note() {
     _line="$(date -u '+%Y-%m-%dT%H:%M:%SZ') ${MY_HOSTNAME} $1"
     printf '%s\n' "$_line"
+    [ -n "$ONE_TEST" ] && return 0
     if [ "$CONSOLE_OUTPUT" = "true" ] && [ -w "$CONSOLE_DEVICE" ] 2>/dev/null; then
         printf '%s\n' "$_line" > "$CONSOLE_DEVICE" 2>/dev/null || true
     fi
@@ -150,6 +177,7 @@ ROWS=""
 # reports. Skip this run if the previous one is still going.
 # -------------------------------------------------------------------
 LOCK_DIR="/run/confetti-test-cycle.lock"
+[ -n "$ONE_TEST" ] && LOCK_DIR="/run/confetti-test-one.lock"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
     # Clear a lock left behind by a killed run (older than 10 minutes).
     if [ -d "$LOCK_DIR" ] && [ -z "$(find "$LOCK_DIR" -maxdepth 0 -mmin -10 2>/dev/null)" ]; then
@@ -222,6 +250,7 @@ log "Opt-in tests: smb=$ENABLE_SMB smtp=$ENABLE_SMTP iperf3=$ENABLE_IPERF"
 sync_service() {
     _svc="$1"
     _want="$2"
+    [ -n "$ONE_TEST" ] && return 0
     command -v rc-service >/dev/null 2>&1 || return 0
     [ -x "/etc/init.d/$_svc" ] || return 0
     if rc-service "$_svc" status >/dev/null 2>&1; then _running=true; else _running=false; fi
@@ -793,6 +822,46 @@ run_smtp_test() {
     printf '{"target_hostname":"%s","target_ip":"%s","test_type":"smtp","success":%s,"latency_ms":%s,"output":%s,"timestamp":"%s"}' \
         "$2" "$_target_ip" "$_success" "$_latency" "$_output_escaped" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 }
+
+# -------------------------------------------------------------------
+# Single-test mode (--test TYPE --target HOSTNAME|IP). A hostname is looked
+# up in the peer list and gets the mesh probe; a bare IP gets the status-only
+# HTTP check, like a static target. Exit 0 pass, 1 fail, 2 bad request.
+# -------------------------------------------------------------------
+if [ -n "$ONE_TEST" ]; then
+    _name="$ONE_TARGET"
+    _ip=$(printf '%s' "$ENDPOINTS" | jq -r --arg h "$ONE_TARGET" '[.[] | select(.hostname == $h)][0].ip // empty')
+    _peer="yes"
+    if [ -z "$_ip" ]; then
+        _peer="no"
+        if printf '%s' "$ONE_TARGET" | grep -qE '^[0-9]{1,3}([.][0-9]{1,3}){3}$'; then
+            _ip="$ONE_TARGET"
+        else
+            echo "unknown target '$ONE_TARGET': not a peer hostname or an IPv4 address"
+            exit 2
+        fi
+    fi
+    case "$ONE_TEST" in
+        http)       if [ "$_peer" = "yes" ]; then _R=$(run_http_probe_test "$_ip" "$_name") || true
+                    else _R=$(run_http_test "$_ip" "$_name") || true; fi ;;
+        ssh)        _R=$(run_ssh_test "$_ip" "$_name") || true ;;
+        traceroute) _R=$(run_traceroute_test "$_ip" "$_name") || true ;;
+        pmtu)       _R=$(run_pmtu_test "$_ip" "$_name") || true ;;
+        loss)       _R=$(run_loss_test "$_ip" "$_name") || true ;;
+        dns)        _R=$(run_dns_test "$_ip" "$_name") || true ;;
+        smb)        _R=$(run_smb_test "$_ip" "$_name") || true ;;
+        smtp)       _R=$(run_smtp_test "$_ip" "$_name") || true ;;
+        iperf3)     _R=$(run_iperf3_test "$_ip" "$_name") || true ;;
+        *) echo "unknown test '$ONE_TEST'"; one_usage; exit 2 ;;
+    esac
+    if [ -z "$_R" ] || ! printf '%s' "$_R" | jq empty 2>/dev/null; then
+        echo "$ONE_TEST $_name ($_ip): no result (test skipped or produced nothing)"
+        exit 1
+    fi
+    printf '%s' "$_R" | jq -r '.test_type + " " + .target_hostname + " (" + .target_ip + "): " + (if .success then "PASS" else "FAIL" end) + "  " + (if .latency_ms == null then "-" else (.latency_ms | tostring) end) + " ms" + "\n" + .output'
+    [ "$(printf '%s' "$_R" | jq -r '.success')" = "true" ]
+    exit $?
+fi
 
 # -------------------------------------------------------------------
 # Decide whether traceroute runs this cycle.

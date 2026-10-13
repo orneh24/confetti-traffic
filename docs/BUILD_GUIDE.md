@@ -269,7 +269,9 @@ wget -O /tmp/i.sh http://<hub-ip>/install.sh && sh /tmp/i.sh [group]
 It downloads the node bundle from the hub, installs the packages and scripts,
 and runs `confettictl-setup.sh` with the hub URL already filled in. It asks only for what
 is still missing, such as the group if you didn't pass it (optional). Don't pipe it into
-`sh`, because the prompts need the terminal.
+`sh`, because the prompts need the terminal. It also sets the root password to the lab default
+(`confetti`); run it as `CONFETTI_ROOT_PASSWORD=... sh /tmp/i.sh` to pick another, or
+`CONFETTI_KEEP_PASSWORD=1 sh /tmp/i.sh` to keep the current one.
 
 ### 5.6 Check
 

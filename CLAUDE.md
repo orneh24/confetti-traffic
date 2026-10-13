@@ -388,7 +388,7 @@ can push updates to them over SSH.
   `wget -O /tmp/i.sh http://<hub>/install.sh && sh /tmp/i.sh [group]`.
   `hub/scripts/confettictl-node-install.sh` downloads the bundle, runs
   `node/confettictl-build-template.sh --update` (install steps, no template cleanup),
-  writes `/etc/confetti-release`, then `confettictl-setup.sh` with `HUB_URL` preset. Not
+  writes `/etc/confetti-release`, then `confettictl-setup.sh` with `HUB_URL` preset. It sets the root password to the lab default (`CONFETTI_ROOT_PASSWORD`, else `confetti`; `CONFETTI_KEEP_PASSWORD=1` keeps the current one), since `--update` itself never touches it. Not
   piped into sh: confettictl-setup.sh's prompts need stdin. Golden templates still come
   from the repo's `confettictl-install.sh`.
 - **Build reporting.** `confettictl-register.sh` adds `build` (commit from
@@ -496,6 +496,11 @@ dropbear's minimal PATH, so the push's remote command sets PATH itself.
   The dashboard marks the same threshold per cell (dashed outline, diagonal stripes
   and a `~` after the letter) over the
   last hour of results, plus a "Flapping (1 h)" tile in the Modern layout.
+- One test on demand: `confettictl-test-cycle.sh --test <type> --target <hostname|IP>`
+  (types: http ssh traceroute pmtu loss dns smb smtp iperf3). Prints the result,
+  exit 0 pass / 1 fail / 2 bad request. Posts nothing, and leaves the cycle lock,
+  snapshot, flap history and traceroute stamp alone. A peer hostname gets the mesh
+  probe; a bare IP gets the status-only HTTP check. No arguments = the normal cycle.
 
 ### Discovery
 - Hub is the registry — single source of truth

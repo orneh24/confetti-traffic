@@ -49,6 +49,17 @@ sh -n "$SRC/node/confettictl-build-template.sh" || die "Bundle scripts do not pa
 log "Installing node files and packages"
 sh "$SRC/node/confettictl-build-template.sh" --update || die "confettictl-build-template.sh failed (see above)"
 
+# --update keeps the current root password (right for confettictl-update), so a
+# node installed from the hub would keep whatever the base VM had. Set the lab
+# default here, as the golden-template build does. CONFETTI_KEEP_PASSWORD=1
+# leaves it alone; CONFETTI_ROOT_PASSWORD picks another.
+if [ "${CONFETTI_KEEP_PASSWORD:-}" = "1" ]; then
+    log "Keeping the current root password"
+else
+    echo "root:${CONFETTI_ROOT_PASSWORD:-confetti}" | chpasswd || die "Could not set the root password"
+    log "Credentials: root / ${CONFETTI_ROOT_PASSWORD:-confetti}"
+fi
+
 COMMIT=$(sed -n 's/^commit=//p' "$SRC/RELEASE" 2>/dev/null | head -n 1 | tr -cd '0-9a-z')
 cat > /etc/confetti-release <<EOF
 commit=${COMMIT:-unknown}
