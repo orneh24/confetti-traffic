@@ -631,7 +631,7 @@ hub/
                         .section:nth-child colours only by coming later. Its .taskbar holds a
                         <details> Start menu with the footer's two buttons (footer hidden there).
                         Amber CRT (amber) and Neon Green CRT (greencrt) are the same own-colours pattern, one shared block driven by --crt-* palettes. One hue, so status
-                        must not rest on colour: a fail is inverted (dark on the bright hue), slow is
+                        must not rest on colour: a fail is an inverted solid block (red, in the matrix), slow is
                         bright + underlined. Local monospace fonts only (a hub may be offline).
   static/
   agent/              — scripts served to nodes (created at build time)

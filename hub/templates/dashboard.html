@@ -1592,7 +1592,9 @@ a:hover { text-decoration: underline; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator { background: transparent; color: var(--crt-hi); text-shadow: 0 0 3px rgba(var(--crt-rgb), .7); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.pass { background: var(--crt-hover); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.slow { background: var(--crt-hover); color: var(--crt-slow); text-decoration: underline; }
-:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.fail { background: var(--crt-fail); color: var(--crt-bg); text-shadow: none; box-shadow: 0 0 6px rgba(var(--crt-fail-rgb), .8); }
+/* A failing test in the matrix is a red block in both CRT layouts (the rest of the
+   layout stays one hue). It is still an inverted solid block, so it reads without colour. */
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.fail { background: #ff3030; color: var(--crt-bg); text-shadow: none; box-shadow: 0 0 6px rgba(255, 48, 48, .8); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.none { color: var(--crt-gray); text-shadow: none; }
 /* The layouts above set .pass/.fail/.slow with the background shorthand, which
    resets the flapping stripes; same specificity, so this comes after them.
