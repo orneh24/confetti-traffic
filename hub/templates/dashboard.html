@@ -391,6 +391,12 @@ function confettiBlast(btn) {
     --gray:      rgba(0,0,0,.30);
     --bg-card:   #ff9f1c;
 }
+/* --text above only reaches elements that use it; table cells inherit colour,
+   which was the page's white on the lime and cyan boxes. Not in the layouts
+   that bring their own colours (Retro 95, the CRTs). */
+:root[data-theme="neon"]:not([data-layout="retro95"]):not([data-layout="amber"]):not([data-layout="greencrt"]) .section {
+    color: var(--text);
+}
 :root[data-theme="neon"] .section:nth-child(5n+2) { --bg-card: #00e5ff; }
 :root[data-theme="neon"] .section:nth-child(5n+3) { --bg-card: #b6ff00; }
 :root[data-theme="neon"] .section:nth-child(5n+4) { --bg-card: #ff7ac8; }
@@ -693,6 +699,12 @@ a:hover { text-decoration: underline; }
     outline: 2px solid var(--blue);
     outline-offset: -2px;
 }
+/* The row of the selected cell is tinted end to end, name included, so the
+   eye can follow it across a wide matrix. Opaque: the name cell is sticky. */
+.matrix tr.row-sel > th,
+.matrix tr.row-sel > td:not(.self):not(.excluded) {
+    background: color-mix(in srgb, var(--blue) 16%, var(--bg-card));
+}
 .matrix td.self {
     cursor: default;
     background: var(--bg);
@@ -733,6 +745,8 @@ a:hover { text-decoration: underline; }
 .indicator.pass { background: var(--green); }
 .indicator.fail { background: var(--red); }
 .indicator.slow { background: var(--yellow); }
+/* Hub column only: connected, but running a different build than the hub. */
+.indicator.warn { background: #f0821e; }
 .indicator.none { background: var(--gray); color: var(--text-dim); }
 /* A detected traceroute path change is orthogonal to pass/fail, so this
    composes onto pass/fail/none as an inset highlight rather than replacing
@@ -793,12 +807,20 @@ a:hover { text-decoration: underline; }
     overflow: auto;
     min-height: 0;
 }
+/* Never squeezed to nothing by a long LLDP or endpoint list. */
 .detail-section {
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    min-height: 220px;
 }
+#lldp-section {
+    flex: 0 1 auto;
+    max-height: 40%;
+    display: flex;
+    flex-direction: column;
+}
+#lldp-section .section-body { overflow: auto; min-height: 0; }
 .detail-section .section-body {
     overflow: auto;
     flex: 1;
@@ -1206,7 +1228,8 @@ a:hover { text-decoration: underline; }
     overflow-y: auto;
     gap: 18px;
 }
-:root[data-layout="modern"] .endpoints-section { max-height: none; flex: none; }
+:root[data-layout="modern"] .endpoints-section,
+:root[data-layout="modern"] #lldp-section { max-height: none; flex: none; }
 :root[data-layout="modern"] .section {
     border-radius: 14px;
     scroll-margin-top: 16px;
@@ -1363,10 +1386,13 @@ a:hover { text-decoration: underline; }
 :root[data-layout="retro95"] .matrix tbody th,
 :root[data-layout="retro95"] .matrix th.origin { box-shadow: -6px 0 0 #c0c0c0; }
 :root[data-layout="retro95"] .matrix td.selected { outline: 2px dashed #000080; outline-offset: -2px; }
+:root[data-layout="retro95"] .matrix tr.row-sel > th,
+:root[data-layout="retro95"] .matrix tr.row-sel > td:not(.self):not(.excluded) { background: #c8d4f8; }
 :root[data-layout="retro95"] .indicator { border: 1px solid #000; text-shadow: none; color: #000; }
 :root[data-layout="retro95"] .indicator.pass { background: #00c000; }
 :root[data-layout="retro95"] .indicator.fail { background: #ff0000; color: #fff; }
 :root[data-layout="retro95"] .indicator.slow { background: #ffff00; }
+:root[data-layout="retro95"] .indicator.warn { background: #ff9900; }
 :root[data-layout="retro95"] .indicator.none { background: #d4d4d4; color: #808080; border-color: #a0a0a0; }
 /* Buttons raised, fields sunken, the current page pressed in. */
 :root[data-layout="retro95"] .btn-small,
@@ -1602,6 +1628,15 @@ a:hover { text-decoration: underline; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .ep-table th { background: var(--crt-bg); color: var(--crt-mid); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .matrix td { background: transparent; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .matrix td.selected { outline: 1px dashed var(--crt-hi); outline-offset: -3px; }
+/* One hue and the pass boxes use --crt-hover, so no solid fill: a faint tint plus
+   lines above and below the row, which read without colour. */
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .matrix tr.row-sel > th,
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .matrix tr.row-sel > td {
+    box-shadow: inset 0 1px 0 var(--crt-hi), inset 0 -1px 0 var(--crt-hi);
+}
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .matrix tr.row-sel > td:not(.self):not(.excluded) { background: rgba(var(--crt-rgb), .14); }
+/* Table stripes (LLDP per node, Recent Changes per time) were near-black on black. */
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .ep-table tr.stripe td { background: rgba(var(--crt-rgb), .09); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator { background: transparent; color: var(--crt-hi); text-shadow: 0 0 3px rgba(var(--crt-rgb), .7); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.pass { background: var(--crt-hover); }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.slow { background: var(--crt-hover); color: var(--crt-slow); text-decoration: underline; }
@@ -1638,6 +1673,8 @@ a:hover { text-decoration: underline; }
    fill, so its dashes are dark and sit inside it. Slow gets a dotted box. */
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.fail.flapping { outline-color: var(--crt-bg); outline-offset: -3px; }
 :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.slow { outline: 1px dotted var(--crt-slow); outline-offset: -1px; }
+/* One hue: warn is shaped like slow (underline, dotted outline), not coloured. */
+:root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.warn { background: var(--crt-hover); color: var(--crt-slow); text-decoration: underline; outline: 1px dotted var(--crt-slow); outline-offset: -1px; text-shadow: none; }
 @keyframes crt-flap { 50% { opacity: .3; } }
 @media (prefers-reduced-motion: reduce) {
     :root:is([data-layout="amber"], [data-layout="greencrt"]) .indicator.flapping { animation: none; }
@@ -1843,6 +1880,7 @@ try {
                 <div class="legend">
                     <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Pass</div>
                     <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Slow</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#f0821e"></div>Hub: build differs</div>
                     <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Fail</div>
                     <div class="legend-item"><div class="legend-dot" style="background:var(--gray)"></div>No data</div>
                     <div class="legend-item"><div class="legend-dot legend-flap"></div>Flapping</div>
@@ -2964,6 +3002,7 @@ try {
             html += "</tr>";
         }
         tbody.innerHTML = html;
+        markSelectedRow();
 
         // Attach click handlers
         var cells = tbody.querySelectorAll("td[data-src]");
@@ -2994,10 +3033,14 @@ try {
     function hubReachCell(ep, at) {
         var age = at ? Math.round((Date.now() - at) / 1000) : null;
         var ok = age !== null && age <= HUB_FRESH_S;
+        // Same rule as the build line under each hostname in Registered Endpoints.
+        var build = ep.build || "unknown";
+        var oldBuild = ok && hubRelease && hubRelease !== "unknown" && build !== hubRelease;
         var tip = !at ? "The hub has not heard from " + ep.hostname
             : ep.hostname + (ok ? " reaches the hub" : " is silent") + " — last heard " +
-              (age < 90 ? age + " s" : Math.round(age / 60) + " min") + " ago";
-        return "<td class='hubreach'><div class='cell-indicators'><div class='indicator " + (!at ? "none" : (ok ? "pass" : "fail")) +
+              (age < 90 ? age + " s" : Math.round(age / 60) + " min") + " ago" +
+              (oldBuild ? " — warning: runs build " + build.substring(0, 7) + ", the hub serves " + hubRelease.substring(0, 7) : "");
+        return "<td class='hubreach'><div class='cell-indicators'><div class='indicator " + (!at ? "none" : (oldBuild ? "warn" : (ok ? "pass" : "fail"))) +
                "' title='" + escAttr(tip) + "'>&uarr;</div></div></td>";
     }
 
@@ -3109,6 +3152,7 @@ try {
             html += "</tr>";
         }
         table.querySelector("tbody").innerHTML = html;
+        markSelectedRow();
 
         // The box starts folded (it's partly admin), so its title carries the
         // verdict: a failing target must not hide behind a closed panel.
@@ -3176,6 +3220,15 @@ try {
         for (var c = 0; c < cells.length; c++) {
             cells[c].classList.toggle("selected", cells[c].getAttribute("data-src") === src && cells[c].getAttribute("data-dst") === dst);
         }
+        markSelectedRow();
+    }
+
+    // Tint the whole row of the selected cell (the selected cell's own tr).
+    function markSelectedRow() {
+        var rows = document.querySelectorAll(".matrix tr");
+        for (var r = 0; r < rows.length; r++) {
+            rows[r].classList.toggle("row-sel", !!rows[r].querySelector("td.selected"));
+        }
     }
 
     function onCellClick(e) {
@@ -3189,6 +3242,7 @@ try {
         var prev = document.querySelectorAll(".matrix td.selected");
         for (var p = 0; p < prev.length; p++) prev[p].classList.remove("selected");
         td.classList.add("selected");
+        markSelectedRow();
         loadDetail(src, dst);
     }
 
@@ -3770,6 +3824,7 @@ try {
         this.style.display = "none";
         var prev = document.querySelectorAll(".matrix td.selected");
         for (var p = 0; p < prev.length; p++) prev[p].classList.remove("selected");
+        markSelectedRow();
     });
 
     // ---------------------------------------------------------------
