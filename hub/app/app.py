@@ -1243,7 +1243,7 @@ def api_time():
 #
 # The hub is infrastructure, not a test participant, but it can still fail
 # quietly: a full disk stops both the sweep and the syslog cap from helping,
-# and a dead service (chronyd, dropbear, the syslog listener) degrades
+# and a dead service (chronyd, sshd, the syslog listener) degrades
 # correlation or access without ever showing up in the matrix. This is a
 # separate concern from /api/time, which is specifically about clock
 # discipline for syslog pinning; this endpoint is the general "is the box

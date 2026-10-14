@@ -110,7 +110,7 @@ Diagram: `docs/TOPOLOGY.md`.
     unparseable output) returns `chrony: null` with a `reason`
   - `GET /api/health` — hub self-health for the dashboard's "Hub Health"
     panel: OpenRC service status (`HUB_HEALTH_SERVICES`, default
-    `confettid-hub,chronyd,dropbear,open-vm-tools,lldpd`), syslog listener state,
+    `confettid-hub,chronyd,sshd,open-vm-tools,lldpd`), syslog listener state,
     load average, memory, disk, uptime, build (commit, from the bundle's
     `RELEASE`). Same never-500 discipline as
     `/api/time` — a check that can't run (e.g. `rc-service` missing) reports
@@ -181,9 +181,10 @@ Every `traceroute` result is diffed hub-side against the previous sample for
 that (source, target) pair (`hub/app/pathchange.py`, hooked into
 `POST /results`); a detected change is logged as a tagged row in `syslog`
 (see below) and surfaced as a marker on the traceroute cell. The rule: **a
-hop position only counts when both samples got a real reply.** `traceroute`
-here runs `-q 1` (constraint 10 — one probe per hop), so a single dropped
-probe is ordinary noise, not a path change, and comparing only hops both
+hop position only counts when both samples got a real reply.** The test
+runs `mtr --report` (per-hop loss and RTT spread in `output`; plain
+`traceroute -q 1` is the fallback on a node without mtr), so a single
+dropped probe is ordinary noise, not a path change, and comparing only hops both
 samples reached makes that automatic rather than a separate check. Path
 length alone is never a trigger either — a trace that simply got shorter or
 longer produces no positional mismatch by itself; a real reroute always
@@ -490,15 +491,28 @@ off. It only tells: updating stays manual.
 node install, not by a fresh hub build: the banner shows "unknown" until the hub's
 first `confettictl-update`), read from the tarball's pax
 header (GitHub) or the bundle's `RELEASE` file (hub). An ssh command gets
-dropbear's minimal PATH, so the push's remote command sets PATH itself.
+a minimal PATH, so the push's remote command sets PATH itself.
+
+**SSH server.** OpenSSH (`sshd` + `openssh-sftp-server`), not Dropbear (switched 2026-10-14: Dropbear has no
+SFTP, so scp and Paramiko uploads failed, and it drops large packets). `/etc/ssh/sshd_config.d/10-confetti.conf`
+keeps root password login on (`PermitRootLogin yes`; the documented `root` login and the hub, which has no
+`authorized_keys`, depend on it) and sets `MaxStartups 100:30:200`, because every node SSHes to every peer on the
+same cron tick and the default `10:30:100` would drop connections in a mesh of about 10 nodes or more. Only an
+ed25519 host key is generated (`key_types_to_generate` in `/etc/conf.d/sshd`; RSA is slow on a 128 MB clone).
+Each build's `switch_ssh_server()` (called last, above the `--update` exit) moves a VM that still has Dropbear
+over: converts its ed25519 host key so clients see no change, stops Dropbear, starts sshd, and only then removes
+Dropbear and rewrites `dropbear` to `sshd` in hub.env's health list; if sshd does not start Dropbear is started
+again. A dashboard push runs the whole update inside a Dropbear session; stopping Dropbear only stops its
+listener, so the session survives (confirm exit code 255 does not appear). `confettictl-setup.sh` starts `sshd`.
+`confettictl-update --rollback` does not undo it. R40 checks it.
 
 ### Node (one per network segment under test)
 - Alpine Linux VM, ~128 MB RAM, DHCP on its interface
 - Installed to `/usr/local/bin/confetti/`, config at `/etc/confetti/config`
-- Servers: dropbear (SSH), busybox httpd via OpenRC service **`confettid-httpd`**,
+- Servers: sshd (OpenSSH, SFTP included), busybox httpd via OpenRC service **`confettid-httpd`**,
   iperf3, `smbd` via OpenRC service **`confettid-smbd`** (opt-in, `ENABLE_SMB`),
   `smtpd` (OpenSMTPD) via OpenRC service **`confettid-smtpd`** (opt-in, `ENABLE_SMTP`)
-- Clients: curl, ssh, traceroute, iperf3, smbclient, fping, `nc` (hand-rolled
+- Clients: curl, ssh, mtr (traceroute as fallback), iperf3, smbclient, fping, `nc` (hand-rolled
   SMTP conversation — see below) — driven by cron every 60s
 - Cloned from a single golden template, or installed straight from the hub
   (`/install.sh`, see Hub-managed nodes)
@@ -740,7 +754,7 @@ These were live bugs that a review caught; each has a comment at the site.
    but Python's parser does not, so the hub rejects the *entire* batch with a
    400 — and on a healthy lab SSH is always sub-second, so nothing would ever
    be recorded. Use arithmetic: `$(( _elapsed * 1000 ))`.
-10. **Traceroute is rationed, deliberately.** `-q 1` with `-m 10`, run on
+10. **Traceroute is rationed, deliberately.** `mtr -c 5` (fallback `traceroute -q 1`) with `-m 10`, run on
    `TRACEROUTE_INTERVAL` (default 300s) and on demand when HTTP or SSH to a
    target has just failed. At the old settings (3 probes, 15 hops, 2s wait) a
    black-holed path cost 90s per target and, tested serially, overran the 60s
@@ -776,8 +790,8 @@ These were live bugs that a review caught; each has a comment at the site.
      that dropbear's `dbclient` rejects, so OpenSSH is required.
    - Never add the `dropbear-ssh` subpackage. It installs its own
      `/usr/bin/ssh` symlink to `dbclient` and collides with
-     `openssh-client-default` at that path. Plain `dropbear` is the server
-     only and does not pull it in.
+     `openssh-client-default` at that path. Dropbear is no longer installed:
+     the server is `openssh-server` + `openssh-sftp-server` (R14, R40).
    - `samba-server` and `samba-client`, not the `samba` metapackage. The
      metapackage drags in winbind and the AD domain-controller machinery;
      `samba-server` depends on neither (`samba-dc` depends on it, not the

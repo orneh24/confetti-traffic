@@ -1,0 +1,21 @@
+#!/bin/sh
+# Dev shim for `mtr -n --report --report-wide -c N -i S -m HOPS --timeout T TARGET`.
+# Prints a report-format table. DEV_TRACE_PATH works as in the traceroute
+# shim: space-separated hop addresses, last one the target IP.
+_target="$*"
+_target="${_target##* }"
+
+echo "Start: 2026-01-01T00:00:00+0000"
+echo "HOST: dev                         Loss%   Snt   Last   Avg  Best  Wrst StDev"
+if [ -n "${DEV_TRACE_PATH:-}" ]; then
+    _hop=0
+    for _addr in $DEV_TRACE_PATH; do
+        _hop=$((_hop + 1))
+        printf '%3d.|-- %-26s 0.0%%     5    %d.0   %d.0   %d.0   %d.0   0.1\n' \
+            "$_hop" "$_addr" "$_hop" "$_hop" "$_hop" "$_hop"
+    done
+else
+    echo "  1.|-- 10.0.0.1                   0.0%     5    1.1   1.1   1.0   1.2   0.1"
+    echo "  2.|-- 10.0.0.2                   0.0%     5    2.2   2.2   2.1   2.3   0.1"
+    printf '  3.|-- %-26s 0.0%%     5    3.3   3.3   3.2   3.4   0.1\n' "$_target"
+fi

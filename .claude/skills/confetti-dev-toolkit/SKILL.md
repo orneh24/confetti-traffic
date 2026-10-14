@@ -50,7 +50,7 @@ shim (`DEV_HOSTNAME`), so one workstation plays many nodes.
   the way to put a deliberately broken path into the demo mesh (red cells,
   a failure-triggered traceroute, a losing loss/jitter row).
 
-External binaries the scripts shell out to (`ping`, `ssh`, `traceroute`,
+External binaries the scripts shell out to (`ping`, `ssh`, `traceroute`, `mtr`,
 `dig`, `iperf3`, `smbclient`, `fping`, `nc`, `ip`, `chronyc`) are shimmed under
 `dev/shims/` (`DEV_CHRONY=ok|drift|unsynced|off` picks the clock state
 register reports); `curl` and `jq` are the real thing.

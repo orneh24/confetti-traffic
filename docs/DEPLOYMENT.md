@@ -98,7 +98,7 @@ For each network segment:
 On the first clone, also check:
 
 - [ ] `confettictl-status` shows passing tests after a minute
-- [ ] `rc-service dropbear status`, `confettid-httpd`, `crond`, `lldpd` and
+- [ ] `rc-service sshd status`, `confettid-httpd`, `crond`, `lldpd` and
       `open-vm-tools` are running, plus `iperf3` / `confettid-smbd` /
       `confettid-smtpd` for any `ENABLE_*` flag you set
 - [ ] With `ENABLE_SMTP=true`: `grep -n relay /etc/smtpd/smtpd.conf` shows

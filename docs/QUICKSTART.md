@@ -15,7 +15,7 @@ reachable.
 | Syslog receiver (optional, UDP) | hub, same process | 514 |
 | NTP for the lab (UDP) | hub, `chronyd` | 123 |
 | HTTP test target | node, `confettid-httpd` | 80 |
-| SSH test target | node, dropbear | 22 |
+| SSH test target | node, sshd | 22 |
 | SMB test target (opt-in) | node, `confettid-smbd` | 445 |
 | SMTP test target (opt-in) | node, `confettid-smtpd` | 25 |
 | iperf3 (opt-in) | node, `iperf3` | 5201 |
@@ -54,7 +54,7 @@ Restart the hub after editing: `rc-service confettid-hub restart`.
 | `HUB_BUSY_TIMEOUT_MS` | 5000 | |
 | `HUB_PATH_CHANGE_ENABLED` | true | log traceroute path changes to syslog |
 | `HUB_UPDATE_CHECK` | true | at service start, check GitHub for a newer main commit so the login banner can say so; false = never call out |
-| `HUB_HEALTH_SERVICES` | `confettid-hub,chronyd,dropbear,open-vm-tools,lldpd` | shown in Hub Health |
+| `HUB_HEALTH_SERVICES` | `confettid-hub,chronyd,sshd,open-vm-tools,lldpd` | shown in Hub Health |
 | `HUB_HEALTH_SERVICE_TIMEOUT_S` | 3 | time limit for each service check in Hub Health |
 | `HUB_PUSH_TIMEOUT_S` | 600 | time limit for one node's push-update |
 | `HUB_PUSH_SEEN_MINUTES` | 10 | push only to nodes seen this recently |

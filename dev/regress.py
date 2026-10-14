@@ -192,7 +192,7 @@ def _():
 def _():
     p = []
     trust = "node/scripts/confettictl-trust-hub.sh"
-    need(grep(r"^\s*rm .*dropbear_.*host_key", NODE_BUILD), "cleanup no longer deletes dropbear host keys", p)
+    need(grep(r"^\s*rm .*ssh_host_", NODE_BUILD), "cleanup no longer deletes the SSH host keys", p)
     # Every node must hold the same key; a per-build keygen breaks the SSH
     # test between nodes installed separately.
     p += ["node build generates its own mesh key: " + x
@@ -319,7 +319,9 @@ def _():
 @check("R10", "traceroute stays rationed")
 def _():
     p = []
-    need(grep(r"traceroute -n -q 1 ", CYCLE), "traceroute no longer runs -q 1", p)
+    need(grep(r"traceroute -n -q 1 ", CYCLE), "traceroute fallback no longer runs -q 1", p)
+    need(grep(r"mtr -n --report .*-c \"\$\{MTR_COUNT:-5\}\" .*-m \"\$\{TRACEROUTE_MAX_HOPS:-10\}\"", CYCLE),
+         "mtr no longer runs with a probe count and the max-hops cap", p)
     need(grep(r"TRACEROUTE_MAX_HOPS:-10", CYCLE), "max hops no longer defaults to 10", p)
     need(grep(r"TRACEROUTE_INTERVAL:-300", CYCLE), "interval no longer defaults to 300", p)
     need(grep(r'TRACE_THIS_CYCLE" = "yes" \] \|\| \[ "\$_failed_now" = "yes"', CYCLE),
@@ -371,7 +373,9 @@ def _():
     pkgs = set(re.findall(r"[a-z0-9][a-z0-9._-]+", re.sub(r"#[^\n]*", "", m.group(0)))) if m else set()
     for want in ("iputils-ping", "openssh-client", "samba-server", "samba-client", "opensmtpd"):
         need(want in pkgs, "package %s missing from apk add" % want, p)
-    for bad in ("dropbear-ssh", "iputils", "samba", "opensmtpd-openrc"):
+    for want in ("openssh-server", "openssh-sftp-server"):
+        need(want in pkgs, "package %s missing from apk add" % want, p)
+    for bad in ("dropbear", "dropbear-ssh", "iputils", "samba", "opensmtpd-openrc"):
         need(bad not in pkgs, "package %s must not be installed" % bad, p)
     # The hub needs an ssh client (and ssh-keygen, which it pulls in) for
     # push-update and its keypairs. sshpass went with the password-based
@@ -380,6 +384,8 @@ def _():
     hub_pkgs = set(re.findall(r"[a-z0-9][a-z0-9._-]+", hm.group(0))) if hm else set()
     need("openssh-client" in hub_pkgs, "hub: package openssh-client missing from apk add", p)
     need("sshpass" not in hub_pkgs, "hub: sshpass is back in apk add", p)
+    need("openssh-server" in hub_pkgs and "openssh-sftp-server" in hub_pkgs, "hub: openssh-server / openssh-sftp-server missing from apk add", p)
+    need("dropbear" not in hub_pkgs, "hub: dropbear is back in apk add", p)
     p += at(NODE_BUILD, grep(r"^[^#]*dropbear-ssh", NODE_BUILD))
     p += at(NODE_BUILD, grep(r"^[^#]*opensmtpd-openrc", NODE_BUILD))
     return p
@@ -544,6 +550,33 @@ def _():
     m = re.search(r"rm -f /etc/confetti/config[^\n]*\\\n[^\n]*", body)
     need(m and "template-hub-url" not in m.group(0), "node cleanup removes template-hub-url", p)
     need(grep(r"template-hub-url", SETUP), "confettictl-setup.sh no longer reads template-hub-url", p)
+    return p
+
+
+@check("R40", "SSH server is OpenSSH on hub and node: sshd installed, root password login on, switched from Dropbear last, health list says sshd")
+def _():
+    # Dropbear has no SFTP server and drops large packets (found 2026-10-14). Each build
+    # installs sshd and, on a VM that still has Dropbear, switches only after sshd runs.
+    # The switch must sit above the --update exit, or deployed VMs would never get it, and
+    # confettictl-setup.sh (re-run by every update) must not turn Dropbear back on.
+    p = []
+    for f, done in ((HUB_BUILD, "=== Hub files updated ==="), (NODE_BUILD, "=== Node files updated ===")):
+        body = read(f)
+        need(re.search(r"^switch_ssh_server\(\) \{", body, re.M), "%s lost switch_ssh_server()" % f, p)
+        need("openssh-server openssh-sftp-server" in body, "%s: the switch must install openssh-server and openssh-sftp-server" % f, p)
+        need("PermitRootLogin yes" in body, "%s: sshd drop-in must keep root password login on" % f, p)
+        call = [m.start() for m in re.finditer(r"^switch_ssh_server$", body, re.M)]
+        need(call and 0 <= body.find(done) and call[0] < body.find(done),
+             "%s: switch_ssh_server must be called before the --update exit" % f, p)
+        need(body.find("rc-update del dropbear") > body.find("rc-service sshd start") > 0,
+             "%s: Dropbear must only be removed after sshd was started" % f, p)
+        need(not re.search(r"^[^#\n]*rc-update add dropbear", body, re.M), "%s enables dropbear again" % f, p)
+    need(re.search(r"HEALTH_SERVICES=[^\n]*\bsshd\b", read(HUB_BUILD)), "hub.env health list must name sshd", p)
+    need("dropbear" not in read("hub/app/config.py").split("HEALTH_SERVICES")[1].split(")")[0],
+         "hub config.py health default still lists dropbear", p)
+    setup = read("node/scripts/confettictl-setup.sh")
+    need("rc-update add sshd" in setup and not re.search(r"^[^#\n]*(rc-update add|rc-service) dropbear", setup, re.M),
+         "confettictl-setup.sh must start sshd, not dropbear", p)
     return p
 
 

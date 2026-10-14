@@ -54,7 +54,7 @@ session. `-h` for the rest of the flags (group, `ENABLE_SMB`/`ENABLE_SMTP`/
 
 ### What's real vs. what's shimmed
 
-`dev/shims/` stands in for `ping`, `ssh`, `traceroute`, `dig`, `iperf3`,
+`dev/shims/` stands in for `ping`, `ssh`, `traceroute`, `mtr`, `dig`, `iperf3`,
 `smbclient`, `fping`, `nc`, `ip` and `chronyc` — every external binary these
 scripts shell out to, matching exactly the call shape each script actually uses (see
 each shim's own header comment). `curl` and `jq` are the real thing.

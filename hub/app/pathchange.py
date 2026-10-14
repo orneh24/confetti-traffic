@@ -31,7 +31,10 @@ SEVERITY = 5                     # notice: a path change (ECMP flip, working
 MNEMONIC = "%CONFETTI-5-PATHCHANGE"
 
 HOP_LINE_RE = re.compile(r"^\s*(\d{1,3})\s+(\S.*)$")
-IPV4_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
+# mtr --report line: "  3.|-- 10.0.0.9   0.0%  5  1.2 ...". A silent hop has
+# "???" where the address is, which parse_hops skips like a traceroute "*".
+MTR_LINE_RE = re.compile(r"^\s*(\d{1,3})\.\|--\s+(\S+)")
+IPV4_RE =re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
 MESSAGE_RE = re.compile(
     r"^(?P<source>\S+) -> (?P<target>\S+) \((?P<target_ip>[^)]*)\): (?P<detail>.*)$",
     re.S,
@@ -39,7 +42,10 @@ MESSAGE_RE = re.compile(
 
 
 def parse_hops(output):
-    """Parse raw `traceroute -n -q 1 -w 2 -m N` text into hop data.
+    """Parse raw `mtr -n --report` or `traceroute -n -q 1 -w 2 -m N` text into hop data.
+
+    mtr is what nodes run now; traceroute is the fallback on a node without
+    mtr, and old stored samples are still in that form.
 
     Returns an ordered list of (hop_number, address) tuples, one per hop that
     got a real reply — keyed by traceroute's own hop number (the leading
@@ -58,7 +64,9 @@ def parse_hops(output):
         if not output:
             return hops
         for line in str(output).splitlines():
-            m = HOP_LINE_RE.match(line)
+            m = MTR_LINE_RE.match(line)
+            if not m:
+                m = HOP_LINE_RE.match(line)
             if not m:
                 continue
             try:

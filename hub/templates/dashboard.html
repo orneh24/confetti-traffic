@@ -3654,7 +3654,11 @@ try {
             var out = String(r.output || "").split("\n")[0].trim();
             if (s.order[t] === "traceroute") {
                 // One line per hop; keep hop number and address, e.g. "1 10.3.1.1 | 2 * ".
+                // An mtr line ("3.|-- 10.0.0.9  0.0%  5 ...") keeps hop, address and loss.
                 out = String(r.output || "").split("\n").map(function(h) {
+                    var m = h.match(/^\s*(\d+)\.\|--\s+(\S+)\s+(\S+)/);
+                    if (m) return m[1] + " " + m[2] + " " + m[3].replace(/\.0%?$/, "%");
+                    if (/^\s*(Start:|HOST:)/.test(h)) return "";
                     return h.trim().split(/\s+/).slice(0, 2).join(" ");
                 }).filter(Boolean).join(" | ");
             }

@@ -68,7 +68,7 @@ Boot the ISO, log in as `root` (no password) and run `setup-alpine`:
 | Proxy | `none`, unless your lab needs one |
 | NTP client | `chrony` |
 | Mirror | `f` (fastest) |
-| SSH server | `dropbear` |
+| SSH server | `dropbear` (the build switches it to OpenSSH; setup-alpine's `openssh` choice refuses root password login) |
 | Disk | `sda`, mode `sys`, erase `y` |
 
 `sys` installs to disk. The other modes run from RAM.
@@ -331,8 +331,9 @@ rejecting the probe address with `550` is normal. See `CLAUDE.md`
 constraint 21 for why this can never send mail.
 
 **T (traceroute)** runs rarely because a dead path is slow to trace. It
-uses one probe per hop and at most 10 hops, so it can't overrun the
-60-second cycle when the network breaks.
+runs `mtr` (five probes per hop, `MTR_COUNT`, at most 10 hops), so each hop
+shows its own loss and RTT spread and a broken path can't overrun the
+60-second cycle. A node without mtr falls back to plain `traceroute`.
 
 **Bandwidth on demand.** The dashboard's **Bandwidth Test** panel measures
 throughput when you ask. It isn't part of the minute-by-minute tests. Like
@@ -581,13 +582,13 @@ iperf3 -c <peer-ip> -t 2
 smbclient -N //<peer-ip>/labshare -c 'get probe.bin /dev/null'
 fping -c 5 <peer-ip>
 nc <peer-ip> 25          # wait for the 220 line, then type EHLO test, then QUIT
-traceroute <peer-ip>
+mtr -n --report -c 5 <peer-ip>
 ```
 
 A pair with no results at all may be excluded on purpose: check the Mesh
 Rules panel (or `curl http://<hub>/mesh-rules`).
 
-Usual causes: the service isn't running on the peer (dropbear,
+Usual causes: the service isn't running on the peer (sshd,
 `confettid-httpd`, `iperf3`, `confettid-smbd`, `confettid-smtpd`), or a
 firewall on the path blocks the port. If only SSH fails everywhere, check
 that the node has the mesh key (`ls /etc/confetti/id_confetti`). It comes
@@ -653,7 +654,7 @@ apk add --no-cache openssh-client-default
 ```
 
 Then copy from your workstation with `scp -O`. The `-O` matters: modern scp
-uses SFTP by default, and dropbear has no SFTP server.
+uses SFTP by default, and a fresh Alpine's dropbear has no SFTP server (the build installs OpenSSH, after which plain `scp` works).
 
 ```sh
 scp -O -r confetti root@<vm-ip>:/root/

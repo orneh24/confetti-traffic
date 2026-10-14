@@ -424,14 +424,26 @@ run_traceroute_test() {
     # tested serially, so a few broken paths used to overrun the 60s cycle
     # entirely — the tool got slowest precisely when the lab was broken.
     # One probe per hop and 10 hops caps a dead path at ~20s.
-    _output=$(traceroute -n -q 1 -w 2 -m "${TRACEROUTE_MAX_HOPS:-10}" "$_target_ip" 2>&1) || true
+    #
+    # mtr probes every hop in parallel, so it adds per-hop loss and RTT
+    # spread for about the same wall time. A node built before mtr was in the
+    # package list (this script self-updates ahead of the packages) falls back
+    # to plain traceroute, as does a non-root run (--test by hand): mtr refuses
+    # -i below 1 s for non-root and would report a false failure.
+    if command -v mtr >/dev/null 2>&1 && [ "$(id -u)" = "0" ]; then
+        _output=$(mtr -n --report --report-wide -c "${MTR_COUNT:-5}" -i 0.2 -m "${TRACEROUTE_MAX_HOPS:-10}" --timeout 2 "$_target_ip" 2>&1) || true
+    else
+        _output=$(traceroute -n -q 1 -w 2 -m "${TRACEROUTE_MAX_HOPS:-10}" "$_target_ip" 2>&1) || true
+    fi
 
     _end_s=$(date +%s)
     _elapsed=$(( _end_s - _start_s ))
     _latency=$(( _elapsed * 1000 ))
 
-    # Traceroute "succeeds" if we reached the destination (last hop shows the IP)
-    if printf '%s' "$_output" | tail -1 | grep -q "$_target_ip"; then
+    # "Succeeds" if we reached the destination (last hop shows the IP and,
+    # for mtr, did not lose every probe)
+    if printf '%s' "$_output" | tail -1 | grep -q "$_target_ip" &&
+       ! printf '%s' "$_output" | tail -1 | grep -q '100\.0'; then
         _success="true"
     else
         _success="false"

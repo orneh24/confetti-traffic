@@ -44,7 +44,7 @@ Bandwidth test (CLAUDE.md "On-demand bandwidth test"): `GET /api/bw`, `POST /api
 }]}
 ```
 
-`success` is stored as INTEGER 0/1. `latency_ms` is REAL and may be null. `output` is free text (traceroute dumps land here — keep it, the dashboard drill-down reads it). Empty `results` or missing `source` → 400.
+`success` is stored as INTEGER 0/1. `latency_ms` is REAL and may be null. `output` is free text (mtr tables, or traceroute text from a node without mtr, land here — keep it, the dashboard drill-down reads it). Empty `results` or missing `source` → 400.
 
 `DELETE /endpoints/<hostname>` — for stale clones. 404 if unknown. `POST /api/nodes/<hostname>/group` `{"group": "...", "rename": true}` — hub-side group override, empty clears (400 / 404); `rename: true` also queues a node rename (response `rename` = queued|skipped, plus `rename_reason`). The dashboard sends it for every new non-empty group.
 
@@ -75,7 +75,7 @@ Storage rules that differ from `results`:
 
 ## Path-change detection
 
-`POST /results` diffs each incoming `traceroute` row against the previous sample stored for that (source, target) pair (`_previous_traceroute`/`_note_path_change` in `app.py`, parsing/diff logic in `hub/app/pathchange.py`). A detected change is `INSERT`ed into `syslog` — not a new table — tagged `host=confetti-hub`, `mnemonic=%CONFETTI-5-PATHCHANGE`, severity 5, `source_ip=127.0.0.1`, using the batch's own `received` timestamp so it lands centred in the dashboard's ±5 min pinned window. `GET /api/path-changes` reads it back via `pathchange.split_message`.
+`POST /results` diffs each incoming `traceroute` row against the previous sample stored for that (source, target) pair (`_previous_traceroute`/`_note_path_change` in `app.py`, parsing/diff logic in `hub/app/pathchange.py`, whose `parse_hops` reads both mtr `--report` lines and traceroute lines). A detected change is `INSERT`ed into `syslog` — not a new table — tagged `host=confetti-hub`, `mnemonic=%CONFETTI-5-PATHCHANGE`, severity 5, `source_ip=127.0.0.1`, using the batch's own `received` timestamp so it lands centred in the dashboard's ±5 min pinned window. `GET /api/path-changes` reads it back via `pathchange.split_message`.
 
 The diff rule: a hop position only counts when **both** samples got a real reply (`-q 1` means a single dropped probe is noise, not a change) — `parse_hops` simply omits no-reply hops, so comparing only hop numbers common to both samples makes this automatic. Path length alone is never a trigger for the same reason.
 

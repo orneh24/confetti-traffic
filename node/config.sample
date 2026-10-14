@@ -72,6 +72,10 @@ LLDP_INTERVAL=300
 # expensive to measure.
 TRACEROUTE_MAX_HOPS=10
 
+# Probes per hop for the mtr-based traceroute test (per-hop loss and RTT
+# spread). More probes give a steadier loss figure but a longer test.
+MTR_COUNT=5
+
 # Payload size for the path-MTU probe, in bytes. 1472 payload + 28 bytes of
 # IP/ICMP header = 1500, the standard Ethernet MTU. Lower this if your lab
 # runs a smaller baseline MTU.

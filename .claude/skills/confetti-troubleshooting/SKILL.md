@@ -68,7 +68,7 @@ Go to the node logs before looking at the network.
 
 A failing direction with a working reverse points at the *target*, not the path:
 
-- Target's server is down — dropbear, busybox httpd, iperf3, or (if `ENABLE_SMB=true`/`ENABLE_SMTP=true`) `confettid-smbd`/`confettid-smtpd` not started. For those three, the dashboard's Mesh Settings (`GET /settings`) can override the local flag on every node at once — check it before editing a node's config. Verify locally on the target first: `nc -z <ip> 22 25 80 445 5201` from a neighbour.
+- Target's server is down — sshd, busybox httpd, iperf3, or (if `ENABLE_SMB=true`/`ENABLE_SMTP=true`) `confettid-smbd`/`confettid-smtpd` not started. For those three, the dashboard's Mesh Settings (`GET /settings`) can override the local flag on every node at once — check it before editing a node's config. Verify locally on the target first: `nc -z <ip> 22 25 80 445 5201` from a neighbour.
 - Target firewalled at the host level (Alpine default has none — if `iptables` rules exist, someone added them).
 - If both directions fail for every pair crossing one point in the network, and traceroute dies at that hop, that is a real network problem — outside this harness, and the concern of whatever project owns the routing/switching in the lab.
 - Before concluding it's the network, check `lldpcli show neighbors` on the node (always-on, not gated) — a node on the wrong vSwitch port group registers and often still gets a DHCP lease, but is plugged into the wrong place entirely.
@@ -83,7 +83,10 @@ Its `success` field gates on the banner + `EHLO` response only — a real relay 
 
 ## Reading Traceroute Output
 
-The stored `output` is the full traceroute. The last hop matching the target IP is what marks success. Useful patterns:
+The stored `output` is an `mtr --report` table (hop, address, Loss%, Snt, Last, Avg, Best, Wrst, StDev); a node without mtr stores plain traceroute text. The last hop matching the target IP, with under 100% loss, is what marks success. Useful patterns:
+
+- Loss that starts at one hop and carries through every later hop → real loss from that hop on. Loss at one hop only, with later hops clean, is usually that router rate-limiting its own replies, not a problem.
+- High StDev or Wrst at one hop that later hops don't share → jitter or a busy control plane at that device.
 
 - Stops at a fixed point every time → a device or ACL on the path that isn't forwarding past it.
 - Reaches partway then times out → asymmetric routing, or a return path that differs from the forward one.

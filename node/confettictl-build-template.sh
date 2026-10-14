@@ -88,9 +88,11 @@ apk_step apk add --no-cache --no-progress \
     curl \
     jq \
     traceroute \
+    mtr \
     bind-tools \
     iperf3 \
-    dropbear \
+    openssh-server \
+    openssh-sftp-server \
     busybox-extras \
     openssh-client \
     open-vm-tools \
@@ -117,9 +119,10 @@ log "Packages installed"
 #                      openssh-keygen (so that needs no separate entry).
 #                      confettictl-test-cycle.sh passes -o flags that dropbear's dbclient
 #                      rejects, so the OpenSSH client is required.
-#   dropbear         — the SSH *server* only. Do NOT add the `dropbear-ssh`
-#                      subpackage: it installs its own /usr/bin/ssh symlink to
-#                      dbclient and would collide with openssh-client-default.
+#   openssh-server   — the SSH server (was dropbear until 2026-10-14: no SFTP, drops
+#                      large packets). openssh-sftp-server makes scp/sftp work. Do NOT
+#                      add `dropbear-ssh`: its /usr/bin/ssh symlink to dbclient
+#                      collides with openssh-client-default.
 #   samba-server     — provides /usr/sbin/smbd only. Deliberately NOT the
 #                      `samba` metapackage, which drags in winbind and the AD
 #                      DC machinery this test has no use for on a 128 MB VM.
@@ -134,6 +137,10 @@ log "Packages installed"
 #                      like the entries above — a client-only ICMP tool with
 #                      nothing else on the image at that path. run_loss_test()
 #                      drives it for the always-on loss/jitter probe.
+#   mtr              — the traceroute test's main tool: per-hop loss and RTT
+#                      spread from parallel probes. Plain `traceroute` stays
+#                      installed as the fallback run_traceroute_test() uses
+#                      when mtr is missing. Check the package pulls no GUI libs.
 #   opensmtpd        — verified against the Alpine index: community repo,
 #                      v3.20 branch shows 7.5.0_p0-r0, ~325 KiB download /
 #                      ~820 KiB installed. depends="!postfix ca-certificates",
@@ -183,6 +190,9 @@ fi
 if ! command -v fping >/dev/null 2>&1; then
     log "WARNING: fping missing -- loss/jitter tests will not work"
 fi
+if ! command -v mtr >/dev/null 2>&1; then
+    log "WARNING: mtr missing -- traceroute tests fall back to plain traceroute"
+fi
 
 # Enable open-vm-tools on boot
 rc-update add open-vm-tools default
@@ -219,7 +229,7 @@ else
     log "Setting root password"
     echo "root:${CONFETTI_ROOT_PASSWORD}" | chpasswd
 
-    # Dropbear permits root password login by default (no -w in DROPBEAR_OPTS).
+    # Root password SSH login is kept on by the sshd drop-in (switch_ssh_server below).
 
     log "Credentials: root / ${CONFETTI_ROOT_PASSWORD}"
 fi
@@ -332,7 +342,7 @@ cp -f "${SCRIPT_DIR}/services/confettictl-login-setup.sh" /etc/profile.d/confett
 cp -f "${SCRIPT_DIR}/services/confettictl-login-status.sh" /etc/profile.d/confettictl-login-status.sh
 
 # Samba (SMB probe server). Config is installed unconditionally like the
-# other service files, but — unlike dropbear/confettid-httpd below — confettid-smbd is
+# other service files, but — unlike sshd/confettid-httpd below — confettid-smbd is
 # deliberately NOT rc-update'd here. It only starts when a clone's config
 # sets ENABLE_SMB=true, which confettictl-setup.sh enforces at boot time, matching how
 # iperf3 is handled.
@@ -449,8 +459,93 @@ fi
 # -------------------------------------------------------------------
 log "Enabling services"
 
-# dropbear (SSH)
-rc-update add dropbear default
+# SSH server: OpenSSH sshd (it was Dropbear until 2026-10-14). Dropbear has no
+# SFTP server, so scp/sftp and Paramiko uploads fail, and it drops large
+# packets. Called once, after everything else is installed (see below).
+#
+# Safe to run on a VM that still has Dropbear (the first --update, or a fresh
+# build on an Alpine that was installed with Dropbear) and a no-op afterwards.
+# Dropbear is stopped only after sshd is installed and its config checks out,
+# and it is removed only after sshd is confirmed running; on any failure it is
+# started again, so the VM never loses SSH. The session running this script
+# survives: stopping Dropbear only stops its listener, not open connections.
+switch_ssh_server() {
+    apk_step apk add --no-cache --no-progress openssh-server openssh-sftp-server
+    if [ ! -x /usr/sbin/sshd ] || [ ! -f /etc/init.d/sshd ]; then
+        log "WARNING: OpenSSH is not installed -- SSH stays as it is"
+        return 0
+    fi
+
+    # Root password login stays on (the lab logins and the hub depend on it);
+    # OpenSSH's own default would refuse it. MaxStartups: the mesh test makes
+    # every node SSH to every peer on the same cron tick, and the default
+    # (10:30:100) starts dropping connections in a mesh of more than ~10 nodes.
+    mkdir -p /etc/ssh/sshd_config.d
+    _conf=/etc/ssh/sshd_config.d/10-confetti.conf
+    cat > "$_conf.new" <<'SSHEOF'
+# written by build-template.sh, replaced on every build and update
+PermitRootLogin yes
+PasswordAuthentication yes
+MaxStartups 100:30:200
+SSHEOF
+    _conf_changed=1
+    if cmp -s "$_conf.new" "$_conf" 2>/dev/null; then
+        _conf_changed=""
+        rm -f "$_conf.new"
+    else
+        mv -f "$_conf.new" "$_conf"
+    fi
+    # ed25519 only: RSA key generation is slow on a small clone's first boot.
+    if grep -q '^key_types_to_generate=' /etc/conf.d/sshd 2>/dev/null; then
+        sed -i 's/^key_types_to_generate=.*/key_types_to_generate="ed25519"/' /etc/conf.d/sshd
+    else
+        echo 'key_types_to_generate="ed25519"' >> /etc/conf.d/sshd
+    fi
+
+    # Keep the host key clients already know, so nobody gets a "host key
+    # changed" warning (needs the Dropbear ed25519 key, which Alpine makes).
+    if [ -f /etc/dropbear/dropbear_ed25519_host_key ] && [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
+        apk_step apk add --no-cache --no-progress dropbear-convert
+        if command -v dropbearconvert >/dev/null 2>&1 &&
+           dropbearconvert dropbear openssh /etc/dropbear/dropbear_ed25519_host_key /etc/ssh/ssh_host_ed25519_key >/dev/null 2>&1; then
+            chmod 600 /etc/ssh/ssh_host_ed25519_key
+            log "Kept the SSH host key (converted from Dropbear)"
+        else
+            rm -f /etc/ssh/ssh_host_ed25519_key
+            log "NOTE: could not convert the Dropbear host key; clients will see a new one"
+        fi
+    fi
+
+    if rc-service sshd status >/dev/null 2>&1; then
+        # Already running: reload only if the drop-in changed (a reload is a re-exec).
+        [ -z "$_conf_changed" ] || rc-service sshd reload >/dev/null 2>&1 || true
+    else
+        # Makes the missing host keys and runs sshd -t.
+        if ! rc-service sshd checkconfig >/dev/null 2>&1; then
+            log "WARNING: sshd config check failed -- SSH stays on Dropbear"
+            return 0
+        fi
+        rc-service dropbear stop >/dev/null 2>&1 || true
+        rc-service sshd start >/dev/null 2>&1 || true
+        _i=0
+        while [ "$_i" -lt 5 ] && ! rc-service sshd status >/dev/null 2>&1; do
+            sleep 1
+            _i=$((_i + 1))
+        done
+        if ! rc-service sshd status >/dev/null 2>&1; then
+            [ ! -e /etc/runlevels/default/dropbear ] || rc-service dropbear start >/dev/null 2>&1 || true
+            log "WARNING: sshd did not start -- SSH stays on Dropbear"
+            return 0
+        fi
+    fi
+
+    rc-update add sshd default >/dev/null 2>&1 || true
+    if [ -e /etc/runlevels/default/dropbear ] || [ -f /etc/init.d/dropbear ]; then
+        rc-update del dropbear default >/dev/null 2>&1 || true
+        apk del --no-progress dropbear dropbear-openrc dropbear-convert >/dev/null 2>&1 || true
+        log "SSH server switched from Dropbear to OpenSSH"
+    fi
+}
 
 # crond (needed for test cycle, activated by confettictl-setup.sh)
 rc-update add crond default
@@ -488,6 +583,9 @@ MOTDEOF
 
 # --update stops here. Everything below prepares a template: it deletes the
 # node's config, stamps and hostname, and must never run on a live node.
+# SSH last: everything else is installed, so a problem here leaves a complete VM.
+switch_ssh_server
+
 if [ "$UPDATE_MODE" = "yes" ]; then
     log "=== Node files updated ==="
     exit 0
@@ -499,7 +597,7 @@ fi
 log "Cleaning up for template conversion"
 
 # Remove SSH *host* keys so each clone generates its own on first boot.
-rm -f /etc/dropbear/dropbear_*_host_key
+rm -f /etc/ssh/ssh_host_* /etc/dropbear/dropbear_*_host_key
 
 # Remove the keys fetched from a hub during build-time testing. Each clone
 # fetches them from its own hub at setup (confettictl-trust-hub.sh); a pin baked into

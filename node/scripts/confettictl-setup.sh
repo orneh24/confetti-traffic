@@ -579,9 +579,10 @@ rc-update add confettid-httpd default 2>/dev/null || true
 rc-service confettid-httpd restart 2>/dev/null || rc-service confettid-httpd start 2>/dev/null || \
     log "WARNING: could not start confettid-httpd"
 
-# Start dropbear (SSH server)
-rc-update add dropbear default 2>/dev/null || true
-rc-service dropbear start 2>/dev/null || true
+# Start sshd (SSH server). The build switches a VM from Dropbear to OpenSSH;
+# this only makes sure it is enabled and up.
+rc-update add sshd default 2>/dev/null || true
+rc-service sshd start 2>/dev/null || true
 
 # Start iperf3 if enabled
 if [ "$ENABLE_IPERF" = "true" ]; then

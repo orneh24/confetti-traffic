@@ -31,7 +31,7 @@ agent dir, hub port.
 exist as a file in `node/services/` or be created by a build script.
 Current set: `confettid-httpd`, `confettid-iperf3`, `confettid-smbd`, `confettid-smtpd`,
 `confettid-firstboot`, `confettid-hub`, `confettid-hub-firstboot`, plus
-stock `crond`, `dropbear`, `chronyd`, `open-vm-tools`, `lldpd` (both roles,
+stock `crond`, `sshd`, `chronyd`, `open-vm-tools`, `lldpd` (both roles,
 always-on).
 
 **Config keys — three-way.** Every key in `config.sample` should be written by
