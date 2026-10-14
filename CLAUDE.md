@@ -53,7 +53,7 @@ Diagram: `docs/TOPOLOGY.md`.
   - `GET /api/results?minutes=N`, `GET /api/results/<source>/<target>`
   - `GET /api/path-changes?minutes=N` — detected traceroute path changes
     (see Syslog below); default 10, matching `/api/results`
-  - `GET /api/asymmetry?minutes=N` (default 60) � pairs whose forward and reverse
+  - `GET /api/asymmetry?minutes=N` (default 60) — pairs whose forward and reverse
     traceroute differ (hop count, or no shared subnet between 2+ routers each way) or
     that pass a test one way and fail it the other. A hint, not proof: router
     interfaces differ per direction, so addresses are never compared. Hub-side only;
@@ -237,6 +237,13 @@ the dashboard's "LLDP Neighbors" panel (open by default; the viewer's Collapse i
 read posts nothing, so it never wipes the last known neighbors or fails a cycle.
 Neighbor text comes from frames anything on the wire can send: render it escaped,
 never trust it. Not a test: no result type, never in the matrix.
+
+### Hub reach row
+The dashboard matrix's first row, "Hub / node → hub", has one arrow per node:
+green when the hub heard that node (newest result post or registration) in the
+last `HUB_FRESH_S` = 180 s, red when older, grey when never. Worked out in the
+browser (`newestHeard`, `hubReachCell`); not a test, no result type, and a node
+that cannot reach the hub can only show as silent.
 
 ### Static targets
 Addresses that run no agent — gateways, device loopbacks, outside hosts —
@@ -819,8 +826,8 @@ These were live bugs that a review caught; each has a comment at the site.
    counterpart — `confettictl-hub-setup.sh` / `confettictl-node-setup.sh`, invited at login — has its
    own guard: `case "$-" in *i*)` (interactive shell only) plus `[ -t 0 ]`
    (real tty), so it never fires for `ssh host cmd` or scp/rsync's
-   non-interactive shell either. The hub's hook nests the stamp check inside the
-   tty check, since its banner needs the tty too; same three layers.
+   non-interactive shell either. Both hooks nest the stamp check inside the
+   tty check; same three layers.
 17. **The syslog listener is a second writer, so `busy_timeout` is required.**
    It writes to the same SQLite file as the results API from its own thread.
    WAL permits one writer at a time; without a busy timeout on *both*

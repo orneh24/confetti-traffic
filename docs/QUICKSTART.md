@@ -84,6 +84,8 @@ The root password (`confetti`) is set at build time. Override it with
 | `HUB_NTP` | no | default true; `confettictl-setup.sh` points chrony at the hub. false leaves `chrony.conf` alone |
 | `AGENT_AUTOUPDATE` | no | default true |
 | `TRACEROUTE_INTERVAL` | no | default 300; seconds between scheduled traceroutes |
+| `TRACEROUTE_MAX_HOPS` | no | default 10; hop limit of the traceroute test |
+| `MTR_COUNT` | no | default 5; mtr probes per hop in the traceroute test |
 | `LLDP_INTERVAL` | no | default 300; seconds between LLDP neighbor reports to the hub (shown in the dashboard's LLDP Neighbors panel) |
 
 If `HUB_URL` or `SUBNET` is empty, `confettictl-register.sh` exits and the

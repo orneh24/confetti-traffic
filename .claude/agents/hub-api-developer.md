@@ -25,6 +25,7 @@ You develop the Confetti Traffic hub: `hub/app/app.py` (Flask), SQLite storage, 
 - `POST /api/nodes/<hostname>/group` `{group, rename?}` — hub-side group override (empty clears; 400 bad group / 404 unknown node), applied by `GET /endpoints`; `rename: true` also queues a node rename (response `rename` = queued|skipped, plus `rename_reason` when skipped). The dashboard sends it for every new non-empty group.
 - `POST /lldp` `{source, neighbors:[{local_port, chassis_id, port_id, port_descr, sys_name, sys_descr, mgmt_ip}]}` — replaces that node's rows in `lldp_neighbors` (empty list valid; at most 64 neighbors kept; non-object body or neighbor 400); `GET /api/lldp` — every node's latest rows. Display data only; rows go with the node on delete or stale prune.
 - `GET /api/results?minutes=N` (default 10), `GET /api/results/<source>/<target>` (LIMIT 200, newest first).
+- `GET /api/changes?minutes=N&limit=N` (60 / 15; `format=text`, `ip=1`) — Recent Changes for the console script `confettictl-changes`; rules in `hub/app/changes.py`, a Python copy of the dashboard's `computeRecentChanges` (check R41).
 - `GET /api/path-changes?minutes=N` (default 10) — detected traceroute path changes, `[{source, target, received_at, detail}]`; reads `syslog` rows tagged `host=confetti-hub`/`mnemonic=%CONFETTI-5-PATHCHANGE` written by the `POST /results` hook (`hub/app/pathchange.py`), not a separate table.
 - `GET|POST /targets`, `DELETE /targets/<name>` — static targets; each declares which tests apply. Unknown test names rejected 400 with the valid list.
 - `GET /settings` — `{enable_smb, enable_smtp, enable_iperf}`, each bool or null (null = node's own config); pulled by `confettictl-test-cycle.sh` every cycle. `POST /settings` — partial update from the dashboard, bool/null only, unknown keys 400. Never fold these into `/endpoints`' bare array.
@@ -74,8 +75,9 @@ direct `INSERT` from `hub/app/pathchange.py`'s `_note_path_change` when a
 traceroute sample's hop list differs from the previous one for that
 (source, target) pair, tagged `host=confetti-hub`/
 `mnemonic=%CONFETTI-5-PATHCHANGE`. The diff rule: a hop only counts when
-both samples got a real reply (`-q 1` — one dropped probe is noise, not a
-change), which `parse_hops` implements by simply omitting no-reply hops, so
+both samples got a real reply (a silent hop is noise, not a change), which
+`parse_hops` implements by omitting no-reply hops (`???` in mtr `--report`
+lines, `*` in traceroute lines), so
 comparing only hops common to both samples makes it automatic. Read back via
 `GET /api/path-changes`. This is the one `syslog` row the hub itself can
 vouch for, and it still gets no special trust: anything on the segment can

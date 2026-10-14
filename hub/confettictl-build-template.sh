@@ -183,7 +183,7 @@ cp -f "${SCRIPT_DIR}/confettictl-run.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/confettictl-hub-setup.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/confettictl-check-update.sh" "$HUB_INSTALL_DIR/"
 chmod +x "$HUB_INSTALL_DIR/confettictl-check-update.sh"
-# Console view of the dashboard's Recent Changes: confettictl-changes [-f].
+# Console view of the dashboard's Recent Changes: confettictl-changes [-o].
 cp -f "${SCRIPT_DIR}/scripts/confettictl-changes.sh" "$HUB_INSTALL_DIR/"
 chmod +x "$HUB_INSTALL_DIR/confettictl-changes.sh"
 ln -sf "$HUB_INSTALL_DIR/confettictl-changes.sh" /usr/local/bin/confettictl-changes
@@ -555,7 +555,6 @@ cat > /etc/motd <<'MOTDEOF'
   +--------------------------------------------------------+
   |                    confetti hub VM                      |
   |                                                        |
-  |   Dashboard: http://<this-vm-ip>/                      |
   |   Config:    /opt/confetti-hub/hub.env                  |
   |   DB:        /var/lib/confetti/hub.db                   |
   |   Logs:      /var/log/confetti-hub.log                  |

@@ -333,7 +333,13 @@ constraint 21 for why this can never send mail.
 **T (traceroute)** runs rarely because a dead path is slow to trace. It
 runs `mtr` (five probes per hop, `MTR_COUNT`, at most 10 hops), so each hop
 shows its own loss and RTT spread and a broken path can't overrun the
-60-second cycle. A node without mtr falls back to plain `traceroute`.
+60-second cycle. A node without mtr falls back to plain `traceroute`, and so does a
+non-root `--test traceroute` run, since mtr needs root.
+
+**Hub row.** The matrix's first row, Hub (node → hub), shows an up arrow per node:
+green if the hub heard a result post or registration from it in the last 3
+minutes, red if older, grey if never. It is not a test; red or grey means the
+hub is not hearing from that node.
 
 **Bandwidth on demand.** The dashboard's **Bandwidth Test** panel measures
 throughput when you ask. It isn't part of the minute-by-minute tests. Like

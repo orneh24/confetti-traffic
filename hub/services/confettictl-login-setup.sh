@@ -12,6 +12,7 @@ case "$-" in
                 /opt/confetti-hub/confettictl-hub-setup.sh || true
             else
                 # Already configured: say how to run the wizard again.
+                _ct_conf=1
                 echo "To re-run setup:"
                 echo "  /opt/confetti-hub/confettictl-hub-setup.sh --force"
                 echo
@@ -20,12 +21,16 @@ case "$-" in
             _ct_ip=$(ip -o -4 addr show scope global 2>/dev/null | awk '{print $4; exit}' | cut -d/ -f1)
             _ct_port=$(sed -n 's/^HUB_PORT=//p' /opt/confetti-hub/hub.env 2>/dev/null | tr -d '"' | tail -n 1)
             case "$_ct_port" in ""|80) _ct_port="" ;; *) _ct_port=":$_ct_port" ;; esac
+            if [ -n "$_ct_ip" ] && [ -n "$_ct_conf" ]; then
+                echo "Dashboard: http://${_ct_ip}${_ct_port}/"
+                echo
+            fi
             if [ -n "$_ct_ip" ]; then
                 echo "Install a node from this hub (on a plain Alpine VM):"
                 echo "  wget -O /tmp/i.sh http://${_ct_ip}${_ct_port}/install.sh && sh /tmp/i.sh [group]"
                 echo
             fi
-            unset _ct_ip _ct_port
+            unset _ct_ip _ct_port _ct_conf
             # Installed build, and a newer one if the start-up check found it
             # (confettictl-check-update.sh). Only says "new" when the installed
             # commit is known and is not a prefix of the latest.
