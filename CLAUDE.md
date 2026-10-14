@@ -13,13 +13,15 @@ configuration, and deployment belong to a separate project — this system
 treats the network between nodes as an opaque path it tests, not something it
 configures.
 
-**Companion project: `../confetti-butler`** (separate repo — inventory, IPAM,
-config templates, topology). It imports `GET /endpoints` (reads `hostname`,
-`ip` and `group_name`; the group becomes the device's `site`, so a group set
-on the hub flows into it), its web UI copies this hub's look by hand
-(themes, `confettiBlast`, Shuffle), and its syslog receiver is a port of
-ours. Keep `/endpoints` a bare array with those keys. The
-`confetti-interop-checker` agent (user level) checks both sides.
+**Companion projects: `../confetti-butler`** (separate repo — inventory, IPAM,
+config templates, running-config backup and drift, syslog, alerting) **and
+`../confetti-topo`** (separate repo — the topology map: LLDP, BGP and OSPF
+neighbors, split out of butler on 2026-10-14). Both import `GET /endpoints`
+(they read `hostname`, `ip` and `group_name`; the group becomes the device's
+`site`, so a group set on the hub flows into it), both web UIs copy this hub's
+look by hand (themes, `confettiBlast`, Shuffle), and butler's syslog receiver
+is a port of ours. Keep `/endpoints` a bare array with those keys. The
+`confetti-interop-checker` agent (user level) checks all three sides.
 
 ## Architecture
 
@@ -462,6 +464,17 @@ Anything added to a build must go above that exit if it installs code, and
 below it if it only prepares a template. Scripts that cron may be running
 are installed via temp file + `mv`, never `cp` over the live file (sh reads
 a script as it runs).
+
+On a hub, `confettictl-update` first backs up the database (`sqlite3 .backup` into
+`/var/lib/confetti/backups`, newest 5 kept) and copies the code to
+`/opt/confetti-hub.prev`; after the restart it waits for `/api/health` and, if the
+hub never comes up (or the build fails), puts the old code back by itself and exits 1.
+`confettictl-update --rollback` does the same by hand. The database is not restored
+on a rollback (new versions only add tables and columns); `/etc/confetti-release` is
+written only once the hub is healthy. Ported from confetti-butler's `butler-update.sh`
+(tested with a fake `rc-service` in an `alpine:3.20` container: good update, unhealthy
+start, build failure, `--rollback`, closed stdin); the other way round, butler took this
+script's `-y`/confirm. A node has no database and none of this.
 
 Afterwards the hub restarts; a configured node re-runs `confettictl-setup.sh`. Update
 the hub first, then push the nodes: they can only get what the hub's bundle

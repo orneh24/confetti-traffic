@@ -931,7 +931,7 @@ LIVE = [("T2-live", "real node cycle posts to a live hub"),
         ("R2-live", "timestamps leave the hub as ISO-8601 Z"),
         ("R9-live", "hub still rejects latency_ms 0000"),
         ("R33-live", "group override beats register, drives mesh rules, dies with the endpoint"),
-        ("R34-live", "/endpoints stays a bare array with the keys confetti-butler imports"),
+        ("R34-live", "/endpoints stays a bare array with the keys confetti-butler and confetti-topo import"),
         ("R18-live", "syslog window and filter input"),
         ("R19-live", "null row keeps the batch; bad bodies get 400"),
         ("R21", "/api/time answers 200 on every chrony failure"),
@@ -1110,10 +1110,11 @@ def live_checks(base, db, tmp):
             http("DELETE", base + "/endpoints/" + h)
         return p
 
-    @check("R34-live", "/endpoints stays a bare array with the keys confetti-butler imports")
+    @check("R34-live", "/endpoints stays a bare array with the keys confetti-butler and confetti-topo import")
     def _():
-        # confetti-butler (companion repo) reads hostname, ip and group_name from
-        # every element and iterates the body directly; see CLAUDE.md "Companion project".
+        # confetti-butler and confetti-topo (companion repos) read hostname, ip and
+        # group_name from every element and iterate the body directly; see
+        # CLAUDE.md "Companion projects".
         p = []
         http("POST", base + "/register", {"hostname": "rt34a", "ip": "10.34.0.1",
                                           "subnet": "10.34.0.0/24", "group_name": "rt34"})
@@ -1123,7 +1124,7 @@ def live_checks(base, db, tmp):
         need(mine is not None, "the registered node is missing from /endpoints", p)
         if mine is not None:
             need({"hostname", "ip", "group_name"} <= set(mine),
-                 "/endpoints row lost a key butler imports: has %s" % sorted(mine), p)
+                 "/endpoints row lost a key butler or topo imports: has %s" % sorted(mine), p)
         http("DELETE", base + "/endpoints/rt34a")
         return p
 

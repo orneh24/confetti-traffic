@@ -5,6 +5,7 @@
 # Usage:
 #   confettictl-update         download the latest code, confirm, apply
 #   confettictl-update -y      same, without the confirmation
+#   confettictl-update --rollback    hub only: put the previous hub code back
 #   sh <repo>/confettictl-update.sh      apply from an unpacked repo instead of
 #                            downloading (no GitHub access: scp the repo over)
 #
@@ -19,6 +20,11 @@
 # The apply is `<role>/confettictl-build-template.sh --update`: the same install steps as
 # the build, so there is no second file list here to drift. It keeps the
 # node's config, hostname and keys, and the hub's hub.env and database.
+# On a hub it also backs up the database (sqlite3 .backup, newest 5 kept in
+# /var/lib/confetti/backups), keeps the old code as /opt/confetti-hub.prev,
+# waits for /api/health after the restart and puts the old code back by itself
+# if the hub does not come up. The database is not restored on a rollback:
+# new versions only add tables and columns.
 #
 # Manual only -- never put this on cron. It replaces confettictl-register.sh, which
 # constraint 13 says must be pushed deliberately: a broken copy stops
@@ -44,11 +50,13 @@ die() {
 
 [ "$(id -u)" -eq 0 ] || die "Must run as root"
 
+ROLLBACK=""
 case "${1:-}" in
     "") AUTO_YES="" ;;
     -y|--yes) AUTO_YES="1" ;;
+    --rollback) AUTO_YES="1"; ROLLBACK="1" ;;
     *)
-        echo "Usage: confettictl-update [-y]" >&2
+        echo "Usage: confettictl-update [-y | --rollback]" >&2
         exit 2
         ;;
 esac
@@ -70,6 +78,55 @@ else
         fi
     done
     die "No Confetti Traffic install found on this VM. For a fresh Alpine VM, use confettictl-install.sh."
+fi
+
+# -------------------------------------------------------------------
+# Hub safety net: code copy, database backup, health check, rollback.
+# A node has no database and updates from its hub, so none of this is for it.
+# -------------------------------------------------------------------
+HUB_DIR="/opt/confetti-hub"
+HUB_PREV="${HUB_DIR}.prev"
+HUB_ENV="${HUB_DIR}/hub.env"
+BACKUP_DIR="/var/lib/confetti/backups"
+BACKUP_KEEP=5
+HEALTH_WAIT_S=30
+
+hub_health_url() {
+    _port=$(sed -n 's/^HUB_PORT=//p' "$HUB_ENV" 2>/dev/null | tr -d '"' | tail -n 1)
+    printf 'http://127.0.0.1:%s/api/health' "${_port:-80}"
+}
+
+hub_wait_healthy() {
+    _url=$(hub_health_url)
+    _i=0
+    while [ "$_i" -lt "$HEALTH_WAIT_S" ]; do
+        if curl -fs -m 3 -o /dev/null "$_url"; then
+            return 0
+        fi
+        sleep 1
+        _i=$((_i + 1))
+    done
+    return 1
+}
+
+# Put the previous hub code back. $1 = where the current (bad) one is parked.
+# The database is not restored: new versions only add tables and columns.
+hub_swap_back() {
+    rc-service confettid-hub stop >/dev/null 2>&1 || true
+    rm -rf "$1"
+    mv "$HUB_DIR" "$1"
+    mv "$HUB_PREV" "$HUB_DIR"
+    rc-service confettid-hub start >/dev/null 2>&1 || true
+}
+
+if [ -n "$ROLLBACK" ]; then
+    [ "$ROLE" = "hub" ] || die "--rollback is for a hub; a node updates from its hub"
+    [ -d "$HUB_PREV" ] || die "No previous version at $HUB_PREV"
+    log "Rolling back the hub code to the previous version"
+    hub_swap_back "${HUB_DIR}.rolled-back"
+    hub_wait_healthy || die "Previous version did not become healthy -- check /var/log/confetti-hub.log"
+    log "Rolled back. The version you left is in ${HUB_DIR}.rolled-back"
+    exit 0
 fi
 
 if [ -n "${CONFETTI_UPDATE_URL:-}" ]; then
@@ -174,29 +231,72 @@ if [ -z "$AUTO_YES" ]; then
     esac
 fi
 
+BACKUP=""
+if [ "$ROLE" = "hub" ]; then
+    # Database backup (WAL-safe: sqlite3 .backup, not a file copy), then a copy
+    # of the code for the rollback. Both before anything is changed.
+    _db=$(sed -n 's/^HUB_DB_PATH=//p' "$HUB_ENV" 2>/dev/null | tr -d '"' | tail -n 1)
+    _db="${_db:-/var/lib/confetti/hub.db}"
+    if [ -f "$_db" ]; then
+        command -v sqlite3 >/dev/null 2>&1 || die "sqlite3 is not installed. Nothing changed."
+        mkdir -p "$BACKUP_DIR"
+        chmod 700 "$BACKUP_DIR"
+        BACKUP="${BACKUP_DIR}/hub-pre-update-$(date -u +%Y%m%d-%H%M%S).db"
+        log "Backing up the database to $BACKUP"
+        sqlite3 "$_db" ".backup '${BACKUP}'" || die "Database backup failed. Nothing changed."
+        chmod 600 "$BACKUP"
+        # Our own names (no spaces), newest first; drop all but the newest few.
+        for _old in $(ls -1t "${BACKUP_DIR}"/hub-pre-update-*.db 2>/dev/null | tail -n +"$((BACKUP_KEEP + 1))"); do
+            rm -f "$_old"
+        done
+    fi
+    log "Saving the current hub code to $HUB_PREV (confettictl-update --rollback)"
+    rm -rf "$HUB_PREV"
+    cp -a "$HUB_DIR" "$HUB_PREV" || die "Could not copy $HUB_DIR. Nothing changed."
+fi
+
 log "Running $ROLE/confettictl-build-template.sh --update"
 # The hub build stamps COMMIT into the node bundle it builds.
-CONFETTI_UPDATE_COMMIT="$COMMIT" sh "$SRC/$ROLE/confettictl-build-template.sh" --update \
-    || die "confettictl-build-template.sh --update failed (see above)"
+if ! CONFETTI_UPDATE_COMMIT="$COMMIT" sh "$SRC/$ROLE/confettictl-build-template.sh" --update; then
+    if [ "$ROLE" = "hub" ]; then
+        log "Build failed -- putting the previous hub code back"
+        hub_swap_back "${HUB_DIR}.failed"
+        [ -z "$BACKUP" ] || log "Database backup: $BACKUP"
+    fi
+    die "confettictl-build-template.sh --update failed (see above)"
+fi
 
-cat > "$RELEASE_FILE" <<EOF
+write_release() {
+    cat > "$RELEASE_FILE" <<EOF
 commit=$COMMIT
 source=$FROM
 updated=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 EOF
+}
 
 STATUS=0
 
 if [ "$ROLE" = "hub" ]; then
     # The schema migrates itself on start (init_db). Results pushed during
     # the few seconds of the restart are lost.
-    if rc-service confettid-hub restart; then
-        log "confettid-hub restarted"
+    rc-service confettid-hub restart >/dev/null 2>&1 || true
+    if hub_wait_healthy; then
+        log "confettid-hub restarted and healthy. Previous code kept in $HUB_PREV (confettictl-update --rollback)."
+        [ -z "$BACKUP" ] || log "Database backup: $BACKUP"
+        write_release
     else
-        log "WARNING: confettid-hub did not restart -- check /var/log/confetti-hub.log"
-        STATUS=1
+        log "New hub did not become healthy within ${HEALTH_WAIT_S}s -- rolling back"
+        hub_swap_back "${HUB_DIR}.failed"
+        if hub_wait_healthy; then
+            log "Rolled back to the previous code. The failed one is in ${HUB_DIR}.failed; see /var/log/confetti-hub.log"
+        else
+            log "Previous code is not healthy either -- check /var/log/confetti-hub.log"
+        fi
+        [ -z "$BACKUP" ] || log "Database backup: $BACKUP"
+        exit 1
     fi
 elif [ -f "$NODE_CONFIG" ]; then
+    write_release
     # The documented safe re-run: keeps the config, merges cron, restarts
     # crond and confettid-httpd, and registers with the hub.
     log "Re-running confettictl-setup.sh"
@@ -218,6 +318,7 @@ elif [ -f "$NODE_CONFIG" ]; then
         fi
     done
 else
+    write_release
     log "No $NODE_CONFIG: files updated, confettictl-setup.sh not run."
 fi
 

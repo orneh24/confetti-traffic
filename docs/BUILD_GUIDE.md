@@ -434,6 +434,13 @@ build again in `--update` mode: new packages, new code and service files,
 with none of the build's cleanup. It keeps `hub.env`, the database, the
 hub's SSH keys and the root password, then restarts the hub. It also
 rebuilds the node bundle the hub serves at `/node/bundle.tar.gz`.
+
+Before it changes anything it backs up the database to
+`/var/lib/confetti/backups` (newest 5 kept) and copies the hub code to
+`/opt/confetti-hub.prev`. After the restart it waits up to 30 seconds for
+`/api/health`; if the hub does not come up, or the build fails, the old code
+is put back automatically. `confettictl-update --rollback` goes back one
+version by hand. The database is not restored on a rollback.
 A hub update overwrites any hand edits in `/opt/confetti-hub/agent/`.
 
 **2. The nodes, from the hub.** On the dashboard, use the update button on a
