@@ -239,7 +239,7 @@ Neighbor text comes from frames anything on the wire can send: render it escaped
 never trust it. Not a test: no result type, never in the matrix.
 
 ### Hub reach row
-The dashboard matrix's first row, "Hub / node → hub", has one arrow per node:
+The dashboard matrix's first column, "Hub / node → hub", has one arrow per node row:
 green when the hub heard that node (newest result post or registration) in the
 last `HUB_FRESH_S` = 180 s, red when older, grey when never. Worked out in the
 browser (`newestHeard`, `hubReachCell`); not a test, no result type, and a node

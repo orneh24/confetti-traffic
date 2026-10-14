@@ -336,7 +336,7 @@ shows its own loss and RTT spread and a broken path can't overrun the
 60-second cycle. A node without mtr falls back to plain `traceroute`, and so does a
 non-root `--test traceroute` run, since mtr needs root.
 
-**Hub row.** The matrix's first row, Hub (node → hub), shows an up arrow per node:
+**Hub column.** The matrix's first column, Hub (node → hub), shows an up arrow per node:
 green if the hub heard a result post or registration from it in the last 3
 minutes, red if older, grey if never. It is not a test; red or grey means the
 hub is not hearing from that node.

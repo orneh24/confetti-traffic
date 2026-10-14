@@ -113,7 +113,7 @@ unauthenticated. Use it to corroborate a failure window, never to rule one out.
 
 ## Hub-Side Checks
 
-- The hub is not a test participant: it has no test rows or columns. The matrix's first row ("Hub / node → hub") only shows whether each node reached the hub in the last 3 minutes (a result post or registration); grey or red there means the hub is not hearing from that node, not that a test failed.
+- The hub is not a test participant: it has no test rows or columns. The matrix's first column ("Hub / node → hub") only shows whether each node reached the hub in the last 3 minutes (a result post or registration); grey or red there means the hub is not hearing from that node, not that a test failed.
 - SQLite is WAL mode; a hub whose disk is full accepts nothing and returns 500s. Check disk before blaming the network.
 - `serve.py` falls back to Flask's single-threaded dev server when `waitress` cannot be imported, and a long request there blocks collection from every node. Check the hub log's first lines for that fallback warning.
 
