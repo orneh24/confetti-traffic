@@ -605,6 +605,13 @@ dashboard) to see the output.
   `/var/log/confetti/register.log`.
 - To trust the hub's current key: `confettictl-trust-hub` on the node.
 
+### Recent changes from the console
+
+On the hub, `confettictl-changes` prints the dashboard's Recent Changes (pass/fail
+flips, "ALL tests FAILED", traceroute path changes), newest last, then keeps
+running and prints new ones every 30 s (`-o` prints once and exits). `-n N` and `-m MINUTES` set the count and
+the look-back (15 and 60), and `-i` shows IP addresses instead of host names.
+
 ### Dashboard doesn't load
 
 On the hub:

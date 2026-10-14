@@ -183,6 +183,10 @@ cp -f "${SCRIPT_DIR}/confettictl-run.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/confettictl-hub-setup.sh" "$HUB_INSTALL_DIR/"
 cp -f "${SCRIPT_DIR}/scripts/confettictl-check-update.sh" "$HUB_INSTALL_DIR/"
 chmod +x "$HUB_INSTALL_DIR/confettictl-check-update.sh"
+# Console view of the dashboard's Recent Changes: confettictl-changes [-f].
+cp -f "${SCRIPT_DIR}/scripts/confettictl-changes.sh" "$HUB_INSTALL_DIR/"
+chmod +x "$HUB_INSTALL_DIR/confettictl-changes.sh"
+ln -sf "$HUB_INSTALL_DIR/confettictl-changes.sh" /usr/local/bin/confettictl-changes
 # Served at /confettictl-install.sh: installs a plain Alpine VM as a node from this hub.
 cp -f "${SCRIPT_DIR}/scripts/confettictl-node-install.sh" "$HUB_INSTALL_DIR/"
 chmod +x "$HUB_INSTALL_DIR/confettictl-run.sh" "$HUB_INSTALL_DIR/serve.py" "$HUB_INSTALL_DIR/confettictl-hub-setup.sh"
@@ -554,12 +558,9 @@ cat > /etc/motd <<'MOTDEOF'
   |   Dashboard: http://<this-vm-ip>/                      |
   |   Config:    /opt/confetti-hub/hub.env                  |
   |   DB:        /var/lib/confetti/hub.db                   |
-  |   Logs:      rc-service confettid-hub status             |
-  |                                                        |
-  |   Not configured yet? Log in and run:                  |
-  |     confettictl-hub-setup.sh                                       |
-  |   (runs automatically at first login if the            |
-  |    static IP hasn't been set)                          |
+  |   Logs:      /var/log/confetti-hub.log                  |
+  |   Status:    rc-service confettid-hub status            |
+  |   Changes:   confettictl-changes                       |
   |                                                        |
   |   If IP needs changing later:                          |
   |     confettictl-set-static-ip <ip/cidr> <gateway> [dns] [hostname] |

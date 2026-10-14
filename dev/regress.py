@@ -840,6 +840,39 @@ def _():
     return p
 
 
+@check("R41", "Recent Changes console copy (hub/app/changes.py): flips, all-down collapse, exclusions, path rows")
+def _():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("ch", "hub/app/changes.py")
+    ch = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ch)
+    t = lambda m: "2026-10-14 10:%02d:00" % m
+    row = lambda m, typ, ok, s="a", d="b": {"source": s, "target": d, "test_type": typ, "success": ok, "received_at": t(m)}
+    p = []
+    # ssh: pass -> fail -> pass; http stays up. Two flips, newest first.
+    rows = [row(1, "ssh", 1), row(1, "http", 1), row(2, "ssh", 0), row(2, "http", 1), row(3, "ssh", 1), row(3, "http", 1)]
+    c = ch.compute(rows, [], {}, set())
+    need([(x["kind"], x.get("to")) for x in c] == [("flip", True), ("flip", False)], "ssh flips wrong: %s" % c, p)
+    need(ch.text(c[1]) == "SSH: PASS -> FAIL" and ch.text(c[0]) == "SSH: FAIL -> PASS", "flip text wrong", p)
+    # every type that ran fails in one batch: one all-down row; a lone type is an ordinary flip
+    rows = [row(1, "ssh", 1), row(1, "http", 1), row(2, "ssh", 0), row(2, "http", 0)]
+    c = ch.compute(rows, [], {}, set())
+    need(len(c) == 1 and c[0]["kind"] == "all-down" and c[0]["count"] == 2, "all-down not collapsed: %s" % c, p)
+    c = ch.compute([row(1, "pmtu", 1), row(2, "pmtu", 0)], [], {}, set())
+    need(len(c) == 1 and c[0]["kind"] == "flip", "single-type batch was collapsed: %s" % c, p)
+    # an excluded group pair is dropped; a path row is kept; the limit applies
+    rows = [row(1, "ssh", 1), row(2, "ssh", 0)]
+    path = [{"source": "a", "target": "b", "received_at": t(5), "detail": "hop 2: x -> y"}]
+    need(ch.compute(rows, path, {"a": "g1", "b": "g2"}, {("g1", "g2")}) == [], "excluded pair was reported", p)
+    c = ch.compute(rows, path, {"a": "g1", "b": "g2"}, set())
+    need([x["kind"] for x in c] == ["path", "flip"], "path row missing or misordered: %s" % c, p)
+    need(len(ch.compute(rows, path, {}, set(), 1)) == 1, "limit ignored", p)
+    need(ch.compute(None, None, None, None) == [], "bad input did not degrade", p)
+    need(grep(r'"/api/changes"', APP), "/api/changes route missing", p)
+    need(grep(r"changes\.py", DASH), "dashboard no longer points at its Python copy", p)
+    return p
+
+
 @check("R37", "hub pages: every inline script parses")
 def _():
     # One raw line break inside a JS string (a lost escape) kills the whole
@@ -969,6 +1002,7 @@ LIVE = [("T2-live", "real node cycle posts to a live hub"),
         ("R19-live", "null row keeps the batch; bad bodies get 400"),
         ("R21", "/api/time answers 200 on every chrony failure"),
         ("R22-live", "correlation window round trip"),
+        ("R41-live", "/api/changes answers JSON and plain text"),
         ("R29-live", "every hub page answers 200 and links to the others")]
 
 
@@ -1201,6 +1235,15 @@ def live_checks(base, db, tmp):
                n("from=%s&to=%s&host=SW2" % (frm, to)), n("from=%s&to=%s" % (z(shifted), to)),
                n("from=%s&to=%s" % (offset, to))]
         return [] if got == [1, 1, 0, 0, 1] else ["counts %s, want [1, 1, 0, 0, 1]" % got]
+
+    @check("R41-live", "/api/changes answers JSON and plain text")
+    def _():
+        code, body = http("GET", base + "/api/changes?minutes=60")
+        code2, text = http("GET", base + "/api/changes?format=text&ip=1")
+        p = []
+        need(code == 200 and isinstance(json.loads(body), list), "/api/changes JSON: %s" % code, p)
+        need(code2 == 200, "/api/changes?format=text: %s" % code2, p)
+        return p
 
     @check("R29-live", "every hub page answers 200 and links to the others")
     def _():

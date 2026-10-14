@@ -705,6 +705,10 @@ a:hover { text-decoration: underline; }
     text-align: left;
 }
 .matrix td.excluded:hover { background: var(--bg-muted); outline: none; }
+/* First row: can each node reach the hub. Not a pair, so not clickable. */
+.matrix td.hubreach { cursor: default; }
+.matrix td.hubreach:hover { background: transparent; }
+.matrix tbody th.hub-th .ip { display: block; margin-left: 0; margin-top: 2px; }
 .rule-list { list-style: none; margin: 0 0 8px; padding: 0; }
 .rule-list li { display: flex; align-items: center; gap: 8px; padding: 3px 2px; }
 .rule-list .rule-name { flex: 1; }
@@ -2612,6 +2616,8 @@ try {
     // as a change — same honest limitation the hub's own path-change
     // detection has for a pair's very first stored sample.
     // ---------------------------------------------------------------
+    // The console script (confettictl-changes, GET /api/changes) uses a Python
+    // copy of these rules: hub/app/changes.py. Change one, change the other.
     function computeRecentChanges(rows, pathRows) {
         // An excluded pair stops testing; its last samples are not news.
         rows = rows.filter(function(r) { return !ruleFor(r.source, r.target_hostname); });
@@ -2932,8 +2938,12 @@ try {
         }
         thead.innerHTML = "<tr>" + hrow + "</tr>";
 
-        // Body
-        var html = "";
+        // Body. First row: does each node reach the hub? The hub only knows
+        // what reached it, so a node that cannot reach it shows as silent.
+        var html = "<tr><th class='hub-th'>Hub<span class='ip'>node &rarr; hub</span></th>";
+        var heard = newestHeard();
+        for (var k = 0; k < hosts.length; k++) html += hubReachCell(endpoints[k], heard[hosts[k]]);
+        html += "</tr>";
         for (var i = 0; i < hosts.length; i++) {
             html += "<tr><th>" + esc(hosts[i]) + nameIp(endpoints[i]) + "</th>";
             for (var j = 0; j < hosts.length; j++) {
@@ -2961,6 +2971,35 @@ try {
         for (var c = 0; c < cells.length; c++) {
             cells[c].addEventListener("click", onCellClick);
         }
+    }
+
+    // A node posts results every minute and registers every 5, so a node the
+    // hub heard from in the last 3 minutes reaches it.
+    var HUB_FRESH_S = 180;
+
+    // Newest time the hub heard from each node: a result post or a registration.
+    function newestHeard() {
+        var heard = {};
+        for (var i = 0; i < resultsData.length; i++) {
+            var r = resultsData[i];
+            var t = parseTs(r.received_at);
+            if (!(heard[r.source] >= t)) heard[r.source] = t;
+        }
+        for (var j = 0; j < endpoints.length; j++) {
+            var seen = parseTs(endpoints[j].last_seen);
+            if (!(heard[endpoints[j].hostname] >= seen)) heard[endpoints[j].hostname] = seen;
+        }
+        return heard;
+    }
+
+    function hubReachCell(ep, at) {
+        var age = at ? Math.round((Date.now() - at) / 1000) : null;
+        var ok = age !== null && age <= HUB_FRESH_S;
+        var tip = !at ? "Hub has not heard from " + ep.hostname
+            : (ok ? ep.hostname + " reaches the hub" : ep.hostname + " is silent: last heard from it ") +
+              " — " + (age < 90 ? age + " s" : Math.round(age / 60) + " min") + " ago";
+        return "<td class='hubreach'><div class='cell-indicators'><div class='indicator " + (!at ? "none" : (ok ? "pass" : "fail")) +
+               "' title='" + escAttr(tip) + "'>&uarr;</div></div></td>";
     }
 
     // Only draw types that actually have data somewhere. iperf is off by

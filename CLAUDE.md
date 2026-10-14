@@ -59,6 +59,11 @@ Diagram: `docs/TOPOLOGY.md`.
     interfaces differ per direction, so addresses are never compared. Hub-side only;
     shown on the pair's traceroute card. Rows: `a`, `b`, `comparable`, `asymmetric`,
     `reasons`, `one_way`, `fwd`/`rev` hops
+  - `GET /api/changes?minutes=N&limit=N` (60 / 15) - the dashboard's Recent Changes
+    (flips, all-down, path changes) worked out hub-side for the console script
+    `confettictl-changes [-o] [-n N] [-m MIN] [-i]` (follows unless `-o`) (`?format=text`, `?ip=1`). The rules
+    are a Python copy of `computeRecentChanges` in `hub/app/changes.py`; a change to
+    one needs the same change in the other (check R41 covers the Python side)
   - `DELETE /endpoints/<hostname>` (also drops its group override)
   - `POST /api/nodes/<hostname>/group` `{group}` — set a node's group from
     the dashboard (empty clears it). A hub-side override in the
@@ -645,7 +650,7 @@ hub/
   confettictl-build-template.sh   — builds the hub golden template
   serve.py            — production entrypoint (reads HUB_PORT at runtime)
   confettictl-run.sh              — foreground launcher for debugging
-  app/                — Flask API (app.py, config.py, pathchange.py,
+  app/                — Flask API (app.py, config.py, pathchange.py, changes.py,
                         syslog_server.py, nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
   templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light,
@@ -678,7 +683,7 @@ hub/
   agent/              — scripts served to nodes (created at build time)
   bundle/             — node bundle + RELEASE (created at build time)
   services/           — firstboot.initd, confettictl-login-setup.sh (also prints the installed build)
-  scripts/            — confettictl-hub-setup.sh, confettictl-node-install.sh (served as /confettictl-install.sh),
+  scripts/            — confettictl-hub-setup.sh, confettictl-changes.sh (console Recent Changes), confettictl-node-install.sh (served as /confettictl-install.sh),
                         confettictl-check-update.sh (started by confettid-hub's start_post; writes /run/confetti-hub-latest)
 node/
   confettictl-build-template.sh   — builds the node golden template

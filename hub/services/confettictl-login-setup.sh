@@ -1,5 +1,6 @@
 # /etc/profile.d/confettictl-login-setup.sh — invite an unconfigured hub to run
-# its setup wizard at first interactive login, then show the one-line node
+# its setup wizard at first interactive login, tell a configured one how to
+# re-run it, then show the one-line node
 # install command with this hub's real address. Guarded to interactive shells
 # with a real tty so it never fires for scp/rsync/non-interactive SSH
 # commands.
@@ -9,6 +10,11 @@ case "$-" in
         if [ -t 0 ]; then
             if [ ! -f /etc/confetti-hub/.setup-done ]; then
                 /opt/confetti-hub/confettictl-hub-setup.sh || true
+            else
+                # Already configured: say how to run the wizard again.
+                echo "To re-run setup:"
+                echo "  /opt/confetti-hub/confettictl-hub-setup.sh --force"
+                echo
             fi
             # Read after the wizard, so a just-set static IP is the one shown.
             _ct_ip=$(ip -o -4 addr show scope global 2>/dev/null | awk '{print $4; exit}' | cut -d/ -f1)

@@ -14,6 +14,7 @@ from flask import Flask, request, jsonify, render_template, g, Response, send_fi
 from . import config
 from . import syslog_server
 from . import pathchange
+from . import changes
 from . import nodemgmt
 from . import bandwidth
 
@@ -629,7 +630,15 @@ def api_path_changes():
         minutes = 10
     minutes = abs(minutes)
 
-    db = get_db()
+    out = path_change_rows(get_db(), minutes)
+    for c in out:
+        c["received_at"] = iso(c["received_at"])
+    return jsonify(out)
+
+
+def path_change_rows(db, minutes):
+    """Path-change notes from the last N minutes, newest first; received_at
+    stays in SQLite's format. Shared by /api/path-changes and /api/changes."""
     rows = db.execute(
         """SELECT received_at, message FROM syslog
            WHERE host = ? AND mnemonic = ?
@@ -646,9 +655,60 @@ def api_path_changes():
         out.append({
             "source": parsed["source"],
             "target": parsed["target"],
-            "received_at": iso(r["received_at"]),
+            "received_at": r["received_at"],
             "detail": parsed["detail"],
         })
+    return out
+
+
+@app.route("/api/changes", methods=["GET"])
+def api_changes():
+    """Recent Changes as the dashboard panel works them out (see changes.py).
+
+    ?minutes=N (default 60), ?limit=N (default 15, max 200). JSON is newest
+    first. ?format=text is plain text, oldest first, one line per change, for
+    the console script; ?ip=1 shows IP addresses instead of host names (a name
+    with no known IP stays as the name).
+    """
+    def num(key, default, top):
+        try:
+            return min(abs(int(request.args.get(key, default))), top)
+        except ValueError:
+            return default
+    minutes, limit = num("minutes", 60, 1440), num("limit", 15, 200)
+
+    db = get_db()
+    rows = db.execute(
+        """SELECT source, target_hostname AS target, test_type, success, received_at
+           FROM results WHERE received_at >= datetime('now', ? || ' minutes')
+           ORDER BY received_at, id""",
+        (f"-{minutes}",),
+    ).fetchall()
+    ends = db.execute(
+        """SELECT e.hostname, e.ip, COALESCE(o.group_name, e.group_name) AS group_name
+           FROM endpoints e LEFT JOIN group_overrides o ON o.hostname = e.hostname"""
+    ).fetchall()
+    group_of = {e["hostname"]: e["group_name"] for e in ends}
+    ip_of = {e["hostname"]: e["ip"] for e in ends}
+    for t in db.execute("SELECT name, ip FROM targets"):
+        ip_of.setdefault(t["name"], t["ip"])
+
+    out = changes.compute([dict(r) for r in rows], path_change_rows(db, minutes),
+                          group_of, excluded_pairs(db), limit)
+    use_ip = request.args.get("ip") in ("1", "true", "yes")
+
+    def shown(name):
+        return (ip_of.get(name) or name) if use_ip else name
+
+    if request.args.get("format") == "text":
+        lines = ["%sZ  %s -> %s  %s" % (c["received_at"], shown(c["source"]), shown(c["target"]),
+                                        changes.text(c)) for c in reversed(out)]
+        return Response("".join(l + "\n" for l in lines), mimetype="text/plain")
+    for c in out:
+        c["text"] = changes.text(c)
+        c["source_ip"] = ip_of.get(c["source"], "")
+        c["target_ip"] = ip_of.get(c["target"], "")
+        c["received_at"] = iso(c["received_at"])
     return jsonify(out)
 
 

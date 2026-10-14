@@ -568,11 +568,6 @@ cat > /etc/motd <<'MOTDEOF'
   +------------------------------------------------+
   |           confetti node                         |
   |                                                |
-  |   Not configured yet? Log in and run:          |
-  |     confettictl-node-setup.sh                              |
-  |   (runs automatically at first login if this   |
-  |    node hasn't been configured)                |
-  |                                                |
   |   Manual path:                                 |
   |     1. Edit /etc/confetti/config                |
   |        (copy from config.sample)               |
