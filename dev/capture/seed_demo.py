@@ -95,10 +95,19 @@ def seed_lldp():
             "mgmt_ip": "10.0.0.%d" % (10 + (i + 1) // 2)}]})
 
 
+def hub_build():
+    """The build this hub serves, so seeded nodes read as up to date (a node
+    reporting a different build gets an orange Hub arrow)."""
+    try:
+        return json.load(urllib.request.urlopen(HUB + "/node/release"))["commit"] or "unknown"
+    except Exception:
+        return "unknown"
+
+
 def main():
     for host, ip, group in NODES:
         post("/register", {"hostname": host, "ip": ip, "subnet": ip.rsplit(".", 1)[0] + ".0/24",
-                           "group_name": group, "build": "unknown", "managed": True,
+                           "group_name": group, "build": hub_build(), "managed": True,
                            "clock_synced": True, "clock_offset_s": -0.0012})
     seed_lldp()
     # A group set on the hub, so the matrix header and Endpoints list show the pencil mark.

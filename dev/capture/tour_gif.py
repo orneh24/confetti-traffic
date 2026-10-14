@@ -28,6 +28,8 @@ def frames(pg):
     pg.wait_for_timeout(1200)
     yield "Dashboard: every path and every test at a glance"
     pg.click(FAILING)
+    # The click scrolled the matrix sideways; bring the name and Hub columns back.
+    pg.evaluate("document.querySelector('#matrix-section .section-body').scrollLeft = 0")
     pg.wait_for_timeout(1200)
     yield "Dashboard: click a cell for that path's tests and history"
     # Mesh Settings starts folded; open it so the rules are in the frame.
