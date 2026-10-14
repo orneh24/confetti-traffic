@@ -3931,9 +3931,11 @@ try {
             var who = r.sys_name || r.chassis_id;
             var tip = [r.sys_descr, "chassis " + r.chassis_id, r.mgmt_ip ? "mgmt " + r.mgmt_ip : "",
                        "seen " + new Date(r.updated).toLocaleString()].filter(Boolean).join("\n");
+            // Only the neighbor's own text wraps (a long "GigabitEthernet1/0/24"
+            // would be cut off by the panel's edge); node and local port are short.
             html += "<tr><td>" + esc(r.node) + "</td><td>" + esc(r.local_port) + "</td>" +
-                    "<td title='" + escAttr(tip) + "'>" + esc(who) + "</td>" +
-                    "<td>" + esc(r.port_descr || r.port_id) + "</td></tr>";
+                    "<td class='wrap' title='" + escAttr(tip) + "'>" + esc(who) + "</td>" +
+                    "<td class='wrap'>" + esc(r.port_descr || r.port_id) + "</td></tr>";
         }
         document.querySelector("#lldp-table tbody").innerHTML = html ||
             "<tr><td colspan='4' class='detail-empty'>No neighbors reported</td></tr>";
