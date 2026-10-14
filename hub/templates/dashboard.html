@@ -782,7 +782,7 @@ a:hover { text-decoration: underline; }
     max-height: calc(100vh - 84px);
 }
 /* Grows to fit every endpoint; only past half the sidebar does the list
-   scroll, so Test Detail below always keeps room. */
+   scroll, so Test Detail above always keeps room. */
 .endpoints-section {
     flex: 0 1 auto;
     max-height: 50%;
@@ -2086,6 +2086,31 @@ try {
 
     <!-- Sidebar -->
     <div class="sidebar">
+        <div class="section detail-section">
+            <div class="section-header">
+                <span>Test Detail</span>
+                <span id="detail-close" style="cursor:pointer;display:none;color:var(--text-dim)">&times;</span>
+            </div>
+            <div class="section-body" id="detail-body">
+                <div class="detail-empty">Click a matrix cell to inspect test results</div>
+            </div>
+        </div>
+
+        <div class="section" id="lldp-section">
+            <div class="section-header">
+                <span>LLDP Neighbors<span class="hdr-note" id="lldp-note"></span></span>
+                <span class="hdr-actions">
+                    <button type="button" class="btn-small collapse-toggle" data-section="lldp-section">Collapse</button>
+                </span>
+            </div>
+            <div class="section-body">
+                <table class="ep-table" id="lldp-table">
+                    <thead><tr><th>Node</th><th>Port</th><th>Neighbor</th><th>Its port</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="section endpoints-section" id="endpoints-section">
             <div class="section-header">
                 <span>Registered Endpoints</span>
@@ -2108,31 +2133,6 @@ try {
                     </thead>
                     <tbody></tbody>
                 </table>
-            </div>
-        </div>
-
-        <div class="section" id="lldp-section">
-            <div class="section-header">
-                <span>LLDP Neighbors<span class="hdr-note" id="lldp-note"></span></span>
-                <span class="hdr-actions">
-                    <button type="button" class="btn-small collapse-toggle" data-section="lldp-section">Collapse</button>
-                </span>
-            </div>
-            <div class="section-body">
-                <table class="ep-table" id="lldp-table">
-                    <thead><tr><th>Node</th><th>Port</th><th>Neighbor</th><th>Its port</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="section detail-section">
-            <div class="section-header">
-                <span>Test Detail</span>
-                <span id="detail-close" style="cursor:pointer;display:none;color:var(--text-dim)">&times;</span>
-            </div>
-            <div class="section-body" id="detail-body">
-                <div class="detail-empty">Click a matrix cell to inspect test results</div>
             </div>
         </div>
     </div>
@@ -3924,14 +3924,20 @@ try {
     // through esc() (escAttr() inside the title attribute).
     function renderLldp(rows) {
         var html = "";
+        // Zebra stripes by node: the shade flips when the node changes, so one
+        // node's neighbors read as a block. Sorted so a node is never split.
+        rows = rows.slice().sort(function(a, b) { return a.node < b.node ? -1 : (a.node > b.node ? 1 : 0); });
+        var stripe = false, lastNode = null;
         for (var i = 0; i < rows.length; i++) {
             var r = rows[i];
+            if (lastNode !== null && r.node !== lastNode) stripe = !stripe;
+            lastNode = r.node;
             var who = r.sys_name || r.chassis_id;
             var tip = [r.sys_descr, "chassis " + r.chassis_id, r.mgmt_ip ? "mgmt " + r.mgmt_ip : "",
                        "seen " + new Date(r.updated).toLocaleString()].filter(Boolean).join("\n");
             // Only the neighbor's own text wraps (a long "GigabitEthernet1/0/24"
             // would be cut off by the panel's edge); node and local port are short.
-            html += "<tr><td>" + esc(r.node) + "</td><td>" + esc(r.local_port) + "</td>" +
+            html += "<tr" + (stripe ? " class='stripe'" : "") + "><td>" + esc(r.node) + "</td><td>" + esc(r.local_port) + "</td>" +
                     "<td class='wrap' title='" + escAttr(tip) + "'>" + esc(who) + "</td>" +
                     "<td class='wrap'>" + esc(r.port_descr || r.port_id) + "</td></tr>";
         }

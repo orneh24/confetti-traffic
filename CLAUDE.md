@@ -61,7 +61,7 @@ Diagram: `docs/TOPOLOGY.md`.
     `reasons`, `one_way`, `fwd`/`rev` hops
   - `GET /api/changes?minutes=N&limit=N` (60 / 15) - the dashboard's Recent Changes
     (flips, all-down, path changes) worked out hub-side for the console script
-    `confettictl-changes [-o] [-n N] [-m MIN] [-i]` (follows unless `-o`) (`?format=text`, `?ip=1`). The rules
+    `confettictl-changes [-o] [-n N] [-m MIN] [-s SEC] [-i]` (follows every 2 s unless `-o`; text answers carry `X-Results-Id`, and `?if_id=` of it gets an empty 304 while nothing new was posted) (`?format=text`, `?ip=1`). The rules
     are a Python copy of `computeRecentChanges` in `hub/app/changes.py`; a change to
     one needs the same change in the other (check R41 covers the Python side)
   - `DELETE /endpoints/<hostname>` (also drops its group override)

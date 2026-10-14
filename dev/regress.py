@@ -1243,6 +1243,14 @@ def live_checks(base, db, tmp):
         p = []
         need(code == 200 and isinstance(json.loads(body), list), "/api/changes JSON: %s" % code, p)
         need(code2 == 200, "/api/changes?format=text: %s" % code2, p)
+        # The script polls with if_id: unchanged means an empty 304, new data a full answer.
+        with urllib.request.urlopen(base + "/api/changes?format=text", timeout=15) as r:
+            rid = r.headers.get("X-Results-Id")
+        need(rid is not None, "text answer has no X-Results-Id", p)
+        code3, body3 = http("GET", base + "/api/changes?format=text&if_id=" + str(rid))
+        need(code3 == 304 and body3 == "", "if_id of the newest result did not give an empty 304: %s" % code3, p)
+        code4, _ = http("GET", base + "/api/changes?format=text&if_id=0")
+        need(code4 == 200, "if_id of an old id did not give a full answer: %s" % code4, p)
         return p
 
     @check("R29-live", "every hub page answers 200 and links to the others")

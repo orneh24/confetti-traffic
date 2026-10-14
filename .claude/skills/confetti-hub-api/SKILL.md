@@ -54,7 +54,7 @@ Bandwidth test (CLAUDE.md "On-demand bandwidth test"): `GET /api/bw`, `POST /api
 
 `GET /api/results?minutes=N` (default 10) — dashboard matrix. `GET /api/results/<source>/<target>` — drill-down, newest first, LIMIT 200.
 
-`GET /api/changes?minutes=N&limit=N` (60 / 15; `format=text`, `ip=1`) — Recent Changes for the console script `confettictl-changes`; rules are `hub/app/changes.py`, a Python copy of the dashboard's `computeRecentChanges` (keep both in step, check R41).
+`GET /api/changes?minutes=N&limit=N` (60 / 15; `format=text`, `ip=1`, `if_id=` of the `X-Results-Id` header for an empty 304 when nothing new) — Recent Changes for the console script `confettictl-changes`; rules are `hub/app/changes.py`, a Python copy of the dashboard's `computeRecentChanges` (keep both in step, check R41).
 
 `GET /api/path-changes?minutes=N` (default 10) — detected traceroute path changes, `[{source, target, received_at, detail}]`. Reads `syslog` rows tagged `host=confetti-hub`/`mnemonic=%CONFETTI-5-PATHCHANGE`, written by `hub/app/pathchange.py` via a hook inside `push_results` (see Path-change detection below), not a new table.
 

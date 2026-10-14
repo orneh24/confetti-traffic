@@ -668,7 +668,9 @@ def api_changes():
     ?minutes=N (default 60), ?limit=N (default 15, max 200). JSON is newest
     first. ?format=text is plain text, oldest first, one line per change, for
     the console script; ?ip=1 shows IP addresses instead of host names (a name
-    with no known IP stays as the name).
+    with no known IP stays as the name). Text answers carry X-Results-Id (the
+    newest result id); ?if_id=<that value> gets an empty 304 while nothing new
+    has been posted, so the script can poll every couple of seconds for free.
     """
     def num(key, default, top):
         try:
@@ -678,6 +680,10 @@ def api_changes():
     minutes, limit = num("minutes", 60, 1440), num("limit", 15, 200)
 
     db = get_db()
+    # Read first: a post landing during the queries below is seen on the next poll.
+    newest = db.execute("SELECT COALESCE(MAX(id), 0) FROM results").fetchone()[0]
+    if request.args.get("if_id") == str(newest):
+        return Response(status=304, headers={"X-Results-Id": str(newest)})
     rows = db.execute(
         """SELECT source, target_hostname AS target, test_type, success, received_at
            FROM results WHERE received_at >= datetime('now', ? || ' minutes')
@@ -703,7 +709,8 @@ def api_changes():
     if request.args.get("format") == "text":
         lines = ["%sZ  %s -> %s  %s" % (c["received_at"], shown(c["source"]), shown(c["target"]),
                                         changes.text(c)) for c in reversed(out)]
-        return Response("".join(l + "\n" for l in lines), mimetype="text/plain")
+        return Response("".join(l + "\n" for l in lines), mimetype="text/plain",
+                        headers={"X-Results-Id": str(newest)})
     for c in out:
         c["text"] = changes.text(c)
         c["source_ip"] = ip_of.get(c["source"], "")

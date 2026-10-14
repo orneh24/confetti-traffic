@@ -615,7 +615,9 @@ dashboard) to see the output.
 
 On the hub, `confettictl-changes` prints the dashboard's Recent Changes (pass/fail
 flips, "ALL tests FAILED", traceroute path changes), newest last, then keeps
-running and prints new ones every 30 s (`-o` prints once and exits). `-n N` and `-m MINUTES` set the count and
+running and prints new ones within about 2 s of the hub receiving them (`-s SEC` changes
+the check interval, `-o` prints once and exits). A change is only known once the node
+posts its results, up to a minute after it happens. `-n N` and `-m MINUTES` set the count and
 the look-back (15 and 60), and `-i` shows IP addresses instead of host names.
 
 ### Dashboard doesn't load
