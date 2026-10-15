@@ -814,13 +814,15 @@ a:hover { text-decoration: underline; }
     flex-direction: column;
     min-height: 220px;
 }
-#lldp-section {
-    flex: 0 1 auto;
-    max-height: 40%;
-    display: flex;
-    flex-direction: column;
+/* Recent Changes and LLDP Neighbors share one row of the main column. */
+.pair-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
 }
-#lldp-section .section-body { overflow: auto; min-height: 0; }
+@media (max-width: 1100px) { .pair-row { grid-template-columns: minmax(0, 1fr); } }
+#lldp-section .section-body, #changes-section .section-body { overflow: auto; max-height: 420px; }
 .detail-section .section-body {
     overflow: auto;
     flex: 1;
@@ -1903,6 +1905,7 @@ try {
              log of transitions (pass<->fail, and traceroute path changes),
              not raw results — a steady-state failure that hasn't changed
              produces nothing here on purpose. -->
+        <div class="pair-row">
         <div class="section" id="changes-section">
             <div class="section-header">
                 <span>Recent Changes<span class="hdr-note" id="changes-note"></span></span>
@@ -1916,6 +1919,22 @@ try {
                 </table>
                 <div class="empty-hint" id="changes-empty">No changes in the last hour.</div>
             </div>
+        </div>
+
+        <div class="section" id="lldp-section">
+            <div class="section-header">
+                <span>LLDP Neighbors<span class="hdr-note" id="lldp-note"></span></span>
+                <span class="hdr-actions">
+                    <button type="button" class="btn-small collapse-toggle" data-section="lldp-section">Collapse</button>
+                </span>
+            </div>
+            <div class="section-body">
+                <table class="ep-table" id="lldp-table">
+                    <thead><tr><th>Node</th><th>Port</th><th>Neighbor</th><th>Its port</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
         </div>
 
         <!-- Compressed syslog feed — the last few messages, so a device event
@@ -2131,21 +2150,6 @@ try {
             </div>
             <div class="section-body" id="detail-body">
                 <div class="detail-empty">Click a matrix cell to inspect test results</div>
-            </div>
-        </div>
-
-        <div class="section" id="lldp-section">
-            <div class="section-header">
-                <span>LLDP Neighbors<span class="hdr-note" id="lldp-note"></span></span>
-                <span class="hdr-actions">
-                    <button type="button" class="btn-small collapse-toggle" data-section="lldp-section">Collapse</button>
-                </span>
-            </div>
-            <div class="section-body">
-                <table class="ep-table" id="lldp-table">
-                    <thead><tr><th>Node</th><th>Port</th><th>Neighbor</th><th>Its port</th></tr></thead>
-                    <tbody></tbody>
-                </table>
             </div>
         </div>
 
