@@ -812,9 +812,12 @@ a:hover { text-decoration: underline; }
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
     gap: 16px;
-    align-items: start;
+    align-items: stretch;
 }
-#changes-section .section-body, .detail-section .section-body { overflow: auto; max-height: 420px; }
+/* Recent Changes sets the row height; Test Detail (contain: size, so it adds none) fills it and scrolls. */
+.detail-section { contain: size; display: flex; flex-direction: column; min-height: 220px; }
+#changes-section .section-body { overflow: auto; max-height: 420px; }
+.detail-section .section-body { overflow: auto; flex: 1; min-height: 0; }
 /* LLDP sits in the sidebar, above the endpoint list, and scrolls on its own. */
 #lldp-section {
     flex: 0 1 auto;
@@ -1251,7 +1254,7 @@ a:hover { text-decoration: underline; }
    equal. */
 :root[data-layout="modern"] { --bg-card-alt: var(--bg-card); }
 :root[data-layout="modern"] .detail-section { display: none; }
-:root[data-layout="modern"] body.has-detail .detail-section { display: block; }
+:root[data-layout="modern"] body.has-detail .detail-section { display: flex; }
 :root[data-layout="modern"] .detail-test-card,
 :root[data-layout="modern"] .detail-related { border-radius: 10px; }
 :root[data-layout="modern"] .page-footer { padding: 6px 0 0; }
