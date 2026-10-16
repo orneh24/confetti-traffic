@@ -92,6 +92,7 @@ apk_step apk add --no-cache --no-progress \
     sqlite \
     curl \
     open-vm-tools \
+    open-vm-tools-guestinfo \
     chrony \
     lldpd \
     openssh-client \

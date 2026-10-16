@@ -96,6 +96,7 @@ apk_step apk add --no-cache --no-progress \
     busybox-extras \
     openssh-client \
     open-vm-tools \
+    open-vm-tools-guestinfo \
     logrotate \
     chrony \
     iputils-ping \
