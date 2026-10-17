@@ -860,6 +860,13 @@ def _():
     need(len(c) == 1 and c[0]["kind"] == "all-down" and c[0]["count"] == 2, "all-down not collapsed: %s" % c, p)
     c = ch.compute([row(1, "pmtu", 1), row(2, "pmtu", 0)], [], {}, set())
     need(len(c) == 1 and c[0]["kind"] == "flip", "single-type batch was collapsed: %s" % c, p)
+    # 4+ tests recovering in one batch collapse to one all-up row; 3 stay separate
+    types = ["http", "ssh", "pmtu", "loss"]
+    rows = [row(1, x, 0) for x in types] + [row(2, x, 1) for x in types]
+    c = ch.compute(rows, [], {}, set())
+    need(len(c) == 1 and c[0]["kind"] == "all-up" and c[0]["count"] == 4, "all-up not collapsed: %s" % c, p)
+    rows = [row(1, x, 0) for x in types[:3]] + [row(2, x, 1) for x in types[:3]]
+    need(len(ch.compute(rows, [], {}, set())) == 3, "3 recoveries were collapsed", p)
     # an excluded group pair is dropped; a path row is kept; the limit applies
     rows = [row(1, "ssh", 1), row(2, "ssh", 0)]
     path = [{"source": "a", "target": "b", "received_at": t(5), "detail": "hop 2: x -> y"}]

@@ -24,7 +24,8 @@ def compute(rows, path_rows, group_of, excluded, limit=15):
     group_of   {hostname: group}; a host with no group is never excluded
     excluded   set of sorted (group, group) pairs (mesh rules)
     Kinds: "flip" (a pass/fail toggle), "all-down" (a batch where every test
-    that ran flipped to FAIL, collapsed into one row), "path".
+    that ran flipped to FAIL, collapsed into one row), "all-up" (4+ tests
+    flipped to PASS in one batch, collapsed into one row), "path".
     received_at stays in SQLite's format; sorting it as text is chronological.
     """
     try:
@@ -39,7 +40,7 @@ def compute(rows, path_rows, group_of, excluded, limit=15):
             by_pair_type.setdefault((r["source"], r["target"], r["test_type"]), []).append(r)
             batch_types.setdefault((r["source"], r["target"], r["received_at"]), set()).add(r["test_type"])
 
-        changes, down_by_batch = [], {}
+        changes, down_by_batch, up_by_batch = [], {}, {}
         for key, arr in by_pair_type.items():
             arr.sort(key=lambda x: x["received_at"])
             for i in range(1, len(arr)):
@@ -47,10 +48,16 @@ def compute(rows, path_rows, group_of, excluded, limit=15):
                     continue
                 flip = {"received_at": arr[i]["received_at"], "source": key[0], "target": key[1],
                         "kind": "flip", "test_type": key[2], "to": bool(arr[i]["success"])}
-                if flip["to"]:
-                    changes.append(flip)
-                else:
-                    down_by_batch.setdefault((key[0], key[1], flip["received_at"]), []).append(flip)
+                batch = up_by_batch if flip["to"] else down_by_batch
+                batch.setdefault((key[0], key[1], flip["received_at"]), []).append(flip)
+
+        # More than 3 tests recovering in the same batch is one event, not a row per test.
+        for flips in up_by_batch.values():
+            if len(flips) > 3:
+                changes.append({"received_at": flips[0]["received_at"], "source": flips[0]["source"],
+                                "target": flips[0]["target"], "kind": "all-up", "count": len(flips)})
+            else:
+                changes.extend(flips)
 
         # Every test type that ran also flipped to FAIL: a target going dark.
         # One type alone is an ordinary flip; "ALL" needs 2+ to agree.
@@ -78,6 +85,8 @@ def text(c):
     try:
         if c["kind"] == "all-down":
             return "ALL tests FAILED (%d tests)" % c["count"]
+        if c["kind"] == "all-up":
+            return "%d tests PASSED again" % c["count"]
         if c["kind"] == "path":
             return "Traceroute path changed: %s" % c["detail"]
         name = TYPE_NAMES.get(c["test_type"], c["test_type"])

@@ -2673,6 +2673,7 @@ try {
         }
 
         var downFlipsByBatch = {}; // "src|dst|received_at" -> [flip, ...]
+        var upFlipsByBatch = {};
         var changes = [];
         Object.keys(byPairType).forEach(function(key) {
             var arr = byPairType[key];
@@ -2688,8 +2689,23 @@ try {
                     var bKey2 = flip.source + "|" + flip.target + "|" + flip.received_at;
                     (downFlipsByBatch[bKey2] = downFlipsByBatch[bKey2] || []).push(flip);
                 } else {
-                    changes.push(flip);
+                    var bKey3 = flip.source + "|" + flip.target + "|" + flip.received_at;
+                    (upFlipsByBatch[bKey3] = upFlipsByBatch[bKey3] || []).push(flip);
                 }
+            }
+        });
+
+        // More than 3 tests recovering in the same batch is one event (a path
+        // coming back), not a row per test.
+        Object.keys(upFlipsByBatch).forEach(function(bKey) {
+            var flips = upFlipsByBatch[bKey];
+            if (flips.length > 3) {
+                changes.push({
+                    received_at: flips[0].received_at, source: flips[0].source,
+                    target: flips[0].target, kind: "all-up", count: flips.length
+                });
+            } else {
+                changes = changes.concat(flips);
             }
         });
 
@@ -2751,6 +2767,9 @@ try {
     function changeText(c) {
         if (c.kind === "all-down") {
             return "<span style='color:var(--red);font-weight:600'>ALL tests FAILED</span> (" + c.count + " tests)";
+        }
+        if (c.kind === "all-up") {
+            return "<span style='color:var(--green);font-weight:600'>" + c.count + " tests PASSED again</span>";
         }
         if (c.kind === "path") {
             return "<span style='color:var(--yellow)'>Traceroute path changed:</span> " + esc(c.detail);
