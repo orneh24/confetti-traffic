@@ -134,8 +134,8 @@ function confettiBlast(btn) {
         fired = true;
         var mx = left ? size * 0.85 : W - size * 0.85, my = H - 12 - size * 0.85;
         for (var i = 0; i < n; i++) {
-            var a = (55 + (Math.random() - 0.5) * 40) * Math.PI / 180;
-            var s = (calm ? 9 : 14) + Math.random() * (calm ? 6 : 12);
+            var a = (60 + (Math.random() - 0.5) * 120) * Math.PI / 180;
+            var s = (calm ? 9 : 24) + Math.random() * (calm ? 6 : 20);
             add(mx, my, dir * Math.cos(a) * s, -Math.sin(a) * s);
         }
     }
