@@ -443,6 +443,7 @@ th {
     letter-spacing: .04em; color: var(--text-dim); border-bottom: 1px solid var(--border);
 }
 td { padding: 4px 10px; border-bottom: 1px solid var(--row-line); vertical-align: top; }
+tr.stripe td { background: rgba(128,128,128,.14); }
 tr:hover td { background: var(--bg-hover); }
 td.time { color: var(--text-dim); white-space: nowrap; }
 td.src { color: var(--blue); white-space: nowrap; }
@@ -604,12 +605,16 @@ td.sevcol { white-space: nowrap; }
     function render(rows) {
         var tbody = document.querySelector("#log tbody");
         var html = "";
+        var band = false, lastSrc = null;
         for (var i = 0; i < rows.length; i++) {
             var r = rows[i];
+            var src = r.host || r.source_ip;
+            if (i && src !== lastSrc) band = !band;
+            lastSrc = src;
             var sev = (r.severity === null || r.severity === undefined) ? null : r.severity;
             var sevCls = sev === null ? "sev-x" : "sev-" + sev;
             var sevText = sev === null ? "?" : sev + " " + SEV_NAMES[sev];
-            html += "<tr>";
+            html += band ? "<tr class='stripe'>" : "<tr>";
             html += "<td class='time'>" + esc(localTime(r.received_at)) + "</td>";
             html += "<td class='src' title='" + esc(r.source_ip) + "'>" + esc(r.host || r.source_ip) + "</td>";
             html += "<td class='sevcol'><span class='sev " + sevCls + "'>" + esc(sevText) + "</span></td>";

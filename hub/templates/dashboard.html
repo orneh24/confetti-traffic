@@ -2958,10 +2958,14 @@ try {
     function renderRecentSyslog() {
         var tbody = document.querySelector("#syslog-preview-table tbody");
         var html = "";
+        var band = false, lastSrc = null;
         for (var i = 0; i < recentSyslog.length; i++) {
             var m = recentSyslog[i];
             var sev = (m.severity === null || m.severity === undefined) ? "?" : m.severity;
-            html += "<tr>";
+            var src = m.host || m.source_ip;
+            if (i && src !== lastSrc) band = !band;
+            lastSrc = src;
+            html += band ? "<tr class='stripe'>" : "<tr>";
             html += "<td title='" + esc(m.received_at) + "'>" + esc(formatWhen(m.received_at)) + "</td>";
             html += "<td>" + esc(m.host || m.source_ip) + "</td>";
             html += "<td style='color:" + sevColor(m.severity) + "'>" + esc(sev) + "</td>";
