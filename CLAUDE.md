@@ -330,6 +330,10 @@ link comes back empty while the unfiltered window beside it still works, which
 is the intended failure: an empty view rather than a wrong one. The hub does
 not maintain an IP→device map.
 
+With no pair selected, Test Detail lists the pairs failing now (`renderFailingList`: failing test
+letters and how long, from the 1 h history; a row opens the pair; the Modern layout shows the
+panel whenever something fails).
+
 A failing pair's drill-down also lists **Related events**: syslog from the
 pair's groups (same `host` matching, so same best effort) within ±5 min of
 when the pair *started* failing, plus the hub's path-change note (from the

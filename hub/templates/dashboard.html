@@ -912,6 +912,8 @@ a:hover { text-decoration: underline; }
 .ep-table .clock-warn { color: var(--yellow); }
 
 /* Detail panel */
+.detail-fail-head { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+#fail-table .indicator { cursor: pointer; }
 .detail-empty {
     color: var(--text-dim);
     text-align: center;
@@ -1267,7 +1269,8 @@ a:hover { text-decoration: underline; }
    equal. */
 :root[data-layout="modern"] { --bg-card-alt: var(--bg-card); }
 :root[data-layout="modern"] .detail-section { display: none; }
-:root[data-layout="modern"] body.has-detail .detail-section { display: flex; }
+:root[data-layout="modern"] body.has-detail .detail-section,
+:root[data-layout="modern"] body.has-failing .detail-section { display: flex; }
 :root[data-layout="modern"] .detail-test-card,
 :root[data-layout="modern"] .detail-related { border-radius: 10px; }
 :root[data-layout="modern"] .page-footer { padding: 6px 0 0; }
@@ -2336,6 +2339,7 @@ try {
             loadBw();
             renderHealth();
             renderRecentChanges();
+            renderFailingList();
             applyRecentSyslog(syslogQuery, arr[6]);
             if (selectedPair) loadDetail(selectedPair.source, selectedPair.target);
             document.getElementById("last-update").textContent = "Updated: " + new Date().toLocaleTimeString();
@@ -3412,6 +3416,72 @@ try {
     // ---------------------------------------------------------------
     // Detail panel
     // ---------------------------------------------------------------
+    // With no pair picked, Test Detail lists the pairs failing right now (same
+    // rules as renderHealth), longest-failing first; a row opens that pair.
+    // "Since" is the oldest sample of the unbroken failing run in the 1 h
+    // history; a run that reaches the window's start shows "over 1 h".
+    function renderFailingList() {
+        var lookup = buildLookup(), pairs = {}, order = [];
+        for (var k in lookup) {
+            if (!lookup.hasOwnProperty(k) || lookup[k].success) continue;
+            var p = k.split("|"), key = p[0] + "|" + p[1];
+            if (ruleFor(p[0], p[1])) continue;
+            if (!pairs[key]) { pairs[key] = {src: p[0], dst: p[1], types: [], since: null, open: false}; order.push(key); }
+            pairs[key].types.push(p[2]);
+        }
+        // changeHistoryResults is newest first: walk each failing test back to its last pass.
+        var passed = {};
+        for (var i = 0; i < changeHistoryResults.length; i++) {
+            var r = changeHistoryResults[i], tk = r.source + "|" + r.target_hostname;
+            var pr = pairs[tk];
+            if (!pr || pr.types.indexOf(r.test_type) === -1) continue;
+            var ek = tk + "|" + r.test_type;
+            if (passed[ek]) continue;
+            if (r.success) { passed[ek] = true; continue; }
+            var t = parseTs(r.received_at);
+            if (t && (!pr.since || t < pr.since)) pr.since = t;
+        }
+        for (var j = 0; j < order.length; j++) {
+            var q = pairs[order[j]];
+            q.open = q.types.some(function(ty) { return !passed[q.src + "|" + q.dst + "|" + ty]; });
+        }
+        var list = order.map(function(o) { return pairs[o]; });
+        list.sort(function(a, b) {
+            var ta = a.since ? a.since.getTime() : Infinity, tb = b.since ? b.since.getTime() : Infinity;
+            return ta - tb || (a.src + a.dst < b.src + b.dst ? -1 : 1);
+        });
+        document.body.classList.toggle("has-failing", list.length > 0);
+        if (selectedPair) return;
+        var body = document.getElementById("detail-body");
+        if (!list.length) {
+            body.innerHTML = "<div class='detail-empty'>Click a matrix cell to inspect test results" +
+                (Object.keys(lookup).length ? "<br>All tests passing" : "") + "</div>";
+            return;
+        }
+        var html = "<div class='detail-fail-head'>" + list.length + " pair" + (list.length !== 1 ? "s" : "") +
+            " failing &mdash; click one to inspect</div>" +
+            "<table class='ep-table' id='fail-table'><thead><tr><th>Pair</th><th>Failing</th><th>Since</th></tr></thead><tbody>";
+        list.forEach(function(f) {
+            var mins = f.since ? Math.max(0, Math.round((Date.now() - f.since.getTime()) / 60000)) : null;
+            var since = mins === null ? "" : (f.open && mins >= 55 ? "over 1 h" : (mins < 1 ? "just now" : mins + " min"));
+            var badges = f.types.map(function(ty) {
+                return "<span class='indicator fail' title='" + escAttr(TYPE_NAMES[ty] || ty) + "'>" + esc(TYPE_LABELS[ty] || ty) + "</span>";
+            }).join("");
+            html += "<tr class='clickable' data-src='" + esc(f.src) + "' data-dst='" + esc(f.dst) + "'>" +
+                "<td>" + esc(pairLabel(f.src)) + " &rarr; " + esc(pairLabel(f.dst)) + "</td>" +
+                "<td><div class='cell-indicators'>" + badges + "</div></td><td>" + since + "</td></tr>";
+        });
+        body.innerHTML = html + "</tbody></table>";
+        var rows = body.querySelectorAll("tr.clickable");
+        for (var n = 0; n < rows.length; n++) {
+            rows[n].addEventListener("click", function() {
+                selectedPair = {source: this.getAttribute("data-src"), target: this.getAttribute("data-dst")};
+                markSelectedCell(selectedPair.source, selectedPair.target);
+                loadDetail(selectedPair.source, selectedPair.target);
+            });
+        }
+    }
+
     function loadDetail(src, dst) {
         fetchJSON("/api/results/" + encodeURIComponent(src) + "/" + encodeURIComponent(dst)).then(function(rows) {
             renderDetail(src, dst, rows);
@@ -3858,11 +3928,11 @@ try {
         detailState = null;
         selectedPoll = null;
         document.body.classList.remove("has-detail");
-        document.getElementById("detail-body").innerHTML = "<div class='detail-empty'>Click a matrix cell to inspect test results</div>";
         this.style.display = "none";
         var prev = document.querySelectorAll(".matrix td.selected");
         for (var p = 0; p < prev.length; p++) prev[p].classList.remove("selected");
         markSelectedRow();
+        renderFailingList();
     });
 
     // ---------------------------------------------------------------
