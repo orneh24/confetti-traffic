@@ -61,7 +61,7 @@ function shuffleStep(fromTimer) {
 try {
     var savedTheme = localStorage.getItem('confetti-theme');
     if (savedTheme === 'shuffle') { shuffling = true; shuffleStep(); }
-    else applyTheme(savedTheme);
+    else applyTheme(savedTheme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
 } catch (e) {}
 function setTheme(name) {
     clearTimeout(shuffleTimer);
@@ -99,7 +99,6 @@ function confettiBlast(btn) {
         .map(function (v) { return css.getPropertyValue(v).trim(); })
         .filter(Boolean);
     if (!colors.length) colors = ['#d29922', '#f85149', '#3fb950', '#58a6ff', '#39c5cf'];
-    var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     var dpr = window.devicePixelRatio || 1;
     var W = window.innerWidth, H = window.innerHeight;
     var cv = document.createElement('canvas');
@@ -122,11 +121,11 @@ function confettiBlast(btn) {
     var gun = document.createElement('div');
     gun.textContent = '🎉';
     gun.style.cssText = 'position:fixed;bottom:12px;' + (left ? 'left' : 'right') + ':0;font-size:' + size +
-        'px;line-height:1;pointer-events:none;z-index:10000;transition:transform ' + (calm ? '0s' : '.3s ease-out');
+        'px;line-height:1;pointer-events:none;z-index:10000;transition:transform .3s ease-out';
     function pose(x, extra) {
         gun.style.transform = 'translateX(' + x + ') ' + (left ? '' : 'scaleX(-1) ') + extra;
     }
-    pose(calm ? '0' : (left ? '-130%' : '130%'), '');
+    pose(left ? '-130%' : '130%', '');
     document.body.appendChild(gun);
     // The popper's mouth is its top inner corner; shoot up and toward the middle.
     function fire(n) {
@@ -134,22 +133,17 @@ function confettiBlast(btn) {
         var mx = left ? size * 0.85 : W - size * 0.85, my = H - 12 - size * 0.85;
         for (var i = 0; i < n; i++) {
             var a = (60 + (Math.random() - 0.5) * 120) * Math.PI / 180;
-            var s = (calm ? 9 : 24) + Math.random() * (calm ? 6 : 20);
+            var s = 24 + Math.random() * 20;
             add(mx, my, dir * Math.cos(a) * s, -Math.sin(a) * s);
         }
     }
-    if (calm) {
-        fire(500);
-        setTimeout(function () { gun.remove(); }, 3600);
-    } else {
-        gun.offsetWidth;
-        pose('0', '');
-        setTimeout(function () { fire(1400); pose('0', 'rotate(' + (-8 * dir) + 'deg) scale(1.15)'); }, 350);
-        setTimeout(function () { pose('0', ''); }, 500);
-        setTimeout(function () { fire(400); }, 550);
-        setTimeout(function () { pose(left ? '-130%' : '130%', ''); }, 4500);
-        setTimeout(function () { gun.remove(); }, 5700);
-    }
+    gun.offsetWidth;
+    pose('0', '');
+    setTimeout(function () { fire(1400); pose('0', 'rotate(' + (-8 * dir) + 'deg) scale(1.15)'); }, 350);
+    setTimeout(function () { pose('0', ''); }, 500);
+    setTimeout(function () { fire(400); }, 550);
+    setTimeout(function () { pose(left ? '-130%' : '130%', ''); }, 4500);
+    setTimeout(function () { gun.remove(); }, 5700);
     var start = performance.now(), last = start;
     function frame(now) {
         var t = now - start, dt = Math.min(2, (now - last) / 16.7);
