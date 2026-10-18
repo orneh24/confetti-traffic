@@ -668,7 +668,7 @@ hub/
                         mask over stripes of the theme's --yellow/--red/--green/--blue/--cyan), so every
                         theme but Neon (its own streaks) gets confetti in its palette with no per-theme CSS.
                         Each page's footer has "Is it DNS..?" and a "Make it rain!" button that calls confettiBlast(),
-                        a canvas overlay in the same five colours; its block is identical in all three pages.
+                        a canvas overlay in the same five colours, fired from a 🎉 cannon that pops in from a random side; its block is identical in all three pages.
                         syslog.html and timeline.html use the smaller
                         variable set (--row-line, and --gray is a text grey there, not a fill).
                         Layouts are dashboard.html ONLY: a LAYOUTS list in a second head <script>
