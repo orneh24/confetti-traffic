@@ -173,7 +173,7 @@ function confettiBlast(btn) {
             return b.y < H + 30;
         });
         if ((bits.length || !fired) && t < 7000) requestAnimationFrame(frame);
-        else { cv.remove(); gun.remove(); }
+        else cv.remove();
     }
     requestAnimationFrame(frame);
 }
