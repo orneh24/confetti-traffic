@@ -139,16 +139,16 @@ function confettiBlast(btn) {
         }
     }
     if (calm) {
-        fire(250);
-        setTimeout(function () { gun.remove(); }, 1200);
+        fire(500);
+        setTimeout(function () { gun.remove(); }, 3600);
     } else {
         gun.offsetWidth;
         pose('0', '');
-        setTimeout(function () { fire(700); pose('0', 'rotate(' + (-8 * dir) + 'deg) scale(1.15)'); }, 350);
+        setTimeout(function () { fire(1400); pose('0', 'rotate(' + (-8 * dir) + 'deg) scale(1.15)'); }, 350);
         setTimeout(function () { pose('0', ''); }, 500);
-        setTimeout(function () { fire(200); }, 550);
-        setTimeout(function () { pose(left ? '-130%' : '130%', ''); }, 1500);
-        setTimeout(function () { gun.remove(); }, 1900);
+        setTimeout(function () { fire(400); }, 550);
+        setTimeout(function () { pose(left ? '-130%' : '130%', ''); }, 4500);
+        setTimeout(function () { gun.remove(); }, 5700);
     }
     var start = performance.now(), last = start;
     function frame(now) {
