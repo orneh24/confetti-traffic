@@ -202,7 +202,7 @@ function confettiBlast(btn) {
     --bg-hover:  #d3d9e0;
     --bg-muted:  #d3d9e0;
     --bg-code:   #dde2e8;
-    --stripe:    #dde2e8;
+    --stripe:    #cbd3dc;
     --border:    #b6bfca;
     --border-soft: #d3d9e0;
     --badge-bg:  #ddf4ff;
@@ -291,6 +291,8 @@ function confettiBlast(btn) {
     --blue:      #00e676;
     --cyan:      #7dffb0;
 }
+/* The bright --green is a text colour here; as a fill under the cells' white letters it was unreadable. */
+:root[data-theme="terminal"] .indicator.pass { background: #14803a; }
 /* Confetti Night — navy with a gold accent */
 :root[data-theme="confetti-night"] {
     --bg:        #0f1222;
@@ -703,6 +705,12 @@ a:hover { text-decoration: underline; }
     cursor: pointer;
     border-bottom: 1px solid var(--border);
     transition: background 0.15s;
+}
+/* Zebra: every other node row. A gradient over the card colour, so a
+   translucent --stripe still leaves the sticky name cell opaque. :where()
+   keeps this weaker than hover, selected and the selected row's tint. */
+.matrix tr.stripe > :where(th, td:not(.self):not(.excluded)) {
+    background: linear-gradient(var(--stripe), var(--stripe)), var(--bg-card);
 }
 .matrix td:hover {
     background: var(--bg-hover);
@@ -3023,7 +3031,7 @@ try {
         var html = "";
         var heard = newestHeard();
         for (var i = 0; i < hosts.length; i++) {
-            html += "<tr><th>" + esc(hosts[i]) + nameIp(endpoints[i]) + "</th>" +
+            html += "<tr" + (i % 2 ? " class='stripe'" : "") + "><th>" + esc(hosts[i]) + nameIp(endpoints[i]) + "</th>" +
                     hubReachCell(endpoints[i], heard[hosts[i]]);
             for (var j = 0; j < hosts.length; j++) {
                 if (i === j) {
@@ -3461,13 +3469,17 @@ try {
         var html = "<div class='detail-fail-head'>" + list.length + " pair" + (list.length !== 1 ? "s" : "") +
             " failing &mdash; click one to inspect</div>" +
             "<table class='ep-table' id='fail-table'><thead><tr><th>Pair</th><th>Failing</th><th>Since</th></tr></thead><tbody>";
+        // Zebra stripes by pair: the shade flips when the pair changes.
+        var stripe = false, lastPair = null;
         list.forEach(function(f) {
             var mins = f.since ? Math.max(0, Math.round((Date.now() - f.since.getTime()) / 60000)) : null;
             var since = mins === null ? "" : (f.open && mins >= 55 ? "over 1 h" : (mins < 1 ? "just now" : mins + " min"));
             var badges = f.types.map(function(ty) {
                 return "<span class='indicator fail' title='" + escAttr(TYPE_NAMES[ty] || ty) + "'>" + esc(TYPE_LABELS[ty] || ty) + "</span>";
             }).join("");
-            html += "<tr class='clickable' data-src='" + esc(f.src) + "' data-dst='" + esc(f.dst) + "'>" +
+            if (lastPair !== null && lastPair !== f.src + "|" + f.dst) stripe = !stripe;
+            lastPair = f.src + "|" + f.dst;
+            html += "<tr class='clickable" + (stripe ? " stripe" : "") + "' data-src='" + esc(f.src) + "' data-dst='" + esc(f.dst) + "'>" +
                 "<td>" + esc(pairLabel(f.src)) + " &rarr; " + esc(pairLabel(f.dst)) + "</td>" +
                 "<td><div class='cell-indicators'>" + badges + "</div></td><td>" + since + "</td></tr>";
         });
