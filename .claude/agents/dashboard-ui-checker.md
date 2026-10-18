@@ -45,13 +45,13 @@ and Neon Streamers (its own box colours and header). Add any theme the change
 touched.
 
 The dashboard (only) also has layouts: `setLayout('<name>')`, names in its
-`LAYOUTS` list (classic, modern, retro95, amber, greencrt), saved under `localStorage` key
+`LAYOUTS` list (classic, modern, retro95, msdos, greencrt), saved under `localStorage` key
 `confetti-layout`. Same rule as the theme: read it first, put it back with
 `setLayout(...)` before you finish. After a dashboard change check every
 layout: Classic must show no `.side-nav`, `.kpi-row` or `.taskbar`; in Modern check the
 side menu, the summary tiles, and that Test Detail stays hidden until a
 matrix cell is clicked. Also check Modern below 1100 px wide (menu hidden,
-tiles in two columns, one column of panels). Retro 95, Amber CRT and Neon Green CRT have their own colours (theme
+tiles in two columns, one column of panels). Retro 95, MS-DOS and Neon Green CRT have their own colours (theme
 picker disabled): check each once with Neon saved as the theme; in the CRT layouts, a failing
 cell must still stand out (inverted) without relying on hue. Open Retro 95's
 Start menu (a `<details>` in the taskbar).

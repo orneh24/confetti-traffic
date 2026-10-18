@@ -16,9 +16,9 @@ and footer buttons are inline in **all three** pages and must match.
 CSS (variable sets, Neon box selectors) is not compared.
 
 ## Layouts (dashboard.html only)
-Classic (no attribute), Modern, Retro 95, Amber CRT, Neon Green CRT. Any new visual state
+Classic (no attribute), Modern, Retro 95, MS-DOS, Neon Green CRT. Any new visual state
 needs a look in each:
-- Retro 95 and the CRT layouts bring their own colours (Amber and Neon Green share one block, palettes in `--crt-*`); add overrides next to their
+- Retro 95 and the CRT layouts bring their own colours (MS-DOS and Neon Green share one block, palettes in `--crt-*`, plus an `msdos` override block after it); add overrides next to their
   `.indicator` / `.btn-small` rules. Retro 95 must stay after all theme rules.
 - The CRT layouts are one hue, so status must not rest on colour: use shape, underline
   or inversion (the flapping marker is a dashed outline, stripes and a `~`, not colour).

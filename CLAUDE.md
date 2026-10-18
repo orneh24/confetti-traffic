@@ -687,9 +687,9 @@ hub/
                         variable and must stay AFTER all theme rules, since it beats Neon's
                         .section:nth-child colours only by coming later. Its .taskbar holds a
                         <details> Start menu with the footer's two buttons (footer hidden there).
-                        Amber CRT (amber) and Neon Green CRT (greencrt) are the same own-colours pattern, one shared block driven by --crt-* palettes. One hue, so status
-                        must not rest on colour: a pass is a green boxed cell, a fail is an inverted solid block (red, in the matrix), slow is
-                        bright + underlined. Local monospace fonts only (a hub may be offline).
+                        MS-DOS (msdos: blue screen, the 16 DOS colours as solid blocks that keep their letter) and Neon Green CRT (greencrt) are the same own-colours pattern, one shared block driven by --crt-* palettes,
+                        with an msdos override block after it. Neon Green is one hue, so status must not rest on colour: a pass is a green boxed cell, a fail is an inverted solid block (red, in the matrix), slow is
+                        bright + underlined. Local fonts only (a hub may be offline), except VT323 (SIL OFL), bundled in static/fonts/ and loaded by an @font-face in dashboard.html.
   static/
   agent/              — scripts served to nodes (created at build time)
   bundle/             — node bundle + RELEASE (created at build time)

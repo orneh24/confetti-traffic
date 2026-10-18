@@ -401,10 +401,10 @@ on the right when you click a matrix cell. Modern uses whichever colour
 theme you pick. **Retro 95** turns every panel into a Windows 95 window on a
 teal desktop, with a taskbar and a Start menu (which also holds **Is it
 DNS..?**, **Make it rain!** and a way back to Classic). It has its own colours,
-so the theme menu is greyed out while it's on. **Amber CRT** is an amber
-terminal screen with scanlines, and **Neon Green CRT** is the same in green.
-Both have their own colours; a failing test
-shows as an inverted block so it stands out without a second colour. The
+so the theme menu is greyed out while it's on. **MS-DOS** is a blue DOS screen
+(VT323 font, double-line boxes, a `C:\CONFETTI>` prompt), and **Neon Green CRT** is a
+green terminal screen with scanlines. Both have their own colours; every test badge keeps
+its letter, and a failing test is a solid block, so it stands out without relying on colour. The
 Syslog and Timeline pages have one layout.
 
 ### 6.2 Static targets
