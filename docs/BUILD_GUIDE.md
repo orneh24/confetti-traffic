@@ -404,8 +404,11 @@ DNS..?**, **Make it rain!** and a way back to Classic). It has its own colours,
 so the theme menu is greyed out while it's on. **MS-DOS** is a blue DOS screen
 (VT323 font, double-line boxes, a `C:\CONFETTI>` prompt), and **Neon Green CRT** is a
 green terminal screen with scanlines. Both have their own colours; every test badge keeps
-its letter, and a failing test is a solid block, so it stands out without relying on colour. The
-Syslog and Timeline pages have one layout.
+its letter, and a failing test is a solid block, so it stands out without relying on colour.
+MS-DOS can also be driven from the keyboard: a menu bar (**F10** or **Alt**), a function-key line
+at the bottom, arrow keys to move a cursor over the matrix, **Enter** to open the pair, **Esc** to
+close it, **F5** to refresh, **F6** to jump between panels and **F1** for the list. The Syslog and
+Timeline pages have one layout.
 
 ### 6.2 Static targets
 

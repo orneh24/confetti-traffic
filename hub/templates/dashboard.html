@@ -1805,6 +1805,57 @@ a:hover { text-decoration: underline; }
 :root[data-layout="msdos"] .btn-small:active,
 :root[data-layout="msdos"] .btn-nav:active { box-shadow: none; transform: translate(4px, 4px); }
 :root[data-layout="msdos"] .page-footer::after { content: "C:\\CONFETTI>\2588"; }
+/* MS-DOS keyboard layer: menu bar on top, function-key line at the bottom, a help box.
+   Hidden in every other layout; the keys only work here (see the keydown handler). */
+.dos-menubar, .dos-fkeys, .dos-help { display: none; }
+:root[data-layout="msdos"] body { padding-top: 30px; padding-bottom: 34px; }
+:root[data-layout="msdos"] .dos-menubar,
+:root[data-layout="msdos"] .dos-fkeys {
+    display: flex; position: fixed; left: 0; right: 0; z-index: 50;
+    background: #AAAAAA; color: #000000; font-family: inherit; font-size: 16px; line-height: 24px;
+}
+:root[data-layout="msdos"] .dos-menubar { top: 0; padding: 0 8px; }
+:root[data-layout="msdos"] .dos-fkeys { bottom: 0; padding: 4px 8px; gap: 14px; flex-wrap: wrap; }
+:root[data-layout="msdos"] .dos-menu { position: relative; }
+:root[data-layout="msdos"] .dos-menu > button,
+:root[data-layout="msdos"] .dos-fkeys button {
+    background: transparent; color: #000000; border: 0; font: inherit; padding: 0 10px; cursor: pointer;
+}
+:root[data-layout="msdos"] .dos-fkeys button { padding: 0; }
+:root[data-layout="msdos"] .dos-fkeys button b { background: #000000; color: #AAAAAA; font-weight: 400; padding: 0 3px; margin-right: 4px; }
+:root[data-layout="msdos"] .dos-hot { color: #AA0000; }
+:root[data-layout="msdos"] .dos-menu.open > button,
+:root[data-layout="msdos"] .dos-menu > button:focus-visible { background: #000000; color: #AAAAAA; outline: none; }
+:root[data-layout="msdos"] .dos-menu.open > button .dos-hot { color: #FF5555; }
+:root[data-layout="msdos"] .dos-drop {
+    display: none; position: absolute; top: 24px; left: 0; min-width: 240px; background: #AAAAAA;
+    border: 3px double #000000; box-shadow: 6px 6px 0 #000000; flex-direction: column; padding: 2px 0;
+}
+:root[data-layout="msdos"] .dos-menu.open > .dos-drop { display: flex; }
+:root[data-layout="msdos"] .dos-drop button,
+:root[data-layout="msdos"] .dos-drop a {
+    background: transparent; color: #000000; border: 0; font: inherit; text-align: left; text-decoration: none;
+    padding: 0 12px; cursor: pointer; white-space: nowrap; display: block;
+}
+:root[data-layout="msdos"] .dos-drop .on,
+:root[data-layout="msdos"] .dos-drop button:hover,
+:root[data-layout="msdos"] .dos-drop a:hover { background: #000000; color: #AAAAAA; }
+:root[data-layout="msdos"] .dos-drop .on .dos-hot { color: #FF5555; }
+:root[data-layout="msdos"] .dos-pair { margin-left: auto; color: #000000; }
+:root[data-layout="msdos"] .dos-help.open {
+    display: block; position: fixed; z-index: 60; top: 15%; left: 50%; transform: translateX(-50%);
+    background: #AAAAAA; color: #000000; border: 3px double #000000; box-shadow: 8px 8px 0 #000000;
+    padding: 8px 18px 12px; max-width: 92vw; font-size: 16px; line-height: 1.35;
+}
+:root[data-layout="msdos"] .dos-help h2 { margin: 0 0 6px; font-size: 16px; font-weight: 400; text-align: center; background: #000000; color: #AAAAAA; }
+:root[data-layout="msdos"] .dos-help p { margin: 0; white-space: pre; }
+/* The cursor: a solid yellow frame with a black one inside, so it reads without colour. */
+:root[data-layout="msdos"] .matrix td.kbd-cursor { outline: 3px solid #FFFF55; outline-offset: -3px; box-shadow: inset 0 0 0 5px #000000; }
+:root[data-layout="msdos"] :focus-visible { outline: 2px solid #FFFFFF; outline-offset: 1px; }
+@media (max-width: 700px) {
+    :root[data-layout="msdos"] .dos-pair { display: none; }
+    :root[data-layout="msdos"] body { padding-bottom: 80px; } /* the key line wraps to two rows */
+}
 </style>
 <script>
 // Layout picker, dashboard only (syslog and timeline keep one layout). A
@@ -2270,6 +2321,67 @@ try {
     <span class="tray" id="tray-clock"></span>
 </div>
 
+<!-- MS-DOS layout only: menu bar, function-key line and help box, driven from the
+     keyboard (see the keydown handler in the script below). Hidden in every other layout. -->
+<div class="dos-menubar" id="dos-menubar" role="menubar">
+    <div class="dos-menu" data-menu="f">
+        <button type="button" role="menuitem" aria-haspopup="true"><span class="dos-hot">F</span>ile</button>
+        <div class="dos-drop" role="menu">
+            <button type="button" data-act="refresh" data-key="r"><span class="dos-hot">R</span>efresh data</button>
+            <button type="button" data-act="rain" data-key="m"><span class="dos-hot">M</span>ake it rain!</button>
+            <button type="button" data-act="classic" data-key="c"><span class="dos-hot">C</span>lassic layout</button>
+        </div>
+    </div>
+    <div class="dos-menu" data-menu="v">
+        <button type="button" role="menuitem" aria-haspopup="true"><span class="dos-hot">V</span>iew</button>
+        <div class="dos-drop" role="menu">
+            <button type="button" data-panel="matrix-section" data-key="m"><span class="dos-hot">M</span>atrix</button>
+            <button type="button" data-panel="changes-section" data-key="c"><span class="dos-hot">C</span>hanges</button>
+            <button type="button" data-panel="syslog-preview-section" data-key="y">S<span class="dos-hot">y</span>slog</button>
+            <button type="button" data-panel="targets-section" data-key="t"><span class="dos-hot">T</span>argets</button>
+            <button type="button" data-panel="dns-section" data-key="d"><span class="dos-hot">D</span>NS</button>
+            <button type="button" data-panel="settings-section" data-key="e">Mesh s<span class="dos-hot">e</span>ttings</button>
+            <button type="button" data-panel="bw-section" data-key="b"><span class="dos-hot">B</span>andwidth test</button>
+            <button type="button" data-panel="health-section" data-key="h"><span class="dos-hot">H</span>ub health</button>
+            <button type="button" data-panel="lldp-section" data-key="l"><span class="dos-hot">L</span>LDP</button>
+            <button type="button" data-panel="endpoints-section" data-key="n">E<span class="dos-hot">n</span>dpoints</button>
+        </div>
+    </div>
+    <div class="dos-menu" data-menu="g">
+        <button type="button" role="menuitem" aria-haspopup="true"><span class="dos-hot">G</span>o</button>
+        <div class="dos-drop" role="menu">
+            <a href="/" data-key="d"><span class="dos-hot">D</span>ashboard</a>
+            <a href="/syslog" data-key="s"><span class="dos-hot">S</span>yslog</a>
+            <a href="/timeline" data-key="t"><span class="dos-hot">T</span>imeline</a>
+        </div>
+    </div>
+    <div class="dos-menu" data-menu="h">
+        <button type="button" role="menuitem" aria-haspopup="true"><span class="dos-hot">H</span>elp</button>
+        <div class="dos-drop" role="menu">
+            <button type="button" data-act="help" data-key="k"><span class="dos-hot">K</span>eyboard help</button>
+        </div>
+    </div>
+</div>
+<div class="dos-fkeys" id="dos-fkeys">
+    <button type="button" data-act="help"><b>F1</b>Help</button>
+    <button type="button" data-act="refresh"><b>F5</b>Refresh</button>
+    <button type="button" data-act="panel"><b>F6</b>Panel</button>
+    <button type="button" data-act="menu"><b>F10</b>Menu</button>
+    <button type="button" data-act="esc"><b>Esc</b>Close</button>
+    <span class="dos-pair" id="dos-pair"></span>
+</div>
+<div class="dos-help" id="dos-help" role="dialog" aria-label="Keyboard help">
+    <h2>Keyboard help</h2>
+    <p>Arrows, Home, End   move the cursor in the matrix
+Enter, Space         open the pair under the cursor
+Esc                  close help, menu or the pair
+F1                   this help
+F5                   refresh the data
+F6, Shift+F6         next / previous panel
+F10 or Alt           menu bar (arrows, Enter, hot letters)
+Tab                  move between buttons and fields</p>
+</div>
+
 <script>
 (function() {
     "use strict";
@@ -2322,6 +2434,7 @@ try {
     // key: src|dst|type -> {flips, passPct} for tests flapping in the last hour.
     var flapLookup = {};
     var selectedPair = null; // {source, target}
+    var kbdCursor = null;    // MS-DOS layout's keyboard cursor, {src, dst}
     // Group pairs excluded from the mesh (GET /mesh-rules). Excluded pairs
     // are drawn as "excluded" and left out of every pass/fail count.
     var meshRules = [];
@@ -3101,6 +3214,7 @@ try {
         for (var c = 0; c < cells.length; c++) {
             cells[c].addEventListener("click", onCellClick);
         }
+        applyKbdCursor();
     }
 
     // A node posts results every minute and registers every 5, so a node the
@@ -4520,6 +4634,226 @@ try {
     document.getElementById("sp-q").addEventListener("input", function() {
         clearTimeout(spTimer);
         spTimer = setTimeout(loadRecentSyslog, 300);
+    });
+
+    // ---------------------------------------------------------------
+    // MS-DOS keyboard layer. Active only while the MS-DOS layout is on;
+    // every action reuses what a mouse click already does.
+    // ---------------------------------------------------------------
+    var dosMenu = -1;       // index of the open menu, -1 = none
+    var dosItem = -1;       // highlighted item in that menu
+    var dosAltOnly = false; // Alt went down and nothing else happened yet
+    var dosPanel = -1;
+
+    function isDos() {
+        return document.documentElement.getAttribute("data-layout") === "msdos";
+    }
+
+    function setCursor(td) {
+        var old = document.querySelectorAll("#matrix td.kbd-cursor");
+        for (var i = 0; i < old.length; i++) old[i].classList.remove("kbd-cursor");
+        var label = document.getElementById("dos-pair");
+        if (!td) { kbdCursor = null; label.textContent = ""; return; }
+        td.classList.add("kbd-cursor");
+        kbdCursor = {src: td.getAttribute("data-src"), dst: td.getAttribute("data-dst")};
+        label.textContent = kbdCursor.src + " → " + kbdCursor.dst;
+        td.scrollIntoView({block: "nearest", inline: "nearest"});
+    }
+
+    // The 30 s refresh rebuilds the matrix; put the cursor back on its pair.
+    function applyKbdCursor() {
+        if (!kbdCursor) return;
+        var cells = document.querySelectorAll("#matrix td[data-src]");
+        for (var i = 0; i < cells.length; i++) {
+            if (cells[i].getAttribute("data-src") === kbdCursor.src && cells[i].getAttribute("data-dst") === kbdCursor.dst) {
+                cells[i].classList.add("kbd-cursor");
+                return;
+            }
+        }
+        setCursor(null);
+    }
+
+    // Move over the cells that can be tested (self and excluded have no data-src).
+    // edge: jump to the first (-1) or last (1) cell of the row.
+    function moveCursor(dr, dc, edge) {
+        var rows = document.querySelectorAll("#matrix tbody tr");
+        var cur = document.querySelector("#matrix td.kbd-cursor");
+        if (!cur) {
+            cur = document.querySelector("#matrix td.selected") || document.querySelector("#matrix td[data-src]");
+            if (cur) setCursor(cur);
+            return;
+        }
+        var r = cur.parentNode.rowIndex - 1, c = cur.cellIndex;
+        if (edge) {
+            var cells = rows[r].querySelectorAll("td[data-src]");
+            if (cells.length) setCursor(cells[edge < 0 ? 0 : cells.length - 1]);
+            return;
+        }
+        if (dr) {
+            // Up/down: the next row with a testable cell, in the nearest column
+            // (the diagonal is self, so the same column is often not testable).
+            for (r += dr; r >= 0 && r < rows.length; r += dr) {
+                var cand = rows[r].querySelectorAll("td[data-src]");
+                var best = null;
+                for (var k = 0; k < cand.length; k++) {
+                    if (!best || Math.abs(cand[k].cellIndex - c) < Math.abs(best.cellIndex - c)) best = cand[k];
+                }
+                if (best) { setCursor(best); return; }
+            }
+            return;
+        }
+        // Left/right: the next testable cell along the row.
+        for (c += dc; c >= 0 && c < rows[r].cells.length; c += dc) {
+            if (rows[r].cells[c].hasAttribute("data-src")) { setCursor(rows[r].cells[c]); return; }
+        }
+    }
+
+    function showPanel(id) {
+        var sec = document.getElementById(id);
+        if (!sec) return;
+        if (sec.classList.contains("collapsed") && toggleFor(id)) choose(id, false);
+        sec.setAttribute("tabindex", "-1");
+        sec.scrollIntoView({block: "start"});
+        sec.focus({preventScroll: true});
+    }
+
+    function stepPanel(dir) {
+        var all = document.querySelectorAll(".main-col .section, .sidebar .section");
+        var list = [];
+        for (var i = 0; i < all.length; i++) if (all[i].offsetParent !== null) list.push(all[i]);
+        if (!list.length) return;
+        var here = document.activeElement && document.activeElement.closest ? document.activeElement.closest(".section") : null;
+        var at = list.indexOf(here);
+        if (at < 0) at = dosPanel;
+        dosPanel = (at + dir + list.length) % list.length;
+        list[dosPanel].setAttribute("tabindex", "-1");
+        list[dosPanel].scrollIntoView({block: "start"});
+        list[dosPanel].focus({preventScroll: true});
+    }
+
+    function toggleHelp(open) {
+        var box = document.getElementById("dos-help");
+        box.classList.toggle("open", open === undefined ? !box.classList.contains("open") : open);
+    }
+
+    function dosMenus() { return document.querySelectorAll("#dos-menubar .dos-menu"); }
+    function dosItems(menu) { return menu.querySelectorAll(".dos-drop > *"); }
+
+    function markItem(i) {
+        var menus = dosMenus();
+        var items = dosMenu >= 0 ? dosItems(menus[dosMenu]) : [];
+        for (var k = 0; k < items.length; k++) items[k].classList.toggle("on", k === i);
+        dosItem = i;
+    }
+
+    function openMenu(i) {
+        var menus = dosMenus();
+        for (var k = 0; k < menus.length; k++) menus[k].classList.toggle("open", k === i);
+        dosMenu = i;
+        markItem(i >= 0 ? 0 : -1);
+    }
+
+    function dosAct(el) {
+        var act = el.getAttribute("data-act");
+        var panel = el.getAttribute("data-panel");
+        openMenu(-1);
+        if (panel) showPanel(panel);
+        else if (act === "refresh") refresh();
+        else if (act === "rain") confettiBlast(el);
+        else if (act === "classic") setLayout("classic");
+        else if (act === "help") toggleHelp();
+        else if (act === "panel") stepPanel(1);
+        else if (act === "menu") openMenu(0);
+        else if (act === "esc") closeLayer();
+        else if (el.tagName === "A") window.location.href = el.getAttribute("href");
+    }
+
+    // Esc: help, then menu, then the open pair.
+    function closeLayer() {
+        if (document.getElementById("dos-help").classList.contains("open")) { toggleHelp(false); return; }
+        if (dosMenu >= 0) { openMenu(-1); return; }
+        var x = document.getElementById("detail-close");
+        if (x && x.style.display !== "none") x.click();
+    }
+
+    function menuKey(e) {
+        var menus = dosMenus();
+        var items = dosItems(menus[dosMenu]);
+        var k = e.key;
+        if (k === "ArrowLeft") openMenu((dosMenu + menus.length - 1) % menus.length);
+        else if (k === "ArrowRight") openMenu((dosMenu + 1) % menus.length);
+        else if (k === "ArrowDown") markItem((dosItem + 1) % items.length);
+        else if (k === "ArrowUp") markItem((dosItem + items.length - 1) % items.length);
+        else if (k === "Enter" || k === " ") { if (items[dosItem]) dosAct(items[dosItem]); }
+        else if (k === "Escape" || k === "F10") openMenu(-1);
+        else if (k.length === 1) {
+            var ch = k.toLowerCase();
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].getAttribute("data-key") === ch) { dosAct(items[i]); e.preventDefault(); return; }
+            }
+            for (var m = 0; m < menus.length; m++) {
+                if (menus[m].getAttribute("data-menu") === ch) { openMenu(m); break; }
+            }
+        } else return;
+        e.preventDefault();
+    }
+
+    document.addEventListener("keydown", function(e) {
+        if (!isDos()) return;
+        var t = e.target;
+        var typing = t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+        if (e.key === "Alt") { if (!e.repeat) dosAltOnly = true; return; }
+        dosAltOnly = false;
+        if (typing) { if (e.key === "Escape") t.blur(); return; }
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key === "F5" && e.shiftKey) return;
+        if (e.key === "F1") { toggleHelp(); e.preventDefault(); return; }
+        if (e.key === "F5") { refresh(); e.preventDefault(); return; }
+        if (e.key === "F6") { stepPanel(e.shiftKey ? -1 : 1); e.preventDefault(); return; }
+        if (e.key === "F10") { openMenu(dosMenu >= 0 ? -1 : 0); e.preventDefault(); return; }
+        if (dosMenu >= 0) { menuKey(e); return; }
+        if (e.key === "Escape") { closeLayer(); e.preventDefault(); return; }
+        // Cursor keys work from the page itself, not from a focused button or link.
+        var onPage = t === document.body || (t.closest && t.closest("#matrix"));
+        if (!onPage) return;
+        var d = {ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1]}[e.key];
+        if (d) { moveCursor(d[0], d[1], 0); e.preventDefault(); }
+        else if (e.key === "Home") { moveCursor(0, 0, -1); e.preventDefault(); }
+        else if (e.key === "End") { moveCursor(0, 0, 1); e.preventDefault(); }
+        else if ((e.key === "Enter" || e.key === " ") && t === document.body) {
+            var cur = document.querySelector("#matrix td.kbd-cursor");
+            if (cur) {
+                cur.click();
+                var det = document.querySelector(".detail-section");
+                if (det && det.offsetParent !== null) det.scrollIntoView({block: "nearest"});
+                e.preventDefault();
+            }
+        }
+    });
+    // A lone Alt press-and-release opens the menu, like DOS programs and old Windows.
+    document.addEventListener("keyup", function(e) {
+        if (e.key !== "Alt" || !dosAltOnly || !isDos()) return;
+        dosAltOnly = false;
+        openMenu(dosMenu >= 0 ? -1 : 0);
+        e.preventDefault();
+    });
+    document.getElementById("dos-menubar").addEventListener("click", function(e) {
+        var top = e.target.closest(".dos-menu > button");
+        if (top) {
+            var menus = dosMenus();
+            var i = Array.prototype.indexOf.call(menus, top.parentNode);
+            openMenu(i === dosMenu ? -1 : i);
+            return;
+        }
+        var item = e.target.closest(".dos-drop > *");
+        if (item) dosAct(item);
+    });
+    document.getElementById("dos-fkeys").addEventListener("click", function(e) {
+        var b = e.target.closest("button");
+        if (b) dosAct(b);
+    });
+    document.addEventListener("click", function(e) {
+        if (dosMenu >= 0 && !e.target.closest("#dos-menubar")) openMenu(-1);
     });
 
     refresh();

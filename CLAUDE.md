@@ -688,7 +688,7 @@ hub/
                         .section:nth-child colours only by coming later. Its .taskbar holds a
                         <details> Start menu with the footer's two buttons (footer hidden there).
                         MS-DOS (msdos: blue screen, the 16 DOS colours as solid blocks that keep their letter) and Neon Green CRT (greencrt) are the same own-colours pattern, one shared block driven by --crt-* palettes,
-                        with an msdos override block after it. Neon Green is one hue, so status must not rest on colour: a pass is a green boxed cell, a fail is an inverted solid block (red, in the matrix), slow is
+                        with an msdos override block after it. MS-DOS alone adds a keyboard layer (.dos-menubar, .dos-fkeys, .dos-help and a matrix cursor; one keydown handler that returns at once in any other layout, reusing onCellClick, refresh(), setCollapsed and the detail-close click). Neon Green is one hue, so status must not rest on colour: a pass is a green boxed cell, a fail is an inverted solid block (red, in the matrix), slow is
                         bright + underlined. Local fonts only (a hub may be offline), except VT323 (SIL OFL), bundled in static/fonts/ and loaded by an @font-face in dashboard.html.
   static/
   agent/              — scripts served to nodes (created at build time)
