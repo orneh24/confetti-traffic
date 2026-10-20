@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/ctxmenu.css">
 <title>Lab Syslog</title>
 <script>
 // Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
@@ -563,6 +564,7 @@ td.sevcol { white-space: nowrap; }
     <button class="btn-small" type="button" onclick="confettiBlast(this)">Make it rain!</button>
 </div>
 
+<script src="/static/ctxmenu.js"></script>
 <script>
 (function() {
     "use strict";
@@ -627,7 +629,9 @@ td.sevcol { white-space: nowrap; }
             var sev = (r.severity === null || r.severity === undefined) ? null : r.severity;
             var sevCls = sev === null ? "sev-x" : "sev-" + sev;
             var sevText = sev === null ? "?" : sev + " " + SEV_NAMES[sev];
-            html += band ? "<tr class='stripe'>" : "<tr>";
+            html += "<tr data-ctx='syslog' data-host='" + ctxMenu.attr(r.host || r.source_ip) + "' data-ip='" + ctxMenu.attr(r.source_ip) +
+                    "' data-sev='" + ctxMenu.attr(sev === null ? "" : sev) + "' data-mnem='" + ctxMenu.attr(r.mnemonic || "") +
+                    "' data-at='" + ctxMenu.attr(r.received_at) + "'" + (band ? " class='stripe'" : "") + ">";
             html += "<td class='time'>" + esc(localTime(r.received_at)) + "</td>";
             html += "<td class='src' title='" + esc(r.source_ip) + "'>" + esc(r.host || r.source_ip) + "</td>";
             html += "<td class='sevcol'><span class='sev " + sevCls + "'>" + esc(sevText) + "</span></td>";
@@ -751,6 +755,37 @@ td.sevcol { white-space: nowrap; }
         if (e.key === "Enter") refresh();
     });
     document.getElementById("refresh-now").addEventListener("click", refresh);
+
+    // Right-click a log line (static/ctxmenu.js).
+    function setFilter(id, value) {
+        document.getElementById(id).value = value;
+        refresh();
+    }
+
+    ctxMenu.register("syslog", function(tr) {
+        var host = tr.getAttribute("data-host"), ip = tr.getAttribute("data-ip");
+        var sev = tr.getAttribute("data-sev"), mnem = tr.getAttribute("data-mnem");
+        var at = tr.getAttribute("data-at");
+        var msg = tr.querySelector(".msg").textContent;
+        function z(ms) { return new Date(ms).toISOString().replace(/\.\d+Z$/, "Z"); }
+        var when = new Date(at.indexOf("Z") === -1 && at.indexOf("+") === -1 ? at + "Z" : at).getTime();
+        var pinnable = !isNaN(when);
+        return {title: host, items: [
+            {label: "Copy message", action: function() { ctxMenu.copy(msg); }},
+            {label: "Copy whole line", action: function() {
+                ctxMenu.copy(Array.prototype.map.call(tr.cells, function(c) { return c.textContent.trim(); }).join(" | "));
+            }},
+            {label: "Copy host", action: function() { ctxMenu.copy(host); }},
+            {label: "Copy source IP", action: function() { ctxMenu.copy(ip); }, disabled: !ip},
+            {label: "Show only this host", action: function() { setFilter("f-source", host); }},
+            {label: "Show this severity and worse", action: function() { setFilter("f-sev", String(Math.max(3, Math.min(6, +sev)))); },
+             disabled: sev === "" || +sev > 6},
+            {label: "Search this mnemonic", action: function() { setFilter("f-q", mnem); }, disabled: !mnem},
+            {label: "Pin 5 min around this line", action: function() {
+                window.location.href = "/syslog?from=" + encodeURIComponent(z(when - 300000)) + "&to=" + encodeURIComponent(z(when + 300000));
+            }, disabled: !pinnable}
+        ]};
+    });
 
     loadSources();
     loadClock();

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mesh Timeline</title>
+<link rel="stylesheet" href="/static/ctxmenu.css">
 <script>
 // Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
 // below; dark is the default and has no attribute. Same localStorage key on
@@ -614,6 +615,7 @@ a { color: var(--blue); }
     <button class="btn-small" type="button" onclick="confettiBlast(this)">Make it rain!</button>
 </div>
 
+<script src="/static/ctxmenu.js"></script>
 <script>
 (function() {
     "use strict";
@@ -1103,7 +1105,7 @@ a { color: var(--blue); }
     }
 
     function eventRow(e, t) {
-        return "<div class='ev" + (e.t > t ? " after" : "") + "'>" +
+        return "<div data-ctx='ev' data-t='" + e.t + "' class='ev" + (e.t > t ? " after" : "") + "'>" +
                "<span class='ev-time'>" + esc(clock(e.t, true)) + "</span>" +
                "<span class='ev-dot m-" + e.kind + "'></span>" +
                "<div><div class='ev-what'>" + esc(eventWhat(e)) + "</div>" +
@@ -1127,7 +1129,7 @@ a { color: var(--blue); }
                 : inc.open ? "<span class='tag tag-open'>OPEN · " + esc(duration(S.end - inc.start)) + "</span>"
                 : "<span class='tag tag-closed'>CLOSED · " + esc(duration(inc.end - inc.start)) + "</span>";
             var lim = S.expanded[inc.start + "|" + idx] ? evs.length : EVENTS_SHOWN;
-            html += "<article class='card' style='" + (future ? "opacity:.5" : "") + "'>" +
+            html += "<article data-ctx='incident' data-from='" + inc.start + "' data-to='" + endT + "' class='card' style='" + (future ? "opacity:.5" : "") + "'>" +
                     "<div class='inc-head'>" + tag + "<span class='inc-title'>" + esc(incidentTitle(inc)) + "</span>" +
                     "<span class='inc-span'>" + esc(clock(inc.start, true)) + " – " + (inc.open ? "now" : esc(clock(inc.end, true))) + "</span></div>";
             evs.slice(0, lim).forEach(function(e) { html += eventRow(e, t); });
@@ -1243,6 +1245,29 @@ a { color: var(--blue); }
         var k = b.getAttribute("data-more");
         if (k === "other") S.otherExpanded = true; else S.expanded[k] = true;
         renderIncidents();
+    });
+
+    // Right-click menus (static/ctxmenu.js).
+    ctxMenu.register("ev", function(el) {
+        var what = el.querySelector(".ev-what"), detail = el.querySelector(".ev-detail"), time = el.querySelector(".ev-time");
+        var ms = +el.getAttribute("data-t");
+        var text = (what ? what.textContent : "") + (detail ? " - " + detail.textContent : "");
+        return {title: time ? time.textContent : "Event", items: [
+            {label: "Copy event text", action: function() { ctxMenu.copy(text); }},
+            {label: "Copy time", action: function() { ctxMenu.copy(time ? time.textContent : ""); }},
+            {label: "Open syslog around this event", action: function() { window.location.href = syslogHref(ms, ms); }}
+        ]};
+    });
+
+    ctxMenu.register("incident", function(el) {
+        var from = +el.getAttribute("data-from"), to = +el.getAttribute("data-to");
+        var title = el.querySelector(".inc-title"), span = el.querySelector(".inc-span");
+        return {title: title ? title.textContent : "Incident", items: [
+            {label: "Open syslog around this incident", action: function() { window.location.href = syslogHref(from, to); }},
+            {label: "Open dashboard", action: function() { window.location.href = "/"; }},
+            {label: "Copy title", action: function() { ctxMenu.copy(title ? title.textContent : ""); }},
+            {label: "Copy time span", action: function() { ctxMenu.copy(span ? span.textContent : ""); }}
+        ]};
     });
 
     renderAll();

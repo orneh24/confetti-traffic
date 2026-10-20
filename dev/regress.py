@@ -840,6 +840,43 @@ def _():
     return p
 
 
+@check("R42", "right-click menus: pages load ctxmenu.js, destructive actions confirm, data-* values are quote-safe, a click on a target header does not delete")
+def _():
+    # hub/static/ctxmenu.js is one file for the three pages. Every DELETE, push-update or
+    # rule-removal call needs a confirm() just above it, so the row button and the menu item
+    # both ask. A syslog line can hold a quote and esc() does not escape it: attributes on
+    # data-ctx rows are filled with ctxMenu.attr(). Removing a static target is a menu item;
+    # the old click-to-delete on the header must not come back.
+    p = []
+    for f in ("hub/static/ctxmenu.js", "hub/static/ctxmenu.css"):
+        need(os.path.exists(f), "%s is missing" % f, p)
+    for name in ("dashboard", "syslog", "timeline"):
+        f = "hub/templates/%s.html" % name
+        src = read(f)
+        need('href="/static/ctxmenu.css"' in src, "%s does not link /static/ctxmenu.css" % f, p)
+        js_at = src.find('src="/static/ctxmenu.js"')
+        need(js_at >= 0, "%s does not load /static/ctxmenu.js" % f, p)
+        reg_at = src.find("ctxMenu.register(")
+        need(reg_at < 0 or 0 <= js_at < reg_at, "%s: ctxmenu.js must load before the page calls ctxMenu.register" % f, p)
+        used = set(re.findall(r"data-ctx=['\"](\w+)", src))
+        reg = set(re.findall(r"ctxMenu\.register\([\"'](\w+)", src))
+        for kind in sorted(used - reg):
+            p.append("%s: data-ctx '%s' has no ctxMenu.register" % (f, kind))
+        for kind in sorted(reg - used):
+            p.append("%s: ctxMenu.register('%s') has no data-ctx row" % (f, kind))
+        rows = src.splitlines()
+        for n, line in enumerate(rows, 1):
+            if "data-ctx" in line or (n > 1 and "data-ctx" in rows[n - 2]):
+                if re.search(r"data-(?!src\b|dst\b)[\w-]+='\" \+ esc\(", line):
+                    p.append("%s:%d data-* attribute filled with esc(), use ctxMenu.attr()" % (f, n))
+            if re.search(r"method: ?\"DELETE\"|sendRule\(\"DELETE\"|/update\", ?\{method", line):
+                if not any("confirm(" in rows[k] for k in range(max(0, n - 12), n)):
+                    p.append("%s:%d deletes or pushes without a confirm() in the lines above it" % (f, n))
+    dash = read("hub/templates/dashboard.html")
+    need('closest("th[data-target]")' not in dash, "a click on a static target header deletes again", p)
+    return p
+
+
 @check("R41", "Recent Changes console copy (hub/app/changes.py): flips, all-down collapse, exclusions, path rows")
 def _():
     import importlib.util

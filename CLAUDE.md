@@ -250,7 +250,7 @@ Addresses that run no agent — gateways, device loopbacks, outside hosts —
 held on the hub in the `targets` table and merged into every node's cycle.
 Each declares which tests apply, since a loopback answers traceroute and
 PMTU but has no HTTP server. Configured once on the hub rather than per
-node.
+node. A target is removed from the right-click menu on its column header (with a confirm); a plain click on the header does nothing.
 
 ### Syslog
 The hub can optionally receive Cisco/RFC3164-style syslog over UDP/514 from
@@ -690,7 +690,7 @@ hub/
                         MS-DOS (msdos: blue screen, the 16 DOS colours as solid blocks that keep their letter) and Neon Green CRT (greencrt) are the same own-colours pattern, one shared block driven by --crt-* palettes,
                         with an msdos override block after it. MS-DOS alone adds a keyboard layer (.dos-menubar, .dos-fkeys, .dos-help and a matrix cursor; one keydown handler that returns at once in any other layout, reusing onCellClick, refresh(), setCollapsed and the detail-close click). Neon Green is one hue, so status must not rest on colour: a pass is a green boxed cell, a fail is an inverted solid block (red, in the matrix), slow is
                         bright + underlined. Local fonts only (a hub may be offline), except VT323 (SIL OFL), bundled in static/fonts/ and loaded by an @font-face in dashboard.html.
-  static/
+  static/             — fonts/, plus ctxmenu.js + ctxmenu.css: right-click menus for the dashboard, syslog and timeline pages (outside the head theme block that R31 compares). A row carries data-ctx="<type>" and the page calls ctxMenu.register(type, fn) inside its own function; one document-level listener finds the row. Fill data-* attributes with ctxMenu.attr(), not esc(). Destructive items are last and red and always ask confirm() (a menu item that clicks a row button relies on that button's own confirm). The browser's own menu stays on inputs and selected text. R42 checks it. Same ctxmenu.js as confetti-butler
   agent/              — scripts served to nodes (created at build time)
   bundle/             — node bundle + RELEASE (created at build time)
   services/           — firstboot.initd, confettictl-login-setup.sh (also prints the installed build)

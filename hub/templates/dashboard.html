@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network Connectivity Tester</title>
 <link rel="icon" href="/favicon.ico" type="image/svg+xml">
+<link rel="stylesheet" href="/static/ctxmenu.css">
 <script>
 // Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
 // below; dark is the default and has no attribute. Same localStorage key on
@@ -796,8 +797,6 @@ a:hover { text-decoration: underline; }
     color: var(--cyan);
     margin-top: 2px;
 }
-.target-th { cursor: pointer; }
-.target-th:hover { color: var(--red); }
 .cell-na { color: var(--gray); font-size: 10px; }
 .dim { color: var(--gray); font-size: 10px; }
 .dns-out {
@@ -2383,6 +2382,7 @@ F10 or Alt           menu bar (arrows, Enter, hot letters)
 Tab                  move between buttons and fields</p>
 </div>
 
+<script src="/static/ctxmenu.js"></script>
 <script>
 (function() {
     "use strict";
@@ -3027,7 +3027,7 @@ Tab                  move between buttons and fields</p>
             var when = formatWhen(c.received_at);
             if (lastWhen !== null && when !== lastWhen) stripe = !stripe;
             lastWhen = when;
-            html += "<tr class='clickable" + (stripe ? " stripe" : "") + "' data-src='" + esc(c.source) + "' data-dst='" + esc(c.target) + "'>";
+            html += "<tr data-ctx='pair' class='clickable" + (stripe ? " stripe" : "") + "' data-src='" + esc(c.source) + "' data-dst='" + esc(c.target) + "'>";
             html += "<td title='" + esc(c.received_at) + "'>" + esc(when) + "</td>";
             html += "<td>" + esc(pairLabel(c.source)) + " &rarr; " + esc(pairLabel(c.target)) + "</td>";
             html += "<td class='wrap'>" + changeText(c) + "</td>";
@@ -3146,7 +3146,7 @@ Tab                  move between buttons and fields</p>
             var src = m.host || m.source_ip;
             if (i && src !== lastSrc) band = !band;
             lastSrc = src;
-            html += band ? "<tr class='stripe'>" : "<tr>";
+            html += "<tr data-ctx='syslog' data-host='" + ctxMenu.attr(src) + "'" + (band ? " class='stripe'" : "") + ">";
             html += "<td title='" + esc(m.received_at) + "'>" + esc(formatWhen(m.received_at)) + "</td>";
             html += "<td>" + esc(m.host || m.source_ip) + "</td>";
             html += "<td style='color:" + sevColor(m.severity) + "'>" + esc(sev) + "</td>";
@@ -3178,7 +3178,7 @@ Tab                  move between buttons and fields</p>
         // Header row
         var hrow = "<th class='origin'>src \\ dst</th><th class='hub-th'>Hub<span class='ip'>node &rarr; hub</span></th>";
         for (var j = 0; j < hosts.length; j++) {
-            hrow += "<th>" + esc(hosts[j]) + nameIp(endpoints[j]) + "</th>";
+            hrow += "<th data-ctx='host' data-host='" + ctxMenu.attr(hosts[j]) + "'>" + esc(hosts[j]) + nameIp(endpoints[j]) + "</th>";
         }
         thead.innerHTML = "<tr>" + hrow + "</tr>";
 
@@ -3187,7 +3187,7 @@ Tab                  move between buttons and fields</p>
         var html = "";
         var heard = newestHeard();
         for (var i = 0; i < hosts.length; i++) {
-            html += "<tr" + (i % 2 ? " class='stripe'" : "") + "><th>" + esc(hosts[i]) + nameIp(endpoints[i]) + "</th>" +
+            html += "<tr" + (i % 2 ? " class='stripe'" : "") + "><th data-ctx='host' data-host='" + ctxMenu.attr(hosts[i]) + "'>" + esc(hosts[i]) + nameIp(endpoints[i]) + "</th>" +
                     hubReachCell(endpoints[i], heard[hosts[i]]);
             for (var j = 0; j < hosts.length; j++) {
                 if (i === j) {
@@ -3201,7 +3201,7 @@ Tab                  move between buttons and fields</p>
                     continue;
                 }
                 var sel = selectedPair && selectedPair.source === hosts[i] && selectedPair.target === hosts[j];
-                html += "<td data-src='" + esc(hosts[i]) + "' data-dst='" + esc(hosts[j]) + "'" + (sel ? " class='selected'" : "") + ">";
+                html += "<td data-ctx='cell' data-src='" + esc(hosts[i]) + "' data-dst='" + esc(hosts[j]) + "'" + (sel ? " class='selected'" : "") + ">";
                 html += renderIndicators(hosts[i], hosts[j], lookup, activePairTypes());
                 html += "</td>";
             }
@@ -3326,15 +3326,16 @@ Tab                  move between buttons and fields</p>
 
         var hrow = "<th class='origin'>src \\ target</th>";
         for (var j = 0; j < targets.length; j++) {
-            hrow += "<th class='target-th' data-target='" + esc(targets[j].name) + "' title='" +
-                    esc(targets[j].ip + (targets[j].note ? " — " + targets[j].note : "") + "  (click to remove)") + "'>" +
+            hrow += "<th class='target-th' data-ctx='target' data-target='" + ctxMenu.attr(targets[j].name) + "' data-ip='" +
+                    ctxMenu.attr(targets[j].ip) + "' title='" +
+                    esc(targets[j].ip + (targets[j].note ? " — " + targets[j].note : "") + "  (right-click for options)") + "'>" +
                     esc(targets[j].name) + "<div class='th-sub'>" + esc(targets[j].ip) + "</div></th>";
         }
         table.querySelector("thead").innerHTML = "<tr>" + hrow + "</tr>";
 
         var html = "";
         for (var i = 0; i < hosts.length; i++) {
-            html += "<tr><th>" + esc(hosts[i]) + "</th>";
+            html += "<tr><th data-ctx='host' data-host='" + ctxMenu.attr(hosts[i]) + "'>" + esc(hosts[i]) + "</th>";
             for (var k = 0; k < targets.length; k++) {
                 var declared = targets[k].tests || [];
                 // Intersect declared tests with the pair-shaped ones; DNS is
@@ -3350,7 +3351,7 @@ Tab                  move between buttons and fields</p>
                 }
                 if (down) failing++;
                 var sel = selectedPair && selectedPair.source === hosts[i] && selectedPair.target === targets[k].name;
-                html += "<td data-src='" + esc(hosts[i]) + "' data-dst='" + esc(targets[k].name) + "'" +
+                html += "<td data-ctx='cell' data-src='" + esc(hosts[i]) + "' data-dst='" + esc(targets[k].name) + "'" +
                         (sel ? " class='selected'" : "") + ">";
                 html += types.length ? renderIndicators(hosts[i], targets[k].name, lookup, types)
                                      : "<span class='cell-na'>dns only</span>";
@@ -3410,7 +3411,7 @@ Tab                  move between buttons and fields</p>
             // show the address rather than that internal marker.
             var resolver = d.target_hostname.indexOf("dns:") === 0
                          ? d.target_hostname.slice(4) : d.target_hostname;
-            html += "<tr>";
+            html += "<tr data-ctx='line'>";
             html += "<td>" + esc(d.source) + "</td>";
             html += "<td>" + esc(resolver) + " <span class='dim'>" + esc(d.target_ip) + "</span></td>";
             html += "<td class='dns-out'>" + esc(d.output || "") + "</td>";
@@ -3468,7 +3469,8 @@ Tab                  move between buttons and fields</p>
             var stale = ago > 300;
             if (stale) staleCount++;
             var agoStr = ago < 60 ? ago + "s" : Math.round(ago / 60) + "m";
-            html += "<tr" + (stale ? " class='stale'" : "") + ">";
+            html += "<tr data-ctx='endpoint' data-host='" + ctxMenu.attr(ep.hostname) + "' data-ip='" + ctxMenu.attr(ep.ip) +
+                "' data-build='" + ctxMenu.attr(ep.build || "") + "'" + (stale ? " class='stale'" : "") + ">";
             // Build on a second line under the name: the sidebar has no room
             // for another column.
             html += "<td>" + esc(ep.hostname) + "<div class='ep-build'>" + buildCell(ep) + clockCell(ep) + "</div></td>";
@@ -3636,7 +3638,7 @@ Tab                  move between buttons and fields</p>
             }).join("");
             if (lastPair !== null && lastPair !== f.src + "|" + f.dst) stripe = !stripe;
             lastPair = f.src + "|" + f.dst;
-            html += "<tr class='clickable" + (stripe ? " stripe" : "") + "' data-src='" + esc(f.src) + "' data-dst='" + esc(f.dst) + "'>" +
+            html += "<tr data-ctx='pair' class='clickable" + (stripe ? " stripe" : "") + "' data-src='" + esc(f.src) + "' data-dst='" + esc(f.dst) + "'>" +
                 "<td>" + esc(pairLabel(f.src)) + " &rarr; " + esc(pairLabel(f.dst)) + "</td>" +
                 "<td><div class='cell-indicators'>" + badges + "</div></td><td>" + since + "</td></tr>";
         });
@@ -4230,7 +4232,7 @@ Tab                  move between buttons and fields</p>
             var result = r.state === "ok" ? "<span class='push-ok'>ok</span>"
                 : r.state === "running" ? "<span class='push-busy'>running&hellip;</span>"
                 : "<span class='push-failed' title='" + escAttr(r.msg || "") + "'>failed</span>";
-            html += "<tr" + (r.state === "failed" ? " title='" + escAttr(r.msg || "") + "'" : "") + ">";
+            html += "<tr data-ctx='line'" + (r.state === "failed" ? " title='" + escAttr(r.msg || "") + "'" : "") + ">";
             html += "<td>" + esc(when) + "</td><td>" + esc(r.src) + "</td><td>" + esc(r.dst) + "</td>";
             html += "<td>" + esc(setup) + "</td>";
             html += "<td>" + fmtMbps(r.fwd_mbps) + "</td>";
@@ -4269,7 +4271,7 @@ Tab                  move between buttons and fields</p>
                        "seen " + new Date(r.updated).toLocaleString()].filter(Boolean).join("\n");
             // Only the neighbor's own text wraps (a long "GigabitEthernet1/0/24"
             // would be cut off by the panel's edge); node and local port are short.
-            html += "<tr" + (stripe ? " class='stripe'" : "") + "><td>" + esc(r.node) + "</td><td>" + esc(r.local_port) + "</td>" +
+            html += "<tr data-ctx='line'" + (stripe ? " class='stripe'" : "") + "><td>" + esc(r.node) + "</td><td>" + esc(r.local_port) + "</td>" +
                     "<td class='wrap' title='" + escAttr(tip) + "'>" + esc(who) + "</td>" +
                     "<td class='wrap'>" + esc(r.port_descr || r.port_id) + "</td></tr>";
         }
@@ -4440,15 +4442,12 @@ Tab                  move between buttons and fields</p>
         });
     });
 
-    // Delegated so it survives re-renders.
-    document.getElementById("targets-section").addEventListener("click", function(e) {
-        var th = e.target.closest ? e.target.closest("th[data-target]") : null;
-        if (!th) return;
-        var name = th.getAttribute("data-target");
+    // Removing a static target is a right-click menu item (below); a plain click on the header does nothing.
+    function removeTarget(name) {
         if (!confirm("Remove static target " + name + "?")) return;
         fetch("/targets/" + encodeURIComponent(name), {method: "DELETE"})
             .then(function() { refresh(); });
-    });
+    }
 
     // ---------------------------------------------------------------
     // Mesh settings — true / false / null, where null ("node config")
@@ -4509,7 +4508,7 @@ Tab                  move between buttons and fields</p>
             list.innerHTML = "<li class='empty-hint' style='padding:0'>No rules &mdash; full mesh.</li>";
         } else {
             list.innerHTML = meshRules.map(function(r) {
-                return "<li><span class='rule-name'>" + esc(r.group_a) + " &harr; " + esc(r.group_b) +
+                return "<li data-ctx='rule' data-a='" + ctxMenu.attr(r.group_a) + "' data-b='" + ctxMenu.attr(r.group_b) + "'><span class='rule-name'>" + esc(r.group_a) + " &harr; " + esc(r.group_b) +
                     "</span><button type='button' class='btn-small rule-del' data-a='" + escAttr(r.group_a) +
                     "' data-b='" + escAttr(r.group_b) + "' aria-label='Remove rule'>remove</button></li>";
             }).join("");
@@ -4553,6 +4552,7 @@ Tab                  move between buttons and fields</p>
     document.getElementById("rule-list").addEventListener("click", function(ev) {
         var btn = ev.target.closest ? ev.target.closest(".rule-del") : null;
         if (!btn) return;
+        if (!confirm("Remove the rule " + btn.getAttribute("data-a") + " \u2194 " + btn.getAttribute("data-b") + "?")) return;
         sendRule("DELETE", "/mesh-rules?a=" + encodeURIComponent(btn.getAttribute("data-a")) +
             "&b=" + encodeURIComponent(btn.getAttribute("data-b")));
     });
@@ -4855,6 +4855,96 @@ Tab                  move between buttons and fields</p>
     });
     document.addEventListener("click", function(e) {
         if (dosMenu >= 0 && !e.target.closest("#dos-menubar")) openMenu(-1);
+    });
+
+
+    // ---------------------------------------------------------------
+    // Right-click menus (static/ctxmenu.js). Rows carry data-ctx="<type>".
+    // ---------------------------------------------------------------
+    function rowText(row) {
+        return Array.prototype.map.call(row.cells, function(c) { return c.textContent.trim(); }).join(" | ");
+    }
+
+    function openSyslog(query) {
+        window.location.href = "/syslog" + (query ? "?" + query : "");
+    }
+
+    function hostItems(host) {
+        return [
+            {label: "Copy hostname", action: function() { ctxMenu.copy(host); }},
+            {label: "Open syslog for this host", action: function() { openSyslog("host=" + encodeURIComponent(host)); }}
+        ];
+    }
+
+    ctxMenu.register("cell", function(td) {
+        var src = td.getAttribute("data-src"), dst = td.getAttribute("data-dst");
+        return {title: pairLabel(src) + " \u2192 " + pairLabel(dst), items: [
+            {label: "Show detail", action: function() { td.click(); }},
+            {label: "Copy source \u2192 target", action: function() { ctxMenu.copy(src + " -> " + dst); }},
+            {label: "Copy source", action: function() { ctxMenu.copy(src); }},
+            {label: "Copy target", action: function() { ctxMenu.copy(dst); }},
+            {label: "Open syslog for the source", action: function() { openSyslog("host=" + encodeURIComponent(src)); }}
+        ]};
+    });
+
+    ctxMenu.register("pair", function(tr) {
+        var src = tr.getAttribute("data-src"), dst = tr.getAttribute("data-dst");
+        return {title: pairLabel(src) + " \u2192 " + pairLabel(dst), items: [
+            {label: "Show detail", action: function() { tr.click(); }},
+            {label: "Copy source \u2192 target", action: function() { ctxMenu.copy(src + " -> " + dst); }},
+            {label: "Copy row text", action: function() { ctxMenu.copy(rowText(tr)); }}
+        ]};
+    });
+
+    ctxMenu.register("host", function(th) {
+        var host = th.getAttribute("data-host");
+        return {title: host, items: hostItems(host)};
+    });
+
+    ctxMenu.register("target", function(th) {
+        var name = th.getAttribute("data-target"), ip = th.getAttribute("data-ip");
+        return {title: name + " | " + ip, items: [
+            {label: "Copy name", action: function() { ctxMenu.copy(name); }},
+            {label: "Copy IP", action: function() { ctxMenu.copy(ip); }},
+            {label: "Remove target", danger: true, action: function() { removeTarget(name); }}
+        ]};
+    });
+
+    // The row's own buttons already ask before they act, so the menu clicks them.
+    ctxMenu.register("endpoint", function(tr) {
+        var host = tr.getAttribute("data-host"), ip = tr.getAttribute("data-ip"), build = tr.getAttribute("data-build");
+        var push = tr.querySelector(".btn-push"), group = tr.querySelector(".group-edit"), del = tr.querySelector(".btn-delete");
+        return {title: host + " | " + ip, items: hostItems(host).concat([
+            {label: "Copy IP", action: function() { ctxMenu.copy(ip); }},
+            {label: "Copy build", action: function() { ctxMenu.copy(build); }, disabled: !build},
+            {label: "Set group...", action: function() { group.click(); }, disabled: !group},
+            {label: "Push update", action: function() { push.click(); }, disabled: !push || push.disabled},
+            {label: "Remove endpoint", danger: true, action: function() { del.click(); }, disabled: !del}
+        ])};
+    });
+
+    ctxMenu.register("syslog", function(tr) {
+        var host = tr.getAttribute("data-host");
+        var msg = tr.cells[3] ? tr.cells[3].textContent : "";
+        return {title: host, items: [
+            {label: "Copy message", action: function() { ctxMenu.copy(msg); }},
+            {label: "Copy whole line", action: function() { ctxMenu.copy(rowText(tr)); }}
+        ].concat(hostItems(host))};
+    });
+
+    ctxMenu.register("line", function(tr) {
+        return {title: "Row", items: [
+            {label: "Copy row text", action: function() { ctxMenu.copy(rowText(tr)); }},
+            {label: "Copy first column", action: function() { ctxMenu.copy(tr.cells[0].textContent.trim()); }}
+        ]};
+    });
+
+    ctxMenu.register("rule", function(li) {
+        var a = li.getAttribute("data-a"), b = li.getAttribute("data-b");
+        return {title: a + " \u2194 " + b, items: [
+            {label: "Copy rule", action: function() { ctxMenu.copy(a + " <-> " + b); }},
+            {label: "Remove rule", danger: true, action: function() { li.querySelector(".rule-del").click(); }}
+        ]};
     });
 
     refresh();
