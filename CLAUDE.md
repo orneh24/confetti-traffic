@@ -19,7 +19,7 @@ config templates, running-config backup and drift, syslog, alerting) **and
 neighbors, split out of butler on 2026-10-14). Both import `GET /endpoints`
 (they read `hostname`, `ip` and `group_name`; the group becomes the device's
 `site`, so a group set on the hub flows into it), both web UIs copy this hub's
-look by hand (themes, `confettiBlast`, Shuffle), and butler's syslog receiver
+look by hand (themes, layouts, the MS-DOS keyboard layer, `confettiBlast`, Shuffle), and butler's syslog receiver
 is a port of ours. Keep `/endpoints` a bare array with those keys. The
 `confetti-interop-checker` agent (user level) checks all three sides.
 
