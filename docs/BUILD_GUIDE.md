@@ -388,10 +388,10 @@ the matrix headers.
 
 **Colour themes.** The menu at the right of each page's header picks one of
 seven themes: Dark, Light, Monokai (military green), High
-Contrast, Terminal green, Confetti Night and Neon Streamers. **Shuffle**
+Contrast, Terminal green, Confetti Night and Rainbow. **Shuffle**
 changes to a different theme every 5–10 minutes, with a confetti rain each time. On the dashboard it also picks a random layout each time. The choice is saved in your
 browser and shared by all three pages. Every theme has confetti in its
-header in its own colours, except Neon Streamers, which has glowing streaks.
+header in its own colours, except Rainbow, which has a navy header with a rainbow strip.
 
 **Layouts.** On the dashboard, a second menu beside the theme picks the
 layout. **Classic** is the original. **Modern** adds a menu down the left

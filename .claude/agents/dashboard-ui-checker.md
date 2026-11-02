@@ -36,12 +36,12 @@ Pages: `/` (dashboard), `/syslog`, `/timeline`.
 Themes are switched in the page with `javascript_tool`:
 `setTheme('<name>')`. Names are in the `THEMES` list in each page's head
 script (dark, light, monokai, contrast, terminal,
-confetti-night, neon). **This saves to the browser's localStorage**, which is
+confetti-night, rainbow). **This saves to the browser's localStorage**, which is
 the user's own theme choice: read `localStorage.getItem('confetti-theme')`
 first and put it back with `setTheme(...)` before you finish.
 
 Unless told otherwise, check: Dark (the default), Light (the odd one out),
-and Neon Streamers (its own box colours and header). Add any theme the change
+and Rainbow (its own header, box borders and table headers). Add any theme the change
 touched.
 
 The dashboard (only) also has layouts: `setLayout('<name>')`, names in its
@@ -52,15 +52,15 @@ layout: Classic must show no `.side-nav`, `.kpi-row` or `.taskbar`; in Modern ch
 side menu, the summary tiles, and that Test Detail stays hidden until a
 matrix cell is clicked. Also check Modern below 1100 px wide (menu hidden,
 tiles in two columns, one column of panels). Retro 95, MS-DOS and Neon Green CRT have their own colours (theme
-picker disabled): check each once with Neon saved as the theme; in the CRT layouts, a failing
+picker disabled): check each once with Rainbow saved as the theme; in the CRT layouts, a failing
 cell must still stand out (inverted) without relying on hue. Open Retro 95's
 Start menu (a `<details>` in the taskbar).
 
 ## What to look at
 
 - The change itself: is it there, on every page it should be on?
-- Readability: text against its background, in each theme checked. Neon
-  boxes are bright with dark text inside; check text stays readable there.
+- Readability: text against its background, in each theme checked. Rainbow:
+  navy header with light text, white boxes; check text stays readable on the navy header and on the coloured table headers.
 - Layout: overlapping or clipped text, horizontal scroll at the page level,
   boxes that lost their border or padding, the sidebar squeezed.
 - Buttons and links named in the change: present, clickable (use `find`

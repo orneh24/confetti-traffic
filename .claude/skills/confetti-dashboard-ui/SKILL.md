@@ -13,7 +13,7 @@ while writing it.
 The themes list, theme picker, Shuffle (dashboard.html also picks a layout with it, via window.onShuffleStep), `confettiBlast()`, header confetti
 and footer buttons are inline in **all three** pages and must match.
 `dev/regress.py` R31 compares them. Edit all three or none. Page-specific
-CSS (variable sets, Neon box selectors) is not compared.
+CSS (variable sets, Rainbow box selectors) is not compared.
 
 ## Layouts (dashboard.html only)
 Classic (no attribute), Modern, Retro 95, MS-DOS, Neon Green CRT. Any new visual state

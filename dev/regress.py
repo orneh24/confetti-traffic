@@ -641,7 +641,7 @@ def _():
     # CLAUDE.md: themes, the theme picker, confettiBlast, the header confetti
     # and the footer buttons live inline in all three pages, so a change made
     # in one page only is easy to miss. Page-specific CSS (variable sets,
-    # Neon box selectors) is deliberately not compared.
+    # Rainbow box selectors) is deliberately not compared.
     p = []
     pages = ["hub/templates/%s.html" % n for n in ("dashboard", "syslog", "timeline")]
     base = pages[0]
@@ -685,7 +685,7 @@ def _():
     # 3. The header confetti mask: one shared rule (selector is .header on
     #    the dashboard, header on the others).
     def confetti_rule(f):
-        m = re.search(r'^:root:not\(\[data-theme="neon"\]\) \.?header::before \{\n(.*?)^\}', read(f), re.M | re.S)
+        m = re.search(r'^:root:not\(\[data-theme="rainbow"\]\) \.?header::before \{\n(.*?)^\}', read(f), re.M | re.S)
         return m.group(1) if m else None
     ref = confetti_rule(base)
     need(ref, "%s: header confetti rule not found" % base, p)
