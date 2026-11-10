@@ -45,14 +45,14 @@ and Rainbow (its own header, box borders and table headers). Add any theme the c
 touched.
 
 The dashboard (only) also has layouts: `setLayout('<name>')`, names in its
-`LAYOUTS` list (classic, modern, retro95, msdos, greencrt), saved under `localStorage` key
-`confetti-layout`. Same rule as the theme: read it first, put it back with
+`LAYOUTS` list (classic, modern, retro95, msdos), saved under `localStorage` key
+`confetti-layout`; MS-DOS also has `setVariant('blue'|'green')`, saved under `confetti-dos-variant` (read and restore it too). Same rule as the theme: read it first, put it back with
 `setLayout(...)` before you finish. After a dashboard change check every
 layout: Classic must show no `.side-nav`, `.kpi-row` or `.taskbar`; in Modern check the
 side menu, the summary tiles, and that Test Detail stays hidden until a
 matrix cell is clicked. Also check Modern below 1100 px wide (menu hidden,
-tiles in two columns, one column of panels). Retro 95, MS-DOS and Neon Green CRT have their own colours (theme
-picker disabled): check each once with Rainbow saved as the theme; in the CRT layouts, a failing
+tiles in two columns, one column of panels). Retro 95 and MS-DOS (both variants) have their own colours (theme
+picker disabled): check each once with Rainbow saved as the theme; in MS-DOS (blue and green), a failing
 cell must still stand out (inverted) without relying on hue. Open Retro 95's
 Start menu (a `<details>` in the taskbar).
 

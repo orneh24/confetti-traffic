@@ -371,13 +371,13 @@ function confettiBlast(btn) {
 /* Rainbow structure. Every rule starts with the same prefix: the Rainbow theme, but not under Retro 95 or
    the CRT layouts (they set their own colours and must win). */
 /* Header: navy, light text, a rainbow strip along its lower edge. */
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .header {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .header {
     position: relative;
     margin-bottom: 6px;
     background: #1b1464;
     border-bottom: 0;
 }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .header::after {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .header::after {
     content: "";
     position: absolute;
     left: 0; right: 0; bottom: -6px;
@@ -385,45 +385,45 @@ function confettiBlast(btn) {
     pointer-events: none;
     background: linear-gradient(90deg, #ff3b5c, #ff9f1c, #ffe14d, #3ddc84, #2ec4ff, #6b4cff, #c04cff);
 }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .header h1,
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .header .page-title { color: #ffe14d; }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .header .status { color: #d6d3ff; }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .header .btn-nav {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .header h1,
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .header .page-title { color: #ffe14d; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .header .status { color: #d6d3ff; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .header .btn-nav {
     background: transparent; border-color: transparent; color: #ffffff;
 }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .header .btn-nav:hover {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .header .btn-nav:hover {
     background: rgba(255,255,255,.18); color: #ffffff;
 }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .header .btn-nav-current {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .header .btn-nav-current {
     background: #ffe14d; border-color: #ffe14d; color: #14142b;
 }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .header .theme-select {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .header .theme-select {
     background: #2d2590; border-color: #8b83ff; color: #ffffff;
 }
 /* Boxes: bold dark borders. */
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .section {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .section {
     border-width: 2px;
 }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .section-header {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .section-header {
     border-bottom-width: 2px;
 }
 /* Tables: a different colour on each column header (yellow, cyan, lavender, coral), dark text. */
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) th {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th {
     color: #14142b;
     border-bottom: 2px solid var(--border);
 }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) th:nth-child(4n+1) { background: #ffe14d; }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) th:nth-child(4n+2) { background: #67e0ef; }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) th:nth-child(4n+3) { background: #b79cff; }
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) th:nth-child(4n+4) { background: #ff9a9a; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th:nth-child(4n+1) { background: #ffe14d; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th:nth-child(4n+2) { background: #67e0ef; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th:nth-child(4n+3) { background: #b79cff; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th:nth-child(4n+4) { background: #ff9a9a; }
 /* Filters and fields in the page body: purple borders. */
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .section select,
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .section input[type="search"],
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .section input[type="text"] {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .section select,
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .section input[type="search"],
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .section input[type="text"] {
     border: 2px solid var(--purple);
 }
 /* Pills: a dark outline, rounded. */
-:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"], [data-layout="greencrt"])) .pill {
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .pill {
     border: 1px solid var(--border);
     border-radius: 999px;
     padding: 0 8px;
@@ -500,7 +500,7 @@ a:hover { text-decoration: underline; }
    value. Set as --bg-card, so sticky table headers inside match the box.
    Rainbow keeps every box white. */
 :root { --bg-card-alt: color-mix(in srgb, var(--bg-card), var(--text) 6%); }
-:root:not([data-theme="rainbow"]) .main-col > .section:nth-child(even),
+:root:not([data-theme="rainbow"]) .main-grid > .section:is([data-box="targets"], [data-box="settings"], [data-box="health"]),
 :root:not([data-theme="rainbow"]) .sidebar > .section:nth-child(even) {
     --bg-card: var(--bg-card-alt);
 }
@@ -581,7 +581,22 @@ a:hover { text-decoration: underline; }
     min-height: 0;
     overflow-y: auto;
 }
-.main-col > .section { flex: 0 0 auto; }
+/* The boxes of the main column sit in a grid (dashgrid.js moves and resizes them). Every box is the full row by
+   default; Recent Changes and Test Detail are half a row each, and stack when the column is under 776px (the
+   old auto-fit rule, 2 x 380px + gap). Row gap is the old column gap; the old pair gap was always 16px. */
+.main-grid {
+    --mg: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(max(380px, calc(50% - 8px)), 1fr));
+    gap: var(--mg) 16px;
+    align-items: stretch;
+}
+.main-grid > .section { grid-column: 1 / -1; }
+.main-grid > #changes-section,
+.main-grid > .detail-section { grid-column: span 1; }
+/* Reset layout button (dashgrid.js bar) sits under the boxes, above the footer. */
+.main-col > .dg-bar { order: 1; padding: 0; justify-content: center; }
+.main-col > .page-footer { order: 2; }
 .page-footer { flex: 0 0 auto; text-align: center; padding: 4px 0 8px; }
 .filter-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -797,7 +812,7 @@ a:hover { text-decoration: underline; }
 .indicator.pass.flapping, .legend-flap { background-color: #22d3ee; color: #000; text-shadow: none;
     background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.6) 0 2px, transparent 2px 6px); }
 :root[data-layout="retro95"] .indicator.flapping { outline-color: #000; }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.flapping { outline-color: var(--crt-hi); }
+:root[data-layout="msdos"] .indicator.flapping { outline-color: var(--crt-hi); }
 /* The ~ in a flapping cell: bigger than the 9px letter, which made it a 2px dash. */
 .flap-mark { font-size: 14px; font-weight: 900; line-height: 1; margin-left: -2px; }
 .indicator-label { font-size: 8px; letter-spacing: 0; }
@@ -838,13 +853,7 @@ a:hover { text-decoration: underline; }
     overflow: auto;
     min-height: 0;
 }
-/* Recent Changes and Test Detail share one row of the main column. */
-.pair-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-    gap: 16px;
-    align-items: stretch;
-}
+/* Recent Changes and Test Detail share one row of the main column (.main-grid). */
 /* Recent Changes sets the row height; Test Detail (contain: size, so it adds none) fills it and scrolls. */
 .detail-section { contain: size; display: flex; flex-direction: column; min-height: 220px; }
 #changes-section .section-body { overflow: auto; max-height: 420px; }
@@ -1240,18 +1249,25 @@ a:hover { text-decoration: underline; }
     grid-template-columns: minmax(0, 1fr) 380px;
     align-items: start;
 }
-:root[data-layout="modern"] .main-col {
-    display: grid;
+:root[data-layout="modern"] .main-col { gap: 18px; overflow: visible; }
+:root[data-layout="modern"] .main-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
-    overflow: visible;
     align-items: start;
 }
-:root[data-layout="modern"] .main-col > * { grid-column: span 2; }
-:root[data-layout="modern"] .main-col > #targets-section,
-:root[data-layout="modern"] .main-col > #dns-section,
-:root[data-layout="modern"] .main-col > #settings-section,
-:root[data-layout="modern"] .main-col > #bw-section { grid-column: span 1; }
+:root[data-layout="modern"] .main-grid > .section { grid-column: span 2; }
+:root[data-layout="modern"] .main-grid > #changes-section { grid-column: span 2; }
+:root[data-layout="modern"] .main-grid > #targets-section,
+:root[data-layout="modern"] .main-grid > #dns-section,
+:root[data-layout="modern"] .main-grid > #settings-section,
+:root[data-layout="modern"] .main-grid > #bw-section { grid-column: span 1; }
+/* Recent Changes and Test Detail: side by side only when the column is wide enough (the old auto-fit rule; the
+   column is the window minus the side nav, the 380px sidebar and the padding), else stacked. */
+@media (min-width: 1451px) {
+    :root[data-layout="modern"] .main-grid > .detail-section { grid-column: span 1; align-self: stretch; }
+    /* Test Detail is hidden until a cell is picked or a pair fails; Recent Changes then has the row to itself. */
+    :root[data-layout="modern"] body:is(.has-detail, .has-failing) .main-grid > #changes-section { grid-column: span 1; align-self: stretch; }
+}
 /* Right-hand column: Endpoints, with Test Detail opening above them once a
    pair is selected. Stays in view while the main column scrolls. */
 :root[data-layout="modern"] .sidebar {
@@ -1300,12 +1316,14 @@ a:hover { text-decoration: underline; }
     :root[data-layout="modern"] .container { grid-column: 1; }
     :root[data-layout="modern"] .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     :root[data-layout="modern"] .container,
-    :root[data-layout="modern"] .main-col { grid-template-columns: minmax(0, 1fr); }
-    :root[data-layout="modern"] .main-col > *,
-    :root[data-layout="modern"] .main-col > #targets-section,
-    :root[data-layout="modern"] .main-col > #dns-section,
-    :root[data-layout="modern"] .main-col > #settings-section,
-    :root[data-layout="modern"] .main-col > #bw-section { grid-column: 1; }
+    :root[data-layout="modern"] .main-grid { grid-template-columns: minmax(0, 1fr); }
+    :root[data-layout="modern"] .main-grid > .section,
+    :root[data-layout="modern"] .main-grid > #changes-section,
+    :root[data-layout="modern"] .main-grid > .detail-section,
+    :root[data-layout="modern"] .main-grid > #targets-section,
+    :root[data-layout="modern"] .main-grid > #dns-section,
+    :root[data-layout="modern"] .main-grid > #settings-section,
+    :root[data-layout="modern"] .main-grid > #bw-section { grid-column: 1; }
     :root[data-layout="modern"] .main-col { grid-row: auto; }
     :root[data-layout="modern"] .sidebar { grid-column: 1; grid-row: auto; position: static; max-height: none; }
 }
@@ -1476,6 +1494,7 @@ a:hover { text-decoration: underline; }
     grid-template-columns: minmax(0, 1fr) 440px;
 }
 :root[data-layout="retro95"] .main-col { overflow: visible; gap: 8px; }
+:root[data-layout="retro95"] .main-grid { --mg: 8px; }
 :root[data-layout="retro95"] .sidebar {
     position: sticky;
     top: 8px;
@@ -1558,7 +1577,7 @@ a:hover { text-decoration: underline; }
     border-color: #808080 #fff #fff #808080;
 }
 
-/* VT323 (SIL OFL, hub/static/fonts/): bundled, so the MS-DOS and Neon Green CRT layouts render the same on a
+/* VT323 (SIL OFL, hub/static/fonts/): bundled, so the MS-DOS layout (both colour variants) renders the same on a
    hub with no internet. size-adjust because VT323 is small for its em. */
 @font-face {
     font-family: "VT323";
@@ -1568,8 +1587,9 @@ a:hover { text-decoration: underline; }
     size-adjust: 160%;
     src: url("/static/fonts/vt323.woff2") format("woff2");
 }
-/* The two CRT palettes; everything below reads these. */
-/* MS-DOS: the 16 DOS colours on the same variables; the override block after the shared rules does the rest. */
+/* The CRT palettes; everything below reads these. MS-DOS is one layout with two variants: the 16 DOS colours
+   (blue, no data-variant) and Neon Green (data-variant="green"). The variant block must come after the MS-DOS
+   block (same layout, one more attribute) and only sets variables. */
 :root[data-layout="msdos"] {
     --crt-rgb: 170, 170, 170;      --crt-fail-rgb: 255, 85, 85;
     --crt-bg: #0000AA;  --crt-bg-hi: #0000AA;  --crt-bg-lo: #0000AA;
@@ -1579,8 +1599,11 @@ a:hover { text-decoration: underline; }
     --crt-hi: #FFFFFF;  --crt-mid: #AAAAAA;  --crt-gray: #8080FF;  --crt-accent: #55FFFF;
     --crt-red: #FF8080;  --crt-red-bg: #550000;
     --crt-slow: #FFFF55;  --crt-slow-bg: #000088;  --crt-fail: #AA0000;
+    /* the keyboard layer (menu bar, F-key line, help box, row cursor) */
+    --dos-bar: #AAAAAA;  --dos-ink: #000000;  --dos-sel-bg: #000000;  --dos-sel-fg: #AAAAAA;
+    --dos-hot: #AA0000;  --dos-hot2: #FF5555;  --dos-cursor: #FFFF55;  --dos-focus: #FFFFFF;
 }
-:root[data-layout="greencrt"] {
+:root[data-layout="msdos"][data-variant="green"] {
     --crt-rgb: 57, 255, 20;      --crt-fail-rgb: 140, 255, 77;
     --crt-bg: #010d03;  --crt-bg-hi: #021c07;  --crt-bg-lo: #000502;
     --crt-card: #021407;  --crt-hover: #032a0a;  --crt-muted: #031a09;
@@ -1589,14 +1612,18 @@ a:hover { text-decoration: underline; }
     --crt-hi: #39ff14;  --crt-mid: #22b80c;  --crt-gray: #1d4a1a;  --crt-accent: #7dff6a;
     --crt-red: #ff5a3c;  --crt-red-bg: #3a1008;
     --crt-slow: #d8ff8a;  --crt-slow-bg: #14300a;  --crt-fail: #8cff4d;
+    --dos-bar: var(--crt-mid);  --dos-ink: var(--crt-bg);  --dos-sel-bg: var(--crt-bg);  --dos-sel-fg: var(--crt-hi);
+    --dos-hot: var(--crt-red-bg);  --dos-hot2: var(--crt-slow);  --dos-cursor: var(--crt-hi);  --dos-focus: var(--crt-hi);
 }
-/* MS-DOS and Neon Green CRT: a terminal with scanlines and glow. Brings
+/* The MS-DOS colour variant picker: shown only while the MS-DOS layout is on. */
+:root:not([data-layout="msdos"]) #variant-select { display: none; }
+/* MS-DOS (blue or Neon Green): a terminal with scanlines and glow. Brings
    its own colours (theme picker disabled), so like Retro 95 it must stay
    after all theme rules. One hue means status can't rely on colour alone:
    a fail is inverted (dark on the bright hue), slow is bright and underlined,
    pass is plain colour. Local monospace fonts only: a hub may be offline. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]),
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .section:nth-child(n) {
+:root[data-layout="msdos"],
+:root[data-layout="msdos"] .section:nth-child(n) {
     --bg:        var(--crt-bg);
     --bg-card:   var(--crt-card);
     --bg-card-alt: var(--crt-card);
@@ -1622,13 +1649,13 @@ a:hover { text-decoration: underline; }
     --cyan:      var(--crt-accent);
     color-scheme: dark;
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) body {
+:root[data-layout="msdos"] body {
     font-family: "VT323", "Fixedsys Excelsior", "Consolas", "Lucida Console", "Courier New", monospace;
     background: radial-gradient(ellipse at 50% 40%, var(--crt-bg-hi) 0%, var(--crt-bg) 60%, var(--crt-bg-lo) 100%) fixed;
     text-shadow: 0 0 4px rgba(var(--crt-rgb), .55);
 }
 /* Scanlines over the whole screen; clicks pass through. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) body::after {
+:root[data-layout="msdos"] body::after {
     content: "";
     position: fixed;
     inset: 0;
@@ -1636,10 +1663,10 @@ a:hover { text-decoration: underline; }
     z-index: 60;
     background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px);
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) ::selection { background: var(--crt-hi); color: var(--crt-bg); text-shadow: none; }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) * { scrollbar-color: var(--crt-line) var(--crt-bg); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .header::before { display: none; }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .header {
+:root[data-layout="msdos"] ::selection { background: var(--crt-hi); color: var(--crt-bg); text-shadow: none; }
+:root[data-layout="msdos"] * { scrollbar-color: var(--crt-line) var(--crt-bg); }
+:root[data-layout="msdos"] .header::before { display: none; }
+:root[data-layout="msdos"] .header {
     background: transparent;
     background-image: none;
     border-bottom: 1px solid var(--crt-line);
@@ -1647,90 +1674,90 @@ a:hover { text-decoration: underline; }
     flex-wrap: wrap;
     gap: 8px;
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .header h1 { font-size: 0; letter-spacing: 0; }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .header h1::before {
+:root[data-layout="msdos"] .header h1 { font-size: 0; letter-spacing: 0; }
+:root[data-layout="msdos"] .header h1::before {
     content: "> CONFETTI TRAFFIC";
     font-size: 28px; font-weight: 700; letter-spacing: 3px; color: var(--crt-hi);
     text-shadow: 0 0 6px rgba(var(--crt-rgb), .9), 0 0 20px rgba(var(--crt-fail-rgb), .5);
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .header .status { color: var(--crt-mid); text-transform: uppercase; }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .header .status .dot { background: var(--crt-hi); box-shadow: 0 0 6px var(--crt-hi); }
+:root[data-layout="msdos"] .header .status { color: var(--crt-mid); text-transform: uppercase; }
+:root[data-layout="msdos"] .header .status .dot { background: var(--crt-hi); box-shadow: 0 0 6px var(--crt-hi); }
 /* Boxes: double-line borders, the title cut into the top edge. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .section {
+:root[data-layout="msdos"] .section {
     background: transparent;
     border: 3px double var(--crt-line);
     border-radius: 0;
     overflow: visible;
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .section-header {
+:root[data-layout="msdos"] .section-header {
     border-bottom: 1px dashed var(--crt-soft);
     color: var(--crt-hi);
     letter-spacing: 2px;
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .section-header > span:first-child::before { content: "\2524 "; color: var(--crt-line); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .section-header > span:first-child::after { content: " \251C"; color: var(--crt-line); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .matrix th,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .ep-table th { background: var(--crt-bg); color: var(--crt-mid); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .matrix td { background: transparent; }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .matrix td.selected { outline: 1px dashed var(--crt-hi); outline-offset: -3px; }
+:root[data-layout="msdos"] .section-header > span:first-child::before { content: "\2524 "; color: var(--crt-line); }
+:root[data-layout="msdos"] .section-header > span:first-child::after { content: " \251C"; color: var(--crt-line); }
+:root[data-layout="msdos"] .matrix th,
+:root[data-layout="msdos"] .ep-table th { background: var(--crt-bg); color: var(--crt-mid); }
+:root[data-layout="msdos"] .matrix td { background: transparent; }
+:root[data-layout="msdos"] .matrix td.selected { outline: 1px dashed var(--crt-hi); outline-offset: -3px; }
 /* One hue and the pass boxes use --crt-hover, so no solid fill: a faint tint plus
    lines above and below the row, which read without colour. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .matrix tr.row-sel > th,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .matrix tr.row-sel > td {
+:root[data-layout="msdos"] .matrix tr.row-sel > th,
+:root[data-layout="msdos"] .matrix tr.row-sel > td {
     box-shadow: inset 0 1px 0 var(--crt-hi), inset 0 -1px 0 var(--crt-hi);
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .matrix tr.row-sel > td:not(.self):not(.excluded) { background: rgba(var(--crt-rgb), .14); }
+:root[data-layout="msdos"] .matrix tr.row-sel > td:not(.self):not(.excluded) { background: rgba(var(--crt-rgb), .14); }
 /* Table stripes (LLDP per node, Recent Changes per time) were near-black on black. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .ep-table tr.stripe td { background: rgba(var(--crt-rgb), .09); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator { background: transparent; color: var(--crt-hi); text-shadow: 0 0 3px rgba(var(--crt-rgb), .7); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.pass { background: var(--crt-hover); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.slow { background: var(--crt-hover); color: var(--crt-slow); text-decoration: underline; }
-/* A failing test in the matrix is a red block in both CRT layouts (the rest of the
+:root[data-layout="msdos"] .ep-table tr.stripe td { background: rgba(var(--crt-rgb), .09); }
+:root[data-layout="msdos"] .indicator { background: transparent; color: var(--crt-hi); text-shadow: 0 0 3px rgba(var(--crt-rgb), .7); }
+:root[data-layout="msdos"] .indicator.pass { background: var(--crt-hover); }
+:root[data-layout="msdos"] .indicator.slow { background: var(--crt-hover); color: var(--crt-slow); text-decoration: underline; }
+/* A failing test in the matrix is a red block in both variants (the rest of the
    layout stays one hue). It is still an inverted solid block, so it reads without colour. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.fail { background: #ff3030; color: var(--crt-bg); text-shadow: none; box-shadow: 0 0 6px rgba(255, 48, 48, .8); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.none { color: var(--crt-gray); text-shadow: none; }
+:root[data-layout="msdos"] .indicator.fail { background: #ff3030; color: var(--crt-bg); text-shadow: none; box-shadow: 0 0 6px rgba(255, 48, 48, .8); }
+:root[data-layout="msdos"] .indicator.none { color: var(--crt-gray); text-shadow: none; }
 /* The layouts above set .pass/.fail/.slow with the background shorthand, which
    resets the flapping stripes; same specificity, so this comes after them.
-   Retro 95 needs its own rule to beat its fill shorthand; the CRT layouts are one
+   Retro 95 needs its own rule to beat its fill shorthand; the CRT variants are one
    hue, so they rest on the stripes, outline and ~ alone. */
 :root[data-layout="retro95"] .indicator.flapping {
     background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.35) 0 2px, transparent 2px 6px);
 }
 :root[data-layout="retro95"] .indicator.pass.flapping { background-color: #22d3ee;
     background-image: repeating-linear-gradient(45deg, rgba(255,255,255,.6) 0 2px, transparent 2px 6px); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.flapping,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .legend-flap {
+:root[data-layout="msdos"] .indicator.flapping,
+:root[data-layout="msdos"] .legend-flap {
     background-image: repeating-linear-gradient(45deg, rgba(var(--crt-rgb), .3) 0 2px, transparent 2px 6px);
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .legend-flap {
+:root[data-layout="msdos"] .legend-flap {
     background-color: var(--crt-hover); outline-color: var(--crt-hi);
 }
-/* Passing cells are green in both (like fails are red), so the CRT layouts still read pass/fail by colour.
+/* Passing cells are green in both (like fails are red), so both variants still read pass/fail by colour.
    One hue, so each state is a different shape: pass = a boxed cell, fail = a
    solid inverted block, slow = underlined, flapping = a thick dashed box that
    blinks (a plain pass cell and a flapper looked alike). */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.pass { outline: 1px solid #22b84a; outline-offset: -1px; color: #33ff66; text-shadow: 0 0 3px rgba(51, 255, 102, .7); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.flapping {
+:root[data-layout="msdos"] .indicator.pass { outline: 1px solid #22b84a; outline-offset: -1px; color: #33ff66; text-shadow: 0 0 3px rgba(51, 255, 102, .7); }
+:root[data-layout="msdos"] .indicator.flapping {
     outline: 2px dashed var(--crt-hi); outline-offset: -2px;
     animation: crt-flap 1.2s steps(1) infinite;
 }
 /* A failing flapper is a bright block whose outline would vanish into its own
    fill, so its dashes are dark and sit inside it. Slow gets a dotted box. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.fail.flapping { outline-color: var(--crt-bg); outline-offset: -3px; }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.slow { outline: 1px dotted var(--crt-slow); outline-offset: -1px; }
+:root[data-layout="msdos"] .indicator.fail.flapping { outline-color: var(--crt-bg); outline-offset: -3px; }
+:root[data-layout="msdos"] .indicator.slow { outline: 1px dotted var(--crt-slow); outline-offset: -1px; }
 /* One hue: warn is shaped like slow (underline, dotted outline), not coloured. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.warn { background: var(--crt-hover); color: var(--crt-slow); text-decoration: underline; outline: 1px dotted var(--crt-slow); outline-offset: -1px; text-shadow: none; }
+:root[data-layout="msdos"] .indicator.warn { background: var(--crt-hover); color: var(--crt-slow); text-decoration: underline; outline: 1px dotted var(--crt-slow); outline-offset: -1px; text-shadow: none; }
 @keyframes crt-flap { 50% { opacity: .3; } }
 @media (prefers-reduced-motion: reduce) {
-    :root:is([data-layout="msdos"], [data-layout="greencrt"]) .indicator.flapping { animation: none; }
+    :root[data-layout="msdos"] .indicator.flapping { animation: none; }
 }
 /* A fail anywhere else is inverted too, so it reads without colour. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .detail-test-status.fail,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .health-bad { background: var(--crt-fail); color: var(--crt-bg); text-shadow: none; padding: 0 4px; }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .btn-small,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .btn-nav,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .btn-nav-current,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .info-btn {
+:root[data-layout="msdos"] .detail-test-status.fail,
+:root[data-layout="msdos"] .health-bad { background: var(--crt-fail); color: var(--crt-bg); text-shadow: none; padding: 0 4px; }
+:root[data-layout="msdos"] .btn-small,
+:root[data-layout="msdos"] .btn-nav,
+:root[data-layout="msdos"] .btn-nav-current,
+:root[data-layout="msdos"] .info-btn {
     background: transparent;
     color: var(--crt-hi);
     border: 1px solid var(--crt-line);
@@ -1739,14 +1766,14 @@ a:hover { text-decoration: underline; }
     text-transform: uppercase;
     text-shadow: inherit;
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .btn-small:hover,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .btn-nav:hover,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .btn-nav-current {
+:root[data-layout="msdos"] .btn-small:hover,
+:root[data-layout="msdos"] .btn-nav:hover,
+:root[data-layout="msdos"] .btn-nav-current {
     background: var(--crt-hi); color: var(--crt-bg); text-shadow: none; text-decoration: none;
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) select,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) input,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) textarea {
+:root[data-layout="msdos"] select,
+:root[data-layout="msdos"] input,
+:root[data-layout="msdos"] textarea {
     background: transparent;
     color: var(--crt-hi);
     border: none;
@@ -1755,25 +1782,25 @@ a:hover { text-decoration: underline; }
     font-family: inherit;
     text-shadow: inherit;
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) select option { background: var(--crt-bg); color: var(--crt-hi); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .theme-select:disabled { color: var(--crt-gray); border-color: var(--crt-soft); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .detail-test-card,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .detail-related { background: transparent; border: 1px solid var(--crt-soft); }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .container {
+:root[data-layout="msdos"] select option { background: var(--crt-bg); color: var(--crt-hi); }
+:root[data-layout="msdos"] .theme-select:disabled { color: var(--crt-gray); border-color: var(--crt-soft); }
+:root[data-layout="msdos"] .detail-test-card,
+:root[data-layout="msdos"] .detail-related { background: transparent; border: 1px solid var(--crt-soft); }
+:root[data-layout="msdos"] .container {
     max-height: none;
     grid-template-columns: minmax(0, 1fr) 440px;
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .main-col { overflow: visible; }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .sidebar {
+:root[data-layout="msdos"] .main-col { overflow: visible; }
+:root[data-layout="msdos"] .sidebar {
     position: sticky;
     top: 16px;
     max-height: calc(100vh - 32px);
     overflow-y: auto;
 }
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .matrix tbody th,
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .matrix th.origin { box-shadow: -10px 0 0 var(--crt-bg); }
+:root[data-layout="msdos"] .matrix tbody th,
+:root[data-layout="msdos"] .matrix th.origin { box-shadow: -10px 0 0 var(--crt-bg); }
 /* A prompt with a blinking cursor under the footer buttons. */
-:root:is([data-layout="msdos"], [data-layout="greencrt"]) .page-footer::after {
+:root[data-layout="msdos"] .page-footer::after {
     content: "confetti@hub:~$ \2588";
     display: block;
     margin-top: 10px;
@@ -1782,39 +1809,39 @@ a:hover { text-decoration: underline; }
 }
 @keyframes crt-blink { 50% { color: transparent; text-shadow: none; } }
 @media (prefers-reduced-motion: reduce) {
-    :root:is([data-layout="msdos"], [data-layout="greencrt"]) .page-footer::after { animation: none; }
+    :root[data-layout="msdos"] .page-footer::after { animation: none; }
 }
-/* MS-DOS on top of the shared CRT rules: a blue screen with no scanlines or glow, and
+/* Blue MS-DOS (no variant) on top of the shared CRT rules: a blue screen with no scanlines or glow, and
    the DOS colours as solid blocks, each still carrying its letter (status never rests on colour alone). */
-:root[data-layout="msdos"] body { background: var(--crt-bg); text-shadow: none; }
-:root[data-layout="msdos"] body::after { display: none; }
-:root[data-layout="msdos"] .header h1::before { content: "C:\\CONFETTI>"; text-shadow: none; letter-spacing: 0; font-weight: 400; font-size: 34px; }
-:root[data-layout="msdos"] .header .status .dot { box-shadow: none; }
-:root[data-layout="msdos"] .section-header { color: #FFFF55; letter-spacing: 0; }
-:root[data-layout="msdos"] .matrix th,
-:root[data-layout="msdos"] .ep-table th { color: #FFFFFF; }
-:root[data-layout="msdos"] .indicator { text-shadow: none; font-size: 15px; font-weight: 400; line-height: 1; }
-:root[data-layout="msdos"] .indicator.pass { background: #00AA00; color: #000000; outline: none; }
-:root[data-layout="msdos"] .indicator.fail { background: #AA0000; color: #FFFFFF; box-shadow: none; }
-:root[data-layout="msdos"] .indicator.slow { background: #FFFF55; color: #000000; text-decoration: none; outline: none; }
-:root[data-layout="msdos"] .indicator.warn { background: #AA5500; color: #FFFFFF; text-decoration: none; outline: none; }
-:root[data-layout="msdos"] .indicator.none { background: #555555; color: #AAAAAA; }
-:root[data-layout="msdos"] .indicator.flapping { outline: 2px dashed #FFFFFF; outline-offset: -3px; }
-:root[data-layout="msdos"] .detail-test-status.fail,
-:root[data-layout="msdos"] .health-bad { background: #AA0000; color: #FFFFFF; }
-:root[data-layout="msdos"] .matrix tr.stripe:not(.row-sel) > th,
-:root[data-layout="msdos"] .matrix tr.stripe:not(.row-sel) > td:not(.self):not(.excluded),
-:root[data-layout="msdos"] .ep-table tr.stripe td { background: #000088; }
-:root[data-layout="msdos"] .btn-small,
-:root[data-layout="msdos"] .btn-nav,
-:root[data-layout="msdos"] .btn-nav-current,
-:root[data-layout="msdos"] .info-btn { background: #AAAAAA; color: #000000; border: 0; text-transform: none; box-shadow: 4px 4px 0 #000000; }
-:root[data-layout="msdos"] .btn-small:hover,
-:root[data-layout="msdos"] .btn-nav:hover,
-:root[data-layout="msdos"] .btn-nav-current { background: #FFFFFF; color: #000000; }
-:root[data-layout="msdos"] .btn-small:active,
-:root[data-layout="msdos"] .btn-nav:active { box-shadow: none; transform: translate(4px, 4px); }
-:root[data-layout="msdos"] .page-footer::after { content: "C:\\CONFETTI>\2588"; }
+:root[data-layout="msdos"]:not([data-variant="green"]) body { background: var(--crt-bg); text-shadow: none; }
+:root[data-layout="msdos"]:not([data-variant="green"]) body::after { display: none; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .header h1::before { content: "C:\\CONFETTI>"; text-shadow: none; letter-spacing: 0; font-weight: 400; font-size: 34px; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .header .status .dot { box-shadow: none; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .section-header { color: #FFFF55; letter-spacing: 0; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .matrix th,
+:root[data-layout="msdos"]:not([data-variant="green"]) .ep-table th { color: #FFFFFF; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .indicator { text-shadow: none; font-size: 15px; font-weight: 400; line-height: 1; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .indicator.pass { background: #00AA00; color: #000000; outline: none; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .indicator.fail { background: #AA0000; color: #FFFFFF; box-shadow: none; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .indicator.slow { background: #FFFF55; color: #000000; text-decoration: none; outline: none; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .indicator.warn { background: #AA5500; color: #FFFFFF; text-decoration: none; outline: none; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .indicator.none { background: #555555; color: #AAAAAA; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .indicator.flapping { outline: 2px dashed #FFFFFF; outline-offset: -3px; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .detail-test-status.fail,
+:root[data-layout="msdos"]:not([data-variant="green"]) .health-bad { background: #AA0000; color: #FFFFFF; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .matrix tr.stripe:not(.row-sel) > th,
+:root[data-layout="msdos"]:not([data-variant="green"]) .matrix tr.stripe:not(.row-sel) > td:not(.self):not(.excluded),
+:root[data-layout="msdos"]:not([data-variant="green"]) .ep-table tr.stripe td { background: #000088; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .btn-small,
+:root[data-layout="msdos"]:not([data-variant="green"]) .btn-nav,
+:root[data-layout="msdos"]:not([data-variant="green"]) .btn-nav-current,
+:root[data-layout="msdos"]:not([data-variant="green"]) .info-btn { background: #AAAAAA; color: #000000; border: 0; text-transform: none; box-shadow: 4px 4px 0 #000000; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .btn-small:hover,
+:root[data-layout="msdos"]:not([data-variant="green"]) .btn-nav:hover,
+:root[data-layout="msdos"]:not([data-variant="green"]) .btn-nav-current { background: #FFFFFF; color: #000000; }
+:root[data-layout="msdos"]:not([data-variant="green"]) .btn-small:active,
+:root[data-layout="msdos"]:not([data-variant="green"]) .btn-nav:active { box-shadow: none; transform: translate(4px, 4px); }
+:root[data-layout="msdos"]:not([data-variant="green"]) .page-footer::after { content: "C:\\CONFETTI>\2588"; }
 /* MS-DOS keyboard layer: menu bar on top, function-key line at the bottom, a help box.
    Hidden in every other layout; the keys only work here (see the keydown handler). */
 .dos-menubar, .dos-fkeys, .dos-help { display: none; }
@@ -1822,47 +1849,47 @@ a:hover { text-decoration: underline; }
 :root[data-layout="msdos"] .dos-menubar,
 :root[data-layout="msdos"] .dos-fkeys {
     display: flex; position: fixed; left: 0; right: 0; z-index: 50;
-    background: #AAAAAA; color: #000000; font-family: inherit; font-size: 16px; line-height: 24px;
+    background: var(--dos-bar); color: var(--dos-ink); font-family: inherit; font-size: 16px; line-height: 24px;
 }
 :root[data-layout="msdos"] .dos-menubar { top: 0; padding: 0 8px; }
 :root[data-layout="msdos"] .dos-fkeys { bottom: 0; padding: 4px 8px; gap: 14px; flex-wrap: wrap; }
 :root[data-layout="msdos"] .dos-menu { position: relative; }
 :root[data-layout="msdos"] .dos-menu > button,
 :root[data-layout="msdos"] .dos-fkeys button {
-    background: transparent; color: #000000; border: 0; font: inherit; padding: 0 10px; cursor: pointer;
+    background: transparent; color: var(--dos-ink); border: 0; font: inherit; padding: 0 10px; cursor: pointer;
 }
 :root[data-layout="msdos"] .dos-fkeys button { padding: 0; }
-:root[data-layout="msdos"] .dos-fkeys button b { background: #000000; color: #AAAAAA; font-weight: 400; padding: 0 3px; margin-right: 4px; }
-:root[data-layout="msdos"] .dos-hot { color: #AA0000; }
+:root[data-layout="msdos"] .dos-fkeys button b { background: var(--dos-sel-bg); color: var(--dos-sel-fg); font-weight: 400; padding: 0 3px; margin-right: 4px; }
+:root[data-layout="msdos"] .dos-hot { color: var(--dos-hot); }
 :root[data-layout="msdos"] .dos-menu.open > button,
 :root[data-layout="msdos"] .dos-menu > button:hover,
-:root[data-layout="msdos"] .dos-menu > button:focus-visible { background: #000000; color: #AAAAAA; outline: none; }
-:root[data-layout="msdos"] .dos-menu.open > button .dos-hot { color: #FF5555; }
+:root[data-layout="msdos"] .dos-menu > button:focus-visible { background: var(--dos-sel-bg); color: var(--dos-sel-fg); outline: none; }
+:root[data-layout="msdos"] .dos-menu.open > button .dos-hot { color: var(--dos-hot2); }
 :root[data-layout="msdos"] .dos-drop {
-    display: none; position: absolute; top: 24px; left: 0; min-width: 240px; background: #AAAAAA;
-    border: 3px double #000000; box-shadow: 6px 6px 0 #000000; flex-direction: column; padding: 2px 0;
+    display: none; position: absolute; top: 24px; left: 0; min-width: 240px; background: var(--dos-bar);
+    border: 3px double var(--dos-ink); box-shadow: 6px 6px 0 var(--dos-ink); flex-direction: column; padding: 2px 0;
 }
 :root[data-layout="msdos"] .dos-menu.open > .dos-drop { display: flex; }
 :root[data-layout="msdos"] .dos-drop button,
 :root[data-layout="msdos"] .dos-drop a {
-    background: transparent; color: #000000; border: 0; font: inherit; text-align: left; text-decoration: none;
+    background: transparent; color: var(--dos-ink); border: 0; font: inherit; text-align: left; text-decoration: none;
     padding: 0 12px; cursor: pointer; white-space: nowrap; display: block;
 }
 :root[data-layout="msdos"] .dos-drop .on,
 :root[data-layout="msdos"] .dos-drop button:hover,
-:root[data-layout="msdos"] .dos-drop a:hover { background: #000000; color: #AAAAAA; }
-:root[data-layout="msdos"] .dos-drop .on .dos-hot { color: #FF5555; }
-:root[data-layout="msdos"] .dos-pair { margin-left: auto; color: #000000; }
+:root[data-layout="msdos"] .dos-drop a:hover { background: var(--dos-sel-bg); color: var(--dos-sel-fg); }
+:root[data-layout="msdos"] .dos-drop .on .dos-hot { color: var(--dos-hot2); }
+:root[data-layout="msdos"] .dos-pair { margin-left: auto; color: var(--dos-ink); }
 :root[data-layout="msdos"] .dos-help.open {
     display: block; position: fixed; z-index: 60; top: 15%; left: 50%; transform: translateX(-50%);
-    background: #AAAAAA; color: #000000; border: 3px double #000000; box-shadow: 8px 8px 0 #000000;
+    background: var(--dos-bar); color: var(--dos-ink); border: 3px double var(--dos-ink); box-shadow: 8px 8px 0 var(--dos-ink);
     padding: 8px 18px 12px; max-width: 92vw; font-size: 16px; line-height: 1.35;
 }
-:root[data-layout="msdos"] .dos-help h2 { margin: 0 0 6px; font-size: 16px; font-weight: 400; text-align: center; background: #000000; color: #AAAAAA; }
+:root[data-layout="msdos"] .dos-help h2 { margin: 0 0 6px; font-size: 16px; font-weight: 400; text-align: center; background: var(--dos-sel-bg); color: var(--dos-sel-fg); }
 :root[data-layout="msdos"] .dos-help p { margin: 0; white-space: pre; }
 /* The cursor: a solid yellow frame with a black one inside, so it reads without colour. */
-:root[data-layout="msdos"] .matrix td.kbd-cursor { outline: 3px solid #FFFF55; outline-offset: -3px; box-shadow: inset 0 0 0 5px #000000; }
-:root[data-layout="msdos"] :focus-visible { outline: 2px solid #FFFFFF; outline-offset: 1px; }
+:root[data-layout="msdos"] .matrix td.kbd-cursor { outline: 3px solid var(--dos-cursor); outline-offset: -3px; box-shadow: inset 0 0 0 5px var(--dos-ink); }
+:root[data-layout="msdos"] :focus-visible { outline: 2px solid var(--dos-focus); outline-offset: 1px; }
 @media (max-width: 700px) {
     :root[data-layout="msdos"] .dos-pair { display: none; }
     :root[data-layout="msdos"] body { padding-bottom: 80px; } /* the key line wraps to two rows */
@@ -1882,14 +1909,52 @@ var LAYOUTS = [
     ['modern', 'Modern'],
     ['retro95', 'Retro 95', true],
     ['msdos', 'MS-DOS', true],
-    ['greencrt', 'Neon Green CRT', true],
 ];
+// MS-DOS has colour variants: the same layout, menu bar and keys, another palette (data-variant on :root).
+// Blue is the default and has no attribute. The picker is only shown while MS-DOS is on.
+var VARIANTS = [
+    ['blue', 'DOS Blue'],
+    ['green', 'Neon Green'],
+];
+var VARIANT_KEY = 'confetti-dos-variant';
+function applyVariant(name) {
+    if (name === 'green') document.documentElement.setAttribute('data-variant', 'green');
+    else document.documentElement.removeAttribute('data-variant');
+}
 function applyLayout(name) {
     var known = LAYOUTS.some(function (l) { return l[0] === name; });
     if (!known || name === 'classic') document.documentElement.removeAttribute('data-layout');
     else document.documentElement.setAttribute('data-layout', name);
 }
-try { applyLayout(localStorage.getItem('confetti-layout')); } catch (e) {}
+try {
+    var savedLayout = localStorage.getItem('confetti-layout');
+    // "Neon Green CRT" used to be a layout of its own: it is now the green variant of MS-DOS.
+    if (savedLayout === 'greencrt') {
+        savedLayout = 'msdos';
+        localStorage.setItem('confetti-layout', 'msdos');
+        localStorage.setItem(VARIANT_KEY, 'green');
+    }
+    applyVariant(localStorage.getItem(VARIANT_KEY));
+    applyLayout(savedLayout);
+} catch (e) {}
+function setVariant(name) {
+    applyVariant(name);
+    try { localStorage.setItem(VARIANT_KEY, document.documentElement.getAttribute('data-variant') || 'blue'); } catch (e) {}
+    syncVariantSelect();
+}
+function syncVariantSelect() {
+    var sel = document.getElementById('variant-select');
+    if (!sel) return;
+    if (!sel.options.length) {
+        VARIANTS.forEach(function (v) {
+            var o = document.createElement('option');
+            o.value = v[0];
+            o.textContent = v[1];
+            sel.appendChild(o);
+        });
+    }
+    sel.value = document.documentElement.getAttribute('data-variant') || 'blue';
+}
 function setLayout(name) {
     applyLayout(name);
     try { localStorage.setItem('confetti-layout', document.documentElement.getAttribute('data-layout') || 'classic'); } catch (e) {}
@@ -1920,6 +1985,7 @@ function syncLayoutSelect() {
         themeSel.disabled = own;
         themeSel.title = own ? 'This layout has its own colours' : '';
     }
+    syncVariantSelect();
 }
 // Shuffle picks a layout with each theme, on the same timer. The pick is kept
 // in the shared shuffle state so every open dashboard shows the same one. It
@@ -1984,6 +2050,7 @@ try {
         <select id="theme-select" class="btn-nav theme-select" aria-label="Colour theme" onchange="setTheme(this.value)"></select>
         <script>syncThemeSelect();</script>
         <select id="layout-select" class="btn-nav theme-select" aria-label="Layout" onchange="setLayout(this.value)"></select>
+        <select id="variant-select" class="btn-nav theme-select" aria-label="MS-DOS colour variant" title="MS-DOS colour variant" onchange="setVariant(this.value)"></select>
         <script>syncLayoutSelect();</script>
     </div>
 </div>
@@ -2002,7 +2069,8 @@ try {
 <div class="container">
     <!-- Main column -->
     <div class="main-col">
-        <div class="section" id="matrix-section">
+        <div class="main-grid">
+        <div class="section" id="matrix-section" data-box="matrix">
             <div class="section-header">
                 <span>Confetti traffic matrix</span>
                 <div class="legend">
@@ -2031,8 +2099,7 @@ try {
              log of transitions (pass<->fail, and traceroute path changes),
              not raw results — a steady-state failure that hasn't changed
              produces nothing here on purpose. -->
-        <div class="pair-row">
-        <div class="section" id="changes-section">
+        <div class="section" id="changes-section" data-box="changes">
             <div class="section-header">
                 <span>Recent Changes<span class="hdr-note" id="changes-note"></span></span>
                 <span class="hdr-actions"><button type="button" class="btn-small collapse-toggle" data-section="changes-section">Collapse</button></span>
@@ -2047,7 +2114,7 @@ try {
             </div>
         </div>
 
-        <div class="section detail-section">
+        <div class="section detail-section" data-box="detail">
             <div class="section-header">
                 <span>Test Detail</span>
                 <span id="detail-close" style="cursor:pointer;display:none;color:var(--text-dim)">&times;</span>
@@ -2056,12 +2123,11 @@ try {
                 <div class="detail-empty">Click a matrix cell to inspect test results</div>
             </div>
         </div>
-        </div>
 
         <!-- Compressed syslog feed — the last few messages, so a device event
              is visible without leaving the dashboard. Same filters as /syslog;
              still capped at 10 rows, so "View all" is where to read more. -->
-        <div class="section" id="syslog-preview-section">
+        <div class="section" id="syslog-preview-section" data-box="syslog">
             <div class="section-header">
                 <span>Recent Syslog<span class="hdr-note" id="syslog-preview-note"></span></span>
                 <span class="hdr-actions">
@@ -2103,7 +2169,7 @@ try {
         <!-- Static targets: addresses that run no agent, so they can never
              appear in the mesh matrix above. Their results were previously
              collected and stored but had nowhere to render. -->
-        <div class="section collapsed" id="targets-section">
+        <div class="section collapsed" id="targets-section" data-box="targets">
             <div class="section-header">
                 <span>Static Targets<span class="hdr-note" id="targets-note"></span></span>
                 <span class="hdr-actions">
@@ -2128,7 +2194,7 @@ try {
         <!-- DNS is one test per source against a resolver, not a property of a
              source->target pair, so it cannot light up in a grid. It lives
              here instead of occupying a permanently grey matrix column. -->
-        <div class="section" id="dns-section">
+        <div class="section" id="dns-section" data-box="dns">
             <div class="section-header"><span>DNS Resolution<span class="hdr-note" id="dns-note"></span></span></div>
             <div class="section-body">
                 <table class="ep-table" id="dns-table">
@@ -2148,7 +2214,7 @@ try {
              cycle (GET /settings) and start/stop the matching server
              themselves; "node config" leaves each node's own ENABLE_* line
              in charge. -->
-        <div class="section collapsed" id="settings-section">
+        <div class="section collapsed" id="settings-section" data-box="settings">
             <div class="section-header">
                 <span>Mesh Settings</span>
                 <span class="hdr-actions">
@@ -2197,7 +2263,7 @@ try {
         <!-- On-demand bandwidth test (hub/app/bandwidth.py). Node to node: the
              hub runs iperf3 on both over SSH. Node to browser: this page
              talks to the node's /cgi-bin/confettictl-bw directly. One at a time. -->
-        <div class="section collapsed" id="bw-section">
+        <div class="section collapsed" id="bw-section" data-box="bw">
             <div class="section-header">
                 <span>Bandwidth Test</span>
                 <span class="hdr-actions">
@@ -2242,7 +2308,7 @@ try {
         <!-- Hub self-health: the hub is infrastructure, not a test participant,
              but it can still fail quietly (full disk, dead chronyd, a syslog
              listener that never bound). Separate from the mesh matrix above. -->
-        <div class="section" id="health-section">
+        <div class="section" id="health-section" data-box="health">
             <div class="section-header">
                 <span>Hub Health</span>
                 <span id="health-checked" style="font-size:10px;color:var(--text-dim);text-transform:none;letter-spacing:0"></span>
@@ -2254,6 +2320,8 @@ try {
                     Hub health is unavailable.
                 </div>
             </div>
+        </div>
+
         </div>
 
         <div class="page-footer">
@@ -2394,6 +2462,16 @@ Tab                  move between buttons and fields</p>
 </div>
 
 <script src="/static/ctxmenu.js"></script>
+<script src="/static/dashgrid.js"></script>
+<script>
+// The main column's boxes can be moved and resized; the sidebar stays fixed. "Reset layout" is a footer-style
+// button under the boxes (not above them: a bar on top would push the main column down beside the sidebar).
+DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
+(function () {
+    var b = document.querySelector('.dg-bar button');
+    if (b) b.classList.add('btn-small');
+})();
+</script>
 <script>
 (function() {
     "use strict";
