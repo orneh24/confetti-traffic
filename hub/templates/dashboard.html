@@ -769,6 +769,7 @@ a:hover { text-decoration: underline; }
 .matrix td.hubreach { cursor: default; }
 .matrix td.hubreach:hover { background: transparent; }
 .matrix td.hubreach .indicator { font-size: 14px; }
+.matrix td.hubreach .indicator.hub-push { cursor: pointer; }
 .rule-list { list-style: none; margin: 0 0 8px; padding: 0; }
 .rule-list li { display: flex; align-items: center; gap: 8px; padding: 3px 2px; }
 .rule-list .rule-name { flex: 1; }
@@ -3343,9 +3344,28 @@ DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
             : ep.hostname + (ok ? " reaches the hub" : " is silent") + " — last heard " +
               (age < 90 ? age + " s" : Math.round(age / 60) + " min") + " ago" +
               (oldBuild ? " — warning: runs build " + build.substring(0, 7) + ", the hub serves " + hubRelease.substring(0, 7) : "");
+        // Click = push the hub's build to this node (managed nodes only).
+        var canPush = ep.managed === true;
         return "<td class='hubreach'><div class='cell-indicators'><div class='indicator " + (!at ? "none" : (oldBuild ? "warn" : (ok ? "pass" : "fail"))) +
-               "' title='" + escAttr(tip) + "'>&uarr;</div></div></td>";
+               (canPush ? " hub-push" : "") + "' data-host='" + esc(ep.hostname) + "' title='" +
+               escAttr(tip + (canPush ? " — click to push a new build to this node" : "")) + "'>&uarr;</div></div></td>";
     }
+
+    // Ask, then queue a push-update of the hub's node build (same as the endpoint list's refresh button).
+    function pushNode(host) {
+        if (!confirm("Push new build to " + host + "? It runs confettictl-update there and re-runs confettictl-setup.sh.")) return;
+        fetch("/api/nodes/" + encodeURIComponent(host) + "/update", {method: "POST"})
+            .then(function(r) { return r.json().then(function(body) { return {ok: r.ok, body: body}; }); })
+            .then(function(res) {
+                if (!res.ok) alert("Not queued: " + (res.body.error || "error"));
+                refresh();
+            });
+    }
+
+    document.addEventListener("click", function(e) {
+        var el = e.target.closest ? e.target.closest(".indicator.hub-push") : null;
+        if (el) pushNode(el.getAttribute("data-host"));
+    });
 
     // Only draw types that actually have data somewhere. iperf is off by
     // default, so drawing a permanently grey "I" in every cell was a sixth
@@ -3591,14 +3611,7 @@ DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
         var pushBtns = tbody.querySelectorAll(".btn-push");
         for (var p = 0; p < pushBtns.length; p++) {
             pushBtns[p].addEventListener("click", function(e) {
-                var host = e.currentTarget.getAttribute("data-host");
-                if (!confirm("Push this hub's node build to " + host + "? It runs confettictl-update there and re-runs confettictl-setup.sh.")) return;
-                fetch("/api/nodes/" + encodeURIComponent(host) + "/update", {method: "POST"})
-                    .then(function(r) { return r.json().then(function(body) { return {ok: r.ok, body: body}; }); })
-                    .then(function(res) {
-                        if (!res.ok) alert("Not queued: " + (res.body.error || "error"));
-                        refresh();
-                    });
+                pushNode(e.currentTarget.getAttribute("data-host"));
             });
         }
 
