@@ -22,6 +22,7 @@ End-to-end connectivity testing between nodes on a network. It goes beyond
 ICMP: it makes real TCP connections (HTTP, SSH, SMB, SMTP, iperf3) and
 measures packet loss/jitter, path MTU, DNS and traceroute. Results show on a
 web dashboard, optionally next to syslog from the network devices on the path.
+A Settings page holds the URLs of Confetti Butler and Confetti Topo; a small button for each appears at the right of the top menu on every page (opens in a new tab).
 A Timeline page groups failures, route changes, syslog and bandwidth tests into incidents, and a slider replays the mesh at any earlier moment (1 hour, 6 hours or 24 hours back).
 
 ![Animated tour of the hub's Dashboard, Syslog and Timeline pages](docs/img/hub-pages.gif)

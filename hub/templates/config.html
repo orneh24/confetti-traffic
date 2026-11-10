@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/ctxmenu.css">
+<title>Settings</title>
+<script>
+// Colour theme picker. The palettes are the :root[data-theme="NAME"] blocks
+// below; dark is the default and has no attribute. Same localStorage key on
+// every hub page, so one choice covers all. Applied before first paint so a
+// saved choice doesn't flash dark on load.
+var THEMES = [
+    ['dark', 'Dark'],
+    ['light', 'Light'],
+    ['monokai', 'Monokai'],
+    ['contrast', 'High Contrast'],
+    ['terminal', 'Terminal green'],
+    ['confetti-night', 'Confetti Night'],
+    ['rainbow', 'Rainbow'],
+];
+// "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
+// and moves to a different one every 5-10 minutes. The saved choice is
+// 'shuffle'; the palette on screen and when it next changes live under
+// confetti-theme-shuffle, so all pages show the same one and a reload does
+// not reshuffle early.
+var SHUFFLE_MIN_MS = 5 * 60 * 1000;
+var SHUFFLE_MAX_MS = 10 * 60 * 1000;
+var shuffling = false;
+var shuffleTimer = null;
+function themeKnown(name) {
+    for (var i = 0; i < THEMES.length; i++) { if (THEMES[i][0] === name) return true; }
+    return false;
+}
+function applyTheme(name) {
+    if (!themeKnown(name) || name === 'dark') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', name);
+}
+function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') || 'dark';
+}
+function shuffleStep(fromTimer) {
+    var now = Date.now();
+    var st = null;
+    try { st = JSON.parse(localStorage.getItem('confetti-theme-shuffle')); } catch (e) {}
+    if (!st || !themeKnown(st.theme) || !(st.until > now)) {
+        var avoid = st && themeKnown(st.theme) ? st.theme : currentTheme();
+        var pick;
+        do { pick = THEMES[Math.floor(Math.random() * THEMES.length)][0]; } while (pick === avoid);
+        st = { theme: pick, until: now + SHUFFLE_MIN_MS + Math.random() * (SHUFFLE_MAX_MS - SHUFFLE_MIN_MS) };
+        try { localStorage.setItem('confetti-theme-shuffle', JSON.stringify(st)); } catch (e) {}
+    }
+    applyTheme(st.theme);
+    // The dashboard defines this to pick a layout with the theme.
+    if (typeof window.onShuffleStep === 'function') window.onShuffleStep(st);
+    // The timer's change gets a confetti rain; a page load or a pick from the
+    // selector does not. Another open page may have made the same change.
+    if (fromTimer && typeof confettiBlast === 'function' && document.body) confettiBlast();
+    clearTimeout(shuffleTimer);
+    shuffleTimer = setTimeout(function () { if (shuffling) shuffleStep(true); }, Math.max(1000, st.until - now));
+}
+try {
+    var savedTheme = localStorage.getItem('confetti-theme');
+    if (savedTheme === 'shuffle') { shuffling = true; shuffleStep(); }
+    else applyTheme(savedTheme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+} catch (e) {}
+function setTheme(name) {
+    clearTimeout(shuffleTimer);
+    shuffling = (name === 'shuffle');
+    if (shuffling) {
+        // A fresh pick now, not the tail of an earlier shuffle.
+        try { localStorage.removeItem('confetti-theme-shuffle'); } catch (e) {}
+        shuffleStep();
+    } else {
+        applyTheme(name);
+    }
+    try { localStorage.setItem('confetti-theme', shuffling ? 'shuffle' : currentTheme()); } catch (e) {}
+    syncThemeSelect();
+}
+function syncThemeSelect() {
+    var sel = document.getElementById('theme-select');
+    if (!sel) return;
+    if (!sel.options.length) {
+        THEMES.concat([['shuffle', 'Shuffle']]).forEach(function (t) {
+            var o = document.createElement('option');
+            o.value = t[0];
+            o.textContent = t[1];
+            sel.appendChild(o);
+        });
+    }
+    sel.value = shuffling ? 'shuffle' : currentTheme();
+}
+// "Make it rain!" button: a party-popper cannon pops in from a random side and
+// fires confetti in the current theme's colours. Plain canvas, no library (the
+// hub may be offline). Each click gets its own overlay canvas, removed when the
+// last piece falls off. btn is unused; kept so the callers stay as they are.
+function confettiBlast(btn) {
+    var css = getComputedStyle(document.documentElement);
+    var colors = ['--yellow', '--red', '--green', '--blue', '--cyan']
+        .map(function (v) { return css.getPropertyValue(v).trim(); })
+        .filter(Boolean);
+    if (!colors.length) colors = ['#d29922', '#f85149', '#3fb950', '#58a6ff', '#39c5cf'];
+    var dpr = window.devicePixelRatio || 1;
+    var W = window.innerWidth, H = window.innerHeight;
+    var cv = document.createElement('canvas');
+    cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+    cv.width = W * dpr;
+    cv.height = H * dpr;
+    document.body.appendChild(cv);
+    var ctx = cv.getContext('2d');
+    ctx.scale(dpr, dpr);
+    var bits = [];
+    function add(x, y, vx, vy) {
+        bits.push({ x: x, y: y, vx: vx, vy: vy,
+            w: 6 + Math.random() * 6, h: 3 + Math.random() * 5,
+            rot: Math.random() * 6.28, spin: (Math.random() - 0.5) * 0.3,
+            sway: Math.random() * 6.28,
+            color: colors[Math.floor(Math.random() * colors.length)] });
+    }
+    var fired = false;
+    var left = Math.random() < 0.5, dir = left ? 1 : -1, size = 72;
+    var gun = document.createElement('div');
+    gun.textContent = '🎉';
+    gun.style.cssText = 'position:fixed;bottom:12px;' + (left ? 'left' : 'right') + ':0;font-size:' + size +
+        'px;line-height:1;pointer-events:none;z-index:10000;transition:transform .3s ease-out';
+    function pose(x, extra) {
+        gun.style.transform = 'translateX(' + x + ') ' + (left ? '' : 'scaleX(-1) ') + extra;
+    }
+    pose(left ? '-130%' : '130%', '');
+    document.body.appendChild(gun);
+    // The popper's mouth is its top inner corner; shoot up and toward the middle.
+    function fire(n) {
+        fired = true;
+        var mx = left ? size * 0.85 : W - size * 0.85, my = H - 12 - size * 0.85;
+        for (var i = 0; i < n; i++) {
+            var a = (60 + (Math.random() - 0.5) * 120) * Math.PI / 180;
+            var s = 24 + Math.random() * 20;
+            add(mx, my, dir * Math.cos(a) * s, -Math.sin(a) * s);
+        }
+    }
+    gun.offsetWidth;
+    pose('0', '');
+    setTimeout(function () { fire(1400); pose('0', 'rotate(' + (-8 * dir) + 'deg) scale(1.15)'); }, 350);
+    setTimeout(function () { pose('0', ''); }, 500);
+    setTimeout(function () { fire(400); }, 550);
+    setTimeout(function () { pose(left ? '-130%' : '130%', ''); }, 4500);
+    setTimeout(function () { gun.remove(); }, 5700);
+    var start = performance.now(), last = start;
+    function frame(now) {
+        var t = now - start, dt = Math.min(2, (now - last) / 16.7);
+        last = now;
+        ctx.clearRect(0, 0, W, H);
+        bits = bits.filter(function (b) {
+            b.vy += 0.25 * dt;
+            b.vx *= Math.pow(0.98, dt);
+            b.vy *= Math.pow(0.98, dt);
+            b.sway += 0.1 * dt;
+            b.x += (b.vx + Math.sin(b.sway)) * dt;
+            b.y += b.vy * dt;
+            b.rot += b.spin * dt;
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            ctx.rotate(b.rot);
+            ctx.fillStyle = b.color;
+            ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h * Math.abs(Math.cos(b.sway)));
+            ctx.restore();
+            return b.y < H + 30;
+        });
+        if ((bits.length || !fired) && t < 7000) requestAnimationFrame(frame);
+        else cv.remove();
+    }
+    requestAnimationFrame(frame);
+}
+</script>
+<style>
+:root {
+    --bg:        #0d1117;
+    --bg-card:   #161b22;
+    --bg-hover:  #1c2128;
+    --bg-muted:  #21262d;
+    --border:    #30363d;
+    --row-line:  rgba(48,54,61,.5);
+    --text:      #f0f6fc;
+    --text-dim:  #bcc5cf;
+    --green:     #3fb950;
+    --green-bg:  #0f2d1a;
+    --red:       #f85149;
+    --red-bg:    #3d1214;
+    --yellow:    #d29922;
+    --yellow-bg: #2e2213;
+    --blue:      #58a6ff;
+    --gray:      #8b949e;
+    --cyan:      #39d2c0;
+}
+:root[data-theme="light"] {
+    --bg:        #d9dee4;
+    --bg-card:   #e5e9ee;
+    --bg-hover:  #d3d9e0;
+    --bg-muted:  #d3d9e0;
+    --border:    #b6bfca;
+    --row-line:  rgba(182,191,202,.6);
+    --text:      #000000;
+    --text-dim:  #252b32;
+    --green:     #1a7f37;
+    --green-bg:  #dafbe1;
+    --red:       #cf222e;
+    --red-bg:    #ffebe9;
+    --yellow:    #9a6700;
+    --yellow-bg: #fff8c5;
+    --blue:      #0969da;
+    --gray:      #57606a;
+    --cyan:      #0b7a75;
+}
+/* Monokai -- military green: olive drab backgrounds, Monokai accents */
+:root[data-theme="monokai"] {
+    --bg:        #22261a;
+    --bg-card:   #2b3021;
+    --bg-hover:  #363d29;
+    --bg-muted:  #363d29;
+    --border:    #4b5337;
+    --row-line:  rgba(75,83,55,.5);
+    --text:      #f8f8f2;
+    --text-dim:  #bcc0a2;
+    --green:     #a6e22e;
+    --green-bg:  #33401c;
+    --red:       #f92672;
+    --red-bg:    #4a1f33;
+    --yellow:    #e6db74;
+    --yellow-bg: #44402a;
+    --blue:      #66d9ef;
+    --gray:      #9a9f7c;
+    --cyan:      #66d9ef;
+}
+/* High Contrast — pure black, full-strength colours, for legibility */
+:root[data-theme="contrast"] {
+    --bg:        #000000;
+    --bg-card:   #0a0a0a;
+    --bg-hover:  #1a1a1a;
+    --bg-muted:  #1a1a1a;
+    --border:    #ffffff;
+    --row-line:  rgba(255,255,255,.35);
+    --text:      #ffffff;
+    --text-dim:  #e0e0e0;
+    --green:     #00ff66;
+    --green-bg:  #003318;
+    --red:       #ff3b3b;
+    --red-bg:    #3a0000;
+    --yellow:    #ffdd00;
+    --yellow-bg: #332b00;
+    --blue:      #4db8ff;
+    --gray:      #c8c8c8;
+    --cyan:      #00ffff;
+}
+/* Terminal green — mostly one hue by design; red and amber stay distinct so failures still read */
+:root[data-theme="terminal"] {
+    --bg:        #050805;
+    --bg-card:   #0a120a;
+    --bg-hover:  #112011;
+    --bg-muted:  #112011;
+    --border:    #1f4a1f;
+    --row-line:  rgba(31,74,31,.5);
+    --text:      #33ff66;
+    --text-dim:  #22aa44;
+    --green:     #66ff99;
+    --green-bg:  #0d2b12;
+    --red:       #ff5f5f;
+    --red-bg:    #3a0f0f;
+    --yellow:    #ffcc33;
+    --yellow-bg: #332a0a;
+    --blue:      #00e676;
+    --gray:      #1a8a3a;
+    --cyan:      #7dffb0;
+}
+/* Confetti Night — navy with a gold accent */
+:root[data-theme="confetti-night"] {
+    --bg:        #0f1222;
+    --bg-card:   #171c34;
+    --bg-hover:  #1e2442;
+    --bg-muted:  #20264a;
+    --border:    #2b3256;
+    --row-line:  rgba(43,50,86,.5);
+    --text:      #e8eaf6;
+    --text-dim:  #a3a9cf;
+    --green:     #2fbf71;
+    --green-bg:  #0f2d20;
+    --red:       #ff5d73;
+    --red-bg:    #3a1420;
+    --yellow:    #ffb347;
+    --yellow-bg: #33240f;
+    --blue:      #4cc9f0;
+    --gray:      #8d93b8;
+    --cyan:      #ffd166;
+}
+/* Rainbow — pale lavender page, white boxes with bold dark borders, a navy header with a rainbow strip,
+   a different colour on each table column header. The structure rules below skip Retro 95 and the CRT
+   layouts, which bring their own colours. */
+:root[data-theme="rainbow"] {
+    --bg:        #f6f0ff;
+    --bg-card:   #f5f1fc;
+    --bg-hover:  #ece3ff;
+    --bg-muted:  #ece3ff;
+    --border:    #1a1a2e;
+    --row-line:  rgba(26,26,46,.2);
+    --text:      #14142b;
+    --text-dim:  #4a4a68;
+    --green:     #166a2e;
+    --green-bg:  #d4f5dc;
+    --red:       #c4162a;
+    --red-bg:    #ffd9de;
+    --yellow:    #8a5a00;
+    --yellow-bg: #fff1a8;
+    --blue:      #0b5ed7;
+    --gray:      #8c8ca8;
+    --cyan:      #0b7a8a;
+    --bg-code:   #f0e9fb;
+    --stripe:    #cfe6ff;
+    --border-soft: #ddd3f2;
+    --badge-bg:  #efe6ff;
+    --badge-border: #6b21c8;
+    --purple:    #6b21c8;
+}
+/* Header confetti, every theme but Rainbow (which has its own strip). The
+   shapes are a mask; their colours are stripes of the theme's own variables,
+   so each theme gets confetti in its palette and a new theme needs nothing
+   here. Pieces sit in 26px columns, so none spans two colours. Same rule in
+   all three pages. */
+:root:not([data-theme="rainbow"]) header { position: relative; isolation: isolate; }
+:root:not([data-theme="rainbow"]) header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: .8;
+    background: repeating-linear-gradient(90deg,
+        var(--yellow) 0 26px, var(--red) 26px 52px, var(--green) 52px 78px,
+        var(--blue) 78px 104px, var(--cyan) 104px 130px);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='390' height='60'%3E%3Cpath d='M7 15 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='38' y='40' width='3' height='7' rx='1' transform='rotate(-56 39 43)'/%3E%3Crect x='89' y='11' width='5' height='5' transform='rotate(31 91 13)'/%3E%3Crect x='115' y='11' width='5' height='5' transform='rotate(61 117 13)'/%3E%3Crect x='142' y='42' width='3' height='7' rx='1' transform='rotate(-49 143 45)'/%3E%3Crect x='168' y='31' width='3' height='7' rx='1' transform='rotate(-68 169 34)'/%3E%3Crect x='193' y='14' width='5' height='5' transform='rotate(-6 195 16)'/%3E%3Crect x='220' y='13' width='3' height='8' rx='1' transform='rotate(66 221 17)'/%3E%3Crect x='246' y='42' width='3' height='7' rx='1' transform='rotate(-32 247 45)'/%3E%3Crect x='272' y='10' width='3' height='8' rx='1' transform='rotate(64 273 14)'/%3E%3Crect x='298' y='40' width='3' height='10' rx='1' transform='rotate(29 299 45)'/%3E%3Crect x='324' y='35' width='3' height='8' rx='1' transform='rotate(12 325 39)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='650' height='60'%3E%3Cpolygon points='10,42 17,44 12,49' transform='rotate(-4 13 45)'/%3E%3Cpolygon points='62,34 69,36 64,41' transform='rotate(-7 65 37)'/%3E%3Crect x='116' y='32' width='3' height='8' rx='1' transform='rotate(-38 117 36)'/%3E%3Cpolygon points='166,48 173,50 168,55' transform='rotate(-61 169 51)'/%3E%3Cpolygon points='244,50 251,52 246,57' transform='rotate(9 247 53)'/%3E%3Crect x='323' y='11' width='5' height='5' transform='rotate(-11 325 13)'/%3E%3Cpath d='M371 52 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M449 51 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='480' y='35' width='3' height='7' rx='1' transform='rotate(10 481 38)'/%3E%3Cpath d='M527 24 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='558' y='31' width='3' height='8' rx='1' transform='rotate(47 559 35)'/%3E%3Crect x='584' y='41' width='3' height='10' rx='1' transform='rotate(-9 585 46)'/%3E%3Cpath d='M631 32 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='390' height='60'%3E%3Cpath d='M7 15 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='38' y='40' width='3' height='7' rx='1' transform='rotate(-56 39 43)'/%3E%3Crect x='89' y='11' width='5' height='5' transform='rotate(31 91 13)'/%3E%3Crect x='115' y='11' width='5' height='5' transform='rotate(61 117 13)'/%3E%3Crect x='142' y='42' width='3' height='7' rx='1' transform='rotate(-49 143 45)'/%3E%3Crect x='168' y='31' width='3' height='7' rx='1' transform='rotate(-68 169 34)'/%3E%3Crect x='193' y='14' width='5' height='5' transform='rotate(-6 195 16)'/%3E%3Crect x='220' y='13' width='3' height='8' rx='1' transform='rotate(66 221 17)'/%3E%3Crect x='246' y='42' width='3' height='7' rx='1' transform='rotate(-32 247 45)'/%3E%3Crect x='272' y='10' width='3' height='8' rx='1' transform='rotate(64 273 14)'/%3E%3Crect x='298' y='40' width='3' height='10' rx='1' transform='rotate(29 299 45)'/%3E%3Crect x='324' y='35' width='3' height='8' rx='1' transform='rotate(12 325 39)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='650' height='60'%3E%3Cpolygon points='10,42 17,44 12,49' transform='rotate(-4 13 45)'/%3E%3Cpolygon points='62,34 69,36 64,41' transform='rotate(-7 65 37)'/%3E%3Crect x='116' y='32' width='3' height='8' rx='1' transform='rotate(-38 117 36)'/%3E%3Cpolygon points='166,48 173,50 168,55' transform='rotate(-61 169 51)'/%3E%3Cpolygon points='244,50 251,52 246,57' transform='rotate(9 247 53)'/%3E%3Crect x='323' y='11' width='5' height='5' transform='rotate(-11 325 13)'/%3E%3Cpath d='M371 52 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Cpath d='M449 51 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='480' y='35' width='3' height='7' rx='1' transform='rotate(10 481 38)'/%3E%3Cpath d='M527 24 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3Crect x='558' y='31' width='3' height='8' rx='1' transform='rotate(47 559 35)'/%3E%3Crect x='584' y='41' width='3' height='10' rx='1' transform='rotate(-9 585 46)'/%3E%3Cpath d='M631 32 q3 -4 6 0 t6 0' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E");
+    -webkit-mask-size: 390px 60px, 650px 60px;
+    mask-size: 390px 60px, 650px 60px;
+    -webkit-mask-position: 0 0, 52px 3px;
+    mask-position: 0 0, 52px 3px;
+}
+/* Rainbow structure. Every rule starts with the same prefix: the Rainbow theme, but not under Retro 95 or
+   the CRT layouts (they set their own colours and must win). */
+/* Header: navy, light text, a rainbow strip along its lower edge. */
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) header {
+    position: relative;
+    margin-bottom: 6px;
+    background: #1b1464;
+    border-bottom: 0;
+}
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) header::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -6px;
+    height: 6px;
+    pointer-events: none;
+    background: linear-gradient(90deg, #ff3b5c, #ff9f1c, #ffe14d, #3ddc84, #2ec4ff, #6b4cff, #c04cff);
+}
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) header h1 { color: #ffe14d; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) header .status { color: #d6d3ff; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) header .btn-nav {
+    background: transparent; border-color: transparent; color: #ffffff;
+}
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) header .btn-nav:hover {
+    background: rgba(255,255,255,.18); color: #ffffff;
+}
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) header .btn-nav-current {
+    background: #ffe14d; border-color: #ffe14d; color: #14142b;
+}
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) header .theme-select {
+    background: #2d2590; border-color: #8b83ff; color: #ffffff;
+}
+/* Tables: a different colour on each column header (yellow, cyan, lavender, coral), dark text. */
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th {
+    color: #14142b;
+    border-bottom: 2px solid var(--border);
+}
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th:nth-child(4n+1) { background: #ffe14d; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th:nth-child(4n+2) { background: #67e0ef; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th:nth-child(4n+3) { background: #b79cff; }
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) th:nth-child(4n+4) { background: #ff9a9a; }
+/* Boxes: the filter bar, pinned bar, table and empty note, white with bold dark borders; purple fields. */
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .filters,
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .pinned,
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) #log,
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) #empty {
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+}
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .filters select,
+:root[data-theme="rainbow"]:not(:is([data-layout="retro95"], [data-layout="msdos"])) .filters input {
+    border: 2px solid var(--purple);
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+/* Header matches the dashboard's: same font, sizes, padding and spacing. */
+header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--bg-card);
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+header h1 {
+    font-size: 16px; margin: 0; font-weight: 600;
+    color: var(--cyan); letter-spacing: 0.5px; white-space: nowrap;
+}
+
+/* Same nav set as the other hub pages' headers: links to the other pages, and
+   a non-clickable marker for the page you're already on. Kept identical
+   between the three templates so it reads as one component. */
+.btn-nav {
+    background: var(--bg-hover);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    padding: 4px 12px;
+    border-radius: 0;
+    text-decoration: none;
+}
+.btn-nav:hover { background: var(--cyan); color: var(--bg); text-decoration: none; }
+.btn-nav-current {
+    background: var(--cyan);
+    border: 1px solid var(--cyan);
+    color: var(--bg);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    padding: 4px 12px;
+    border-radius: 0;
+    cursor: default;
+}
+.theme-select { cursor: pointer; margin-left: 8px; }
+.theme-select option { background: var(--bg-card); color: var(--text); }
+.status { margin-left: auto; color: var(--text-dim); font-size: 11px; }
+.filters {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 6px 10px; border-bottom: 1px solid var(--border);
+}
+label { color: var(--text-dim); font-size: 12px; }
+select, input {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 0; padding: 4px 6px; font: inherit; font-size: 12px;
+}
+input[type=text] { min-width: 220px; }
+button {
+    background: var(--bg-hover); color: var(--text); border: 1px solid var(--border);
+    border-radius: 0; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer;
+}
+button:hover { border-color: var(--blue); }
+#toggle-live.off { color: var(--text-dim); }
+#toggle-live.on  { color: var(--green); border-color: var(--green); }
+.pinned {
+    display: none; align-items: center; gap: 10px; padding: 6px 10px;
+    background: var(--yellow-bg); border-bottom: 1px solid var(--border); color: var(--yellow);
+    font-size: 12px;
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+    position: sticky; top: 0; background: var(--bg-card); text-align: left;
+    padding: 6px 10px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--text-dim); border-bottom: 1px solid var(--border);
+}
+td { padding: 4px 10px; border-bottom: 1px solid var(--row-line); vertical-align: top; }
+tr.stripe td { background: rgba(128,128,128,.14); }
+tr:hover td { background: var(--bg-hover); }
+td.time { color: var(--text-dim); white-space: nowrap; }
+td.src { color: var(--blue); white-space: nowrap; }
+td.mnem { color: var(--text-dim); white-space: nowrap; }
+td.msg { width: 100%; word-break: break-word; }
+.sev { display: inline-block; min-width: 76px; text-align: center; white-space: nowrap;
+       border-radius: 0; padding: 0 6px; font-size: 11px; }
+td.sevcol { white-space: nowrap; }
+.sev-0, .sev-1, .sev-2, .sev-3 { background: var(--red-bg); color: var(--red); }
+.sev-4 { background: var(--yellow-bg); color: var(--yellow); }
+.sev-5, .sev-6 { background: var(--green-bg); color: var(--green); }
+.sev-7, .sev-x { background: var(--bg-muted); color: var(--gray); }
+.empty { padding: 12px 10px; text-align: center; color: var(--text-dim); }
+.count { color: var(--text-dim); font-size: 12px; }
+.clock { font-size: 12px; }
+.clock.ok { color: var(--green); }
+.clock.warn { color: var(--yellow); }
+.clock.bad { color: var(--red); }
+/* Footer buttons, same look and place as the dashboard's. */
+.page-footer { text-align: center; padding: 12px 0 16px; }
+.btn-small {
+    display: inline-block;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 0;
+    cursor: pointer;
+    text-decoration: none;
+}
+.btn-small:hover { color: var(--text); border-color: var(--blue); }
+
+/* Settings page: the two link fields */
+.cfg { max-width: 640px; margin: 20px 16px; }
+.cfg h2 { font-size: 14px; margin: 0 0 8px; }
+.cfg .grid { display: grid; grid-template-columns: 180px 1fr; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
+.cfg input[type=text] { width: 100%; box-sizing: border-box; padding: 4px 6px; background: var(--bg-card); color: var(--text);
+    border: 1px solid var(--border); border-radius: 3px; font: inherit; }
+.cfg .hint { color: var(--text-dim); font-size: 12px; margin-bottom: 10px; }
+.cfg .msg { margin-left: 10px; font-size: 12px; }
+.cfg .msg.ok { color: var(--green); }
+.cfg .msg.err { color: var(--red); }
+@media (max-width: 600px) { .cfg .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>SETTINGS</h1>
+    <a href="/" class="btn-nav">Dashboard</a>
+    <a href="/syslog" class="btn-nav">Syslog</a>
+    <a href="/timeline" class="btn-nav">Timeline</a>
+    <span class="btn-nav-current">Settings</span>
+    <div class="status">
+        <span id="confetti-links"></span>
+        <select id="theme-select" class="btn-nav theme-select" aria-label="Colour theme" onchange="setTheme(this.value)"></select>
+        <script>syncThemeSelect();</script>
+    </div>
+</header>
+
+<div class="cfg">
+    <h2>Other Confetti projects</h2>
+    <form id="links-form" autocomplete="off" onsubmit="saveLinks(); return false;">
+        <div class="grid">
+            <label for="l-butler">Confetti Butler URL</label><input type="text" id="l-butler" name="butler" placeholder="http://confetti-butler.example">
+            <label for="l-topo">Confetti Topo URL</label><input type="text" id="l-topo" name="topo" placeholder="http://confetti-topo.example">
+        </div>
+        <div class="hint">A small button for each URL that is filled in appears at the right of the top menu on every page and opens that project in a new tab. Only http:// or https://. Leave a field empty to remove its button. The hub never connects to these addresses; they are only links.</div>
+        <button type="submit" class="btn-small">Save</button>
+        <span class="msg" id="links-msg"></span>
+    </form>
+</div>
+
+<div class="page-footer">
+    <a class="btn-small" href="https://isitdns.com/" target="_blank" rel="noopener noreferrer">Is it DNS..?</a>
+    <button class="btn-small" type="button" onclick="confettiBlast(this)">Make it rain!</button>
+</div>
+
+<script src="/static/ctxmenu.js"></script>
+<script src="/static/confetti-links.js"></script>
+<script>
+(function() {
+    var form = document.getElementById("links-form");
+    var msg = document.getElementById("links-msg");
+    function say(ok, text) { msg.className = "msg " + (ok ? "ok" : "err"); msg.textContent = text; }
+    function load() {
+        fetch("/api/settings/links").then(function(r) { return r.json(); }).then(function(l) {
+            form.butler.value = l.butler || "";
+            form.topo.value = l.topo || "";
+        });
+    }
+    window.saveLinks = function() {
+        fetch("/api/settings/links", {
+            method: "PUT", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({butler: form.butler.value, topo: form.topo.value})
+        }).then(function(r) {
+            return r.json().then(function(d) { return {ok: r.ok, d: d}; });
+        }).then(function(res) {
+            say(res.ok, res.ok ? "saved" : (res.d.error || "save failed"));
+            if (res.ok) { load(); ConfettiLinks.refresh(); }
+        }).catch(function() { say(false, "save failed"); });
+    };
+    load();
+})();
+</script>
+</body>
+</html>

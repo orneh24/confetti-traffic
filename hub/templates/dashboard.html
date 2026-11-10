@@ -2017,6 +2017,7 @@ try {
     <span class="side-link current">Dashboard <span class="side-badge" id="side-fail-badge" hidden></span></span>
     <a class="side-link" href="/syslog">Syslog</a>
     <a class="side-link" href="/timeline">Timeline</a>
+    <a class="side-link" href="/config">Settings</a>
     <div class="side-group">On this page</div>
     <a class="side-link" href="#matrix-section">Matrix</a>
     <a class="side-link" href="#changes-section">Recent changes</a>
@@ -2035,8 +2036,11 @@ try {
         <span class="btn-nav-current">Dashboard</span>
         <a href="/syslog" class="btn-nav">Syslog</a>
         <a href="/timeline" class="btn-nav">Timeline</a>
+        <a href="/config" class="btn-nav">Settings</a>
     </div>
     <div class="status">
+        <span id="confetti-links"></span>
+        <script src="/static/confetti-links.js"></script>
         <span class="dot"></span>
         <span id="refresh-status">Auto-refresh: 30s</span>
         &nbsp;|&nbsp;
@@ -2386,6 +2390,7 @@ try {
                 <a href="/">Dashboard</a>
                 <a href="/syslog">Syslog</a>
                 <a href="/timeline">Timeline</a>
+                <a href="/config">Settings</a>
                 <hr>
                 <a href="https://isitdns.com/" target="_blank" rel="noopener noreferrer">Is it DNS..?</a>
                 <button type="button" onclick="confettiBlast(this)">Make it rain!</button>
@@ -2397,6 +2402,7 @@ try {
     <span class="btn-nav-current">Confetti Traffic</span>
     <a class="btn-nav" href="/syslog">Syslog</a>
     <a class="btn-nav" href="/timeline">Timeline</a>
+    <a class="btn-nav" href="/config">Settings</a>
     <span class="tray" id="tray-clock"></span>
 </div>
 
@@ -2432,6 +2438,7 @@ try {
             <a href="/" data-key="d"><span class="dos-hot">D</span>ashboard</a>
             <a href="/syslog" data-key="s"><span class="dos-hot">S</span>yslog</a>
             <a href="/timeline" data-key="t"><span class="dos-hot">T</span>imeline</a>
+            <a href="/config" data-key="e">S<span class="dos-hot">e</span>ttings</a>
         </div>
     </div>
     <div class="dos-menu" data-menu="h">

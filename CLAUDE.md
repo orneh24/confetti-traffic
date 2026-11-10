@@ -664,7 +664,7 @@ hub/
   app/                — Flask API (app.py, config.py, pathchange.py, changes.py,
                         syslog_server.py, nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
-  templates/          — dashboard.html, syslog.html, timeline.html. Colour themes (Dark, Light,
+  templates/          — dashboard.html, syslog.html, timeline.html, config.html (the Settings page at `/config`, scaffold copied from syslog.html: the two URL fields; R31 compares it too). Colour themes (Dark, Light,
                         Monokai, High Contrast, Terminal green, Confetti Night, Rainbow) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
                         localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. On the dashboard the same state carries a `layout` pick (random, not the current one, not saved as the viewer's layout choice; a hand pick while shuffling updates it): shuffleStep calls window.onShuffleStep(st), which only dashboard.html defines. Each timer-driven change also fires confettiBlast() (rain only; not on page load or a selector pick). Adding or changing a theme means
@@ -691,6 +691,7 @@ hub/
                         with a blue-only override block after it (`:not([data-variant="green"])`). MS-DOS alone (both variants) adds a keyboard layer (.dos-menubar, .dos-fkeys, .dos-help and a matrix cursor; one keydown handler that returns at once in any other layout, reusing onCellClick, refresh(), setCollapsed and the detail-close click). The CRT palettes are one hue, so status must not rest on colour: a pass is a green boxed cell, a fail is an inverted solid block (red, in the matrix), slow is
                         bright + underlined. Local fonts only (a hub may be offline), except VT323 (SIL OFL), bundled in static/fonts/ and loaded by an @font-face in dashboard.html.
   static/             — fonts/, plus ctxmenu.js + ctxmenu.css: right-click menus for the dashboard, syslog and timeline pages (outside the head theme block that R31 compares). A row carries data-ctx="<type>" and the page calls ctxMenu.register(type, fn) inside its own function; one document-level listener finds the row. Fill data-* attributes with ctxMenu.attr(), not esc(). Destructive items are last and red and always ask confirm() (a menu item that clicks a row button relies on that button's own confirm). The browser's own menu stays on inputs and selected text. R42 checks it. The SAME ctxmenu.js is in confetti-butler and confetti-topo; copy it by hand and keep the three identical
+  static/confetti-links.js — the header shortcut buttons to the other Confetti projects (Butler and Topo URLs from the Settings page, `GET /api/settings/links`); every page has `<span id="confetti-links"></span>` in its header `.status` and loads it; opens in a new tab; the SAME file as in confetti-butler and confetti-topo, copy it by hand and keep the three identical (R43)
   static/dashgrid.js  — the dashboard's movable/resizable boxes (main column only; the sidebar stays fixed): drag a `.section[data-box]` of `.main-grid` by its header, drag the corner grip to resize (width snaps to grid columns, height free), "Reset layout" button (placed under the boxes by `.main-col > .dg-bar { order }`); saved per browser in `confetti-dashboard-layout`. `.page-footer` must stay outside `.main-grid` (the script appends boxes to the end of their container). Default look = every box full row, Recent Changes + Test Detail half each; zebra shading is by `data-box` id. Injects its own CSS. The SAME file is in confetti-topo and confetti-butler; copy it by hand and keep the three identical
   agent/              — scripts served to nodes (created at build time)
   bundle/             — node bundle + RELEASE (created at build time)
@@ -877,3 +878,9 @@ These were live bugs that a review caught; each has a comment at the site.
    internet, so "it's an isolated lab" is not a valid defence for this one.
    The probe client never issues `DATA` either, so even a real external
    relay registered as a static target can't have mail sent through it.
+22. **The URLs of the other Confetti projects are only link targets: http(s) with a host, validated on write, never fetched.** The Settings
+   page `/config` (not `/settings`: that is the JSON the nodes pull and must not change) keeps the Butler and Topo URLs (`settings` keys
+   `url_butler` / `url_topo`, `GET|PUT /api/settings/links`); a value that is not http:// or https:// with a host, or has a user:password,
+   whitespace or markup characters, is a 400 and changes nothing (all or nothing); an empty value clears. `static/confetti-links.js` (the same
+   file as in confetti-butler and confetti-topo) turns them into small header buttons that open in a new tab with `noopener`, re-checks http(s)
+   and never builds HTML from the URL. The hub never connects to them. Checked by R43 and R43-live.

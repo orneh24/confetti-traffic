@@ -636,14 +636,14 @@ def _():
     return p
 
 
-@check("R31", "shared blocks match across dashboard, syslog and timeline pages")
+@check("R31", "shared blocks match across dashboard, syslog, timeline and config pages")
 def _():
     # CLAUDE.md: themes, the theme picker, confettiBlast, the header confetti
     # and the footer buttons live inline in all three pages, so a change made
     # in one page only is easy to miss. Page-specific CSS (variable sets,
     # Rainbow box selectors) is deliberately not compared.
     p = []
-    pages = ["hub/templates/%s.html" % n for n in ("dashboard", "syslog", "timeline")]
+    pages = ["hub/templates/%s.html" % n for n in ("dashboard", "syslog", "timeline", "config")]
     base = pages[0]
 
     # 1. The head <script> (themes list, picker, shuffle, confettiBlast).
@@ -850,7 +850,7 @@ def _():
     p = []
     for f in ("hub/static/ctxmenu.js", "hub/static/ctxmenu.css"):
         need(os.path.exists(f), "%s is missing" % f, p)
-    for name in ("dashboard", "syslog", "timeline"):
+    for name in ("dashboard", "syslog", "timeline", "config"):
         f = "hub/templates/%s.html" % name
         src = read(f)
         need('href="/static/ctxmenu.css"' in src, "%s does not link /static/ctxmenu.css" % f, p)
@@ -874,6 +874,31 @@ def _():
                     p.append("%s:%d deletes or pushes without a confirm() in the lines above it" % (f, n))
     dash = read("hub/templates/dashboard.html")
     need('closest("th[data-target]")' not in dash, "a click on a static target header deletes again", p)
+    return p
+
+
+@check("R43", "header shortcuts to the other Confetti projects: shared script, every page has the span and the Settings link, script never builds HTML")
+def _():
+    # hub/static/confetti-links.js is one file for traffic, butler and topo. The URLs are link targets only:
+    # validated on write (R43-live), set as href in the browser, never built into HTML, never fetched by the hub.
+    p = []
+    js = read("hub/static/confetti-links.js")
+    need("innerHTML" not in js and "document.write" not in js, "confetti-links.js must not build HTML from the URL", p)
+    need("noopener" in js and "_blank" in js and "https?" in js, "confetti-links.js must open in a new tab with noopener and re-check http(s)", p)
+    topo = "../confetti-topo/topo/static/confetti-links.js"
+    if os.path.exists(topo):
+        need(read(topo) == js, "confetti-links.js differs from confetti-topo's copy: keep the three identical", p)
+    for name in ("dashboard", "syslog", "timeline", "config"):
+        f = "hub/templates/%s.html" % name
+        src = read(f)
+        need('<span id="confetti-links"></span>' in src, "%s has no header span for the shortcut buttons" % f, p)
+        need('src="/static/confetti-links.js"' in src, "%s does not load /static/confetti-links.js" % f, p)
+        need('href="/config"' in src or name == "config", "%s has no Settings link" % f, p)
+    dash = read("hub/templates/dashboard.html")
+    need(dash.count('href="/config"') >= 5, "dashboard: Settings link missing from the header, side nav, Start menu, taskbar or Go menu (%d of 5)" % dash.count('href="/config"'), p)
+    need(re.search(r'<a href="/config" data-key="(\w)">', dash) is not None, "dashboard: Go menu Settings item has no hotkey", p)
+    need('<form id="links-form"' in read("hub/templates/config.html") and "/api/settings/links" in read("hub/templates/config.html"), "config page has no links form", p)
+    need("requests" not in read(APP) and "urlopen" not in read(APP), "the hub must never fetch the project URLs", p)
     return p
 
 
@@ -926,7 +951,7 @@ def _():
     if not node:
         raise Skip("node not found")
     p = []
-    for n in ("dashboard", "syslog", "timeline"):
+    for n in ("dashboard", "syslog", "timeline", "config"):
         f = "hub/templates/%s.html" % n
         for i, m in enumerate(re.finditer(r"<script>(.*?)</script>", read(f), re.S)):
             with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as t:
@@ -1047,7 +1072,8 @@ LIVE = [("T2-live", "real node cycle posts to a live hub"),
         ("R21", "/api/time answers 200 on every chrony failure"),
         ("R22-live", "correlation window round trip"),
         ("R41-live", "/api/changes answers JSON and plain text"),
-        ("R29-live", "every hub page answers 200 and links to the others")]
+        ("R29-live", "every hub page answers 200 and links to the others"),
+        ("R43-live", "other Confetti projects' URLs: http(s) only, all-or-nothing, empty clears, nodes' /settings unchanged")]
 
 
 def live_checks(base, db, tmp):
@@ -1299,7 +1325,8 @@ def live_checks(base, db, tmp):
 
     @check("R29-live", "every hub page answers 200 and links to the others")
     def _():
-        pages = {"/": ("/syslog", "/timeline"), "/syslog": ("/", "/timeline"), "/timeline": ("/", "/syslog")}
+        pages = {"/": ("/syslog", "/timeline", "/config"), "/syslog": ("/", "/timeline", "/config"), "/timeline": ("/", "/syslog", "/config"),
+                 "/config": ("/", "/syslog", "/timeline")}
         p = []
         for path, links in pages.items():
             code, body = http("GET", base + path)
@@ -1309,6 +1336,34 @@ def live_checks(base, db, tmp):
             for link in links:
                 if 'href="%s"' % link not in body:
                     p.append("%s has no nav link to %s" % (path, link))
+        return p
+
+    @check("R43-live", "other Confetti projects' URLs: http(s) only, all-or-nothing, empty clears, nodes' /settings unchanged")
+    def _():
+        p = []
+        url = base + "/api/settings/links"
+        get = lambda: json.loads(http("GET", url)[1])
+        nodes_before = http("GET", base + "/settings")[1]
+        need(get() == {"butler": "", "topo": ""}, "nothing set yet: %r" % get(), p)
+        c, b = http("PUT", url, {"butler": " http://butler.example:8080/ "})
+        need(c == 200 and json.loads(b) == {"butler": "http://butler.example:8080", "topo": ""}, "a good URL is trimmed and leaves the other field: %s %s" % (c, b), p)
+        c, b = http("PUT", url, {"topo": "https://topo.example"})
+        need(json.loads(b) == {"butler": "http://butler.example:8080", "topo": "https://topo.example"}, "a partial PUT must keep the other field: %s" % b, p)
+        before = get()
+        for v in ["javascript:alert(1)", "ftp://x.example", "http://", "x.example", "http://u:p@h.example", "http://a b.example",
+                  "http://h.example/\"x", "http://h.example:99999", "http://" + "a" * 300, 123, None, ["http://h.example"]]:
+            c, b = http("PUT", url, {"butler": v})
+            need(c == 400 and get() == before and "error" in json.loads(b), "%r must be refused (400) and change nothing: %s" % (v, c), p)
+        c, b = http("PUT", url, {"butler": "http://other.example", "topo": "javascript:x"})
+        need(c == 400 and get() == before, "one bad value must change neither field (all or nothing)", p)
+        for body in ({}, {"unknown": "http://h.example"}, [], "text"):
+            need(http("PUT", url, body)[0] == 400, "body %r must be refused" % (body,), p)
+        c, b = http("PUT", url, {"butler": ""})
+        need(json.loads(b) == {"butler": "", "topo": "https://topo.example"}, "an empty value must clear that field only: %s" % b, p)
+        need(http("POST", url, {})[0] == 405 and http("DELETE", url)[0] == 405, "only GET and PUT", p)
+        need(http("GET", base + "/settings")[1] == nodes_before, "the nodes' GET /settings must not change when links are saved", p)
+        need("url_" not in http("GET", base + "/settings")[1], "GET /settings leaks a link key", p)
+        http("PUT", url, {"topo": ""})
         return p
 
     @check("R21", "/api/time answers 200 on every chrony failure")
