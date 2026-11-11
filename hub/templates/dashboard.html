@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-ctx="page">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -2119,7 +2119,7 @@ try {
             </div>
         </div>
 
-        <div class="section detail-section" data-box="detail">
+        <div class="section detail-section" data-box="detail" data-ctx="detail">
             <div class="section-header">
                 <span>Test Detail</span>
                 <span id="detail-close" style="cursor:pointer;display:none;color:var(--text-dim)">&times;</span>
@@ -2700,11 +2700,13 @@ DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
                     var s = services[name];
                     var cls = s.status === "up" ? "up" : (s.status === "down" ? "down" : "unknown");
                     var label = s.status === "up" ? "up" : (s.status === "down" ? "down" : "unknown");
-                    svcHtml += "<span class='svc-badge " + cls + "' title='" + esc(s.detail || "") + "'>" +
+                    svcHtml += "<span class='svc-badge " + cls + "' data-ctx='health' data-text='" + ctxMenu.attr(name + ": " + label + (s.detail ? " (" + s.detail + ")" : "")) +
+                               "' title='" + ctxMenu.attr(s.detail || "") + "'>" +
                                "<span class='dot2'></span>" + esc(name) + ": " + label + "</span>";
                 }
                 var syslogCls = h.syslog_listening ? "up" : "down";
-                svcHtml += "<span class='svc-badge " + syslogCls + "' title='UDP/514 syslog receiver'>" +
+                svcHtml += "<span class='svc-badge " + syslogCls + "' data-ctx='health' data-text='" +
+                           ctxMenu.attr("syslog listener: " + (h.syslog_listening ? "listening" : "not listening")) + "' title='UDP/514 syslog receiver'>" +
                            "<span class='dot2'></span>syslog listener: " +
                            (h.syslog_listening ? "listening" : "not listening") + "</span>";
                 document.getElementById("health-services").innerHTML = svcHtml;
@@ -2712,14 +2714,14 @@ DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
                 // Metrics
                 var m = "";
                 if (h.load_avg) {
-                    m += "<div class='health-stat'><div class='health-stat-label'>Load avg</div>" +
+                    m += "<div class='health-stat' data-ctx='health'><div class='health-stat-label'>Load avg</div>" +
                          "<div class='health-stat-value'>" +
                          h.load_avg["1m"].toFixed(2) + " / " + h.load_avg["5m"].toFixed(2) +
                          " / " + h.load_avg["15m"].toFixed(2) + "</div></div>";
                 }
                 if (h.memory) {
                     var mp = h.memory.used_pct;
-                    m += "<div class='health-stat'><div class='health-stat-label'>Memory</div>" +
+                    m += "<div class='health-stat' data-ctx='health'><div class='health-stat-label'>Memory</div>" +
                          "<div class='health-stat-value'>" + mp + "% used (" +
                          fmtBytes(h.memory.used_kb * 1024) + " / " + fmtBytes(h.memory.total_kb * 1024) + ")</div>" +
                          "<div class='health-bar-track'><div class='health-bar-fill " + pctBarClass(mp) +
@@ -2727,7 +2729,7 @@ DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
                 }
                 if (h.disk) {
                     var dp = h.disk.used_pct;
-                    m += "<div class='health-stat'><div class='health-stat-label'>Disk (" + esc(h.disk.path) + ")</div>" +
+                    m += "<div class='health-stat' data-ctx='health'><div class='health-stat-label'>Disk (" + esc(h.disk.path) + ")</div>" +
                          "<div class='health-stat-value'>" + dp + "% used (" +
                          fmtBytes(h.disk.used_bytes) + " / " + fmtBytes(h.disk.total_bytes) + ")</div>" +
                          "<div class='health-bar-track'><div class='health-bar-fill " + pctBarClass(dp) +
@@ -2736,11 +2738,11 @@ DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
                 if (h.uptime_s !== null && h.uptime_s !== undefined) {
                     var days = Math.floor(h.uptime_s / 86400);
                     var hrs = Math.floor((h.uptime_s % 86400) / 3600);
-                    m += "<div class='health-stat'><div class='health-stat-label'>Uptime</div>" +
+                    m += "<div class='health-stat' data-ctx='health'><div class='health-stat-label'>Uptime</div>" +
                          "<div class='health-stat-value'>" + days + "d " + hrs + "h</div></div>";
                 }
                 if (h.build) {
-                    m += "<div class='health-stat'><div class='health-stat-label'>Build</div>" +
+                    m += "<div class='health-stat' data-ctx='health'><div class='health-stat-label'>Build</div>" +
                          "<div class='health-stat-value' title='" + escAttr(h.build) + "'>" +
                          esc(h.build === "unknown" ? h.build : h.build.substring(0, 7)) + "</div></div>";
                 }
@@ -3288,12 +3290,13 @@ DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
                     hubReachCell(endpoints[i], heard[hosts[i]]);
             for (var j = 0; j < hosts.length; j++) {
                 if (i === j) {
-                    html += "<td class='self'>&mdash;</td>";
+                    html += "<td class='self' data-ctx='self' data-host='" + ctxMenu.attr(hosts[i]) + "'>&mdash;</td>";
                     continue;
                 }
                 var rule = ruleFor(hosts[i], hosts[j]);
                 if (rule) {
-                    html += "<td class='excluded' title='" + escAttr("not tested: excluded by rule " +
+                    html += "<td class='excluded' data-ctx='excluded' data-from='" + ctxMenu.attr(hosts[i]) + "' data-to='" + ctxMenu.attr(hosts[j]) +
+                        "' data-rule='" + ctxMenu.attr(rule.group_a + " <-> " + rule.group_b) + "' title='" + escAttr("not tested: excluded by rule " +
                         rule.group_a + " ↔ " + rule.group_b) + "'>&middot;</td>";
                     continue;
                 }
@@ -3346,8 +3349,9 @@ DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
               (oldBuild ? " — warning: runs build " + build.substring(0, 7) + ", the hub serves " + hubRelease.substring(0, 7) : "");
         // Click = push the hub's build to this node (managed nodes only).
         var canPush = ep.managed === true;
-        return "<td class='hubreach'><div class='cell-indicators'><div class='indicator " + (!at ? "none" : (oldBuild ? "warn" : (ok ? "pass" : "fail"))) +
-               (canPush ? " hub-push" : "") + "' data-host='" + esc(ep.hostname) + "' title='" +
+        return "<td class='hubreach' data-ctx='hubreach' data-host='" + ctxMenu.attr(ep.hostname) + "' data-managed='" + (canPush ? "1" : "") +
+               "' data-tip='" + ctxMenu.attr(tip) + "'><div class='cell-indicators'><div class='indicator " + (!at ? "none" : (oldBuild ? "warn" : (ok ? "pass" : "fail"))) +
+               (canPush ? " hub-push" : "") + "' data-host='" + ctxMenu.attr(ep.hostname) + "' title='" +
                escAttr(tip + (canPush ? " — click to push a new build to this node" : "")) + "'>&uarr;</div></div></td>";
     }
 
@@ -5053,6 +5057,77 @@ DashGrid.init({ container: '.main-grid', prefix: 'confetti' });
         return {title: a + " \u2194 " + b, items: [
             {label: "Copy rule", action: function() { ctxMenu.copy(a + " <-> " + b); }},
             {label: "Remove rule", danger: true, action: function() { li.querySelector(".rule-del").click(); }}
+        ]};
+    });
+
+    // Mesh Rules list lives in the (usually folded) Settings panel.
+    function showRules() {
+        if (toggleFor("settings-section")) choose("settings-section", false);
+        var el = document.getElementById("rule-list");
+        if (el && el.scrollIntoView) el.scrollIntoView({block: "center"});
+    }
+
+    ctxMenu.register("self", function(td) {
+        return {title: td.getAttribute("data-host"), items: hostItems(td.getAttribute("data-host"))};
+    });
+
+    ctxMenu.register("excluded", function(td) {
+        var rule = td.getAttribute("data-rule");
+        return {title: "Excluded pair", items: [
+            {label: "Copy rule", action: function() { ctxMenu.copy(rule); }},
+            {label: "Copy source → target", action: function() { ctxMenu.copy(td.getAttribute("data-from") + " -> " + td.getAttribute("data-to")); }},
+            {label: "Open mesh rules", action: showRules}
+        ]};
+    });
+
+    // Cells of the hub-reach column. Push asks first (pushNode confirms).
+    ctxMenu.register("hubreach", function(td) {
+        var host = td.getAttribute("data-host"), tip = td.getAttribute("data-tip") || "";
+        var managed = td.getAttribute("data-managed") === "1";
+        return {title: host + " → hub", items: [
+            {label: "Push new build", action: function() { pushNode(host); }, disabled: !managed}
+        ].concat(hostItems(host)).concat([
+            {label: "Copy last-heard text", action: function() { ctxMenu.copy(tip); }, disabled: !tip}
+        ])};
+    });
+
+    // Test Detail: the section itself is the target, so it works on any card.
+    ctxMenu.register("detail", function(el, ev) {
+        var st = detailState;
+        if (!st) return {title: "Test Detail", items: [{label: "Nothing selected", action: function() {}, disabled: true}]};
+        var card = ev.target.closest ? ev.target.closest(".detail-test-card") : null;
+        var out = (card || el).querySelector(".detail-test-output");
+        var first = st.order.length && st.byType[st.order[0]].length ? st.byType[st.order[0]][0] : null;
+        var anchor = first ? (first.received_at || first.timestamp) : null;
+        return {title: pairLabel(st.src) + " → " + pairLabel(st.dst), items: [
+            {label: "Copy summary", action: function() { ctxMenu.copy(buildSummary()); }},
+            {label: "Copy output", action: function() { ctxMenu.copy(out.textContent); }, disabled: !out},
+            {label: "Open syslog around this pair", action: function() { window.location.href = syslogUrl(anchor); }},
+            {label: "Close detail", action: function() { document.getElementById("detail-close").click(); }}
+        ]};
+    });
+
+    // Hub Health badges and tiles.
+    ctxMenu.register("health", function(el) {
+        var text = el.getAttribute("data-text") || el.textContent.replace(/\s+/g, " ").trim();
+        return {title: "Hub health", items: [
+            {label: "Copy", action: function() { ctxMenu.copy(text); }},
+            {label: "Refresh", action: loadHealth}
+        ]};
+    });
+
+    // Empty space (header, nav and taskbar keep the browser's own menu).
+    ctxMenu.register("page", function(el, ev) {
+        if (ev.target.closest(".header, header, .side-nav, .taskbar, .dos-menubar, .dos-fkeys, .dos-help, .page-footer")) return null;
+        var all = document.querySelectorAll(".collapse-toggle");
+        function setAll(collapsed) {
+            all.forEach(function(b) { choose(b.getAttribute("data-section"), collapsed); });
+        }
+        return {title: "Dashboard", items: [
+            {label: "Refresh now", action: refresh},
+            {label: "Update all endpoints...", action: function() { document.getElementById("btn-update-all-endpoints").click(); }, disabled: endpoints.length === 0},
+            {label: "Collapse all sections", action: function() { setAll(true); }},
+            {label: "Expand all sections", action: function() { setAll(false); }}
         ]};
     });
 

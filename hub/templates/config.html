@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-ctx="page">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -537,8 +537,8 @@ td.sevcol { white-space: nowrap; }
     <h2>Other Confetti projects</h2>
     <form id="links-form" autocomplete="off" onsubmit="saveLinks(); return false;">
         <div class="grid">
-            <label for="l-butler">Confetti Butler URL</label><input type="text" id="l-butler" name="butler" placeholder="http://confetti-butler.example">
-            <label for="l-topo">Confetti Topo URL</label><input type="text" id="l-topo" name="topo" placeholder="http://confetti-topo.example">
+            <label for="l-butler" data-ctx="link" data-field="butler">Confetti Butler URL</label><input type="text" id="l-butler" name="butler" placeholder="http://confetti-butler.example">
+            <label for="l-topo" data-ctx="link" data-field="topo">Confetti Topo URL</label><input type="text" id="l-topo" name="topo" placeholder="http://confetti-topo.example">
         </div>
         <div class="hint">A small button for each URL that is filled in appears at the right of the top menu on every page and opens that project in a new tab. Only http:// or https://. Leave a field empty to remove its button. The hub never connects to these addresses; they are only links.</div>
         <button type="submit" class="btn-small">Save</button>
@@ -576,6 +576,32 @@ td.sevcol { white-space: nowrap; }
         }).catch(function() { say(false, "save failed"); });
     };
     load();
+})();
+</script>
+<script>
+(function() {
+    var form = document.getElementById("links-form");
+    function urlOf(field) { return (form[field].value || "").trim(); }
+    // The label is the target: text fields keep the browser's own menu.
+    ctxMenu.register('link', function(el) {
+        var field = el.getAttribute("data-field"), url = urlOf(field);
+        return {title: (field === "butler" ? "Confetti Butler" : "Confetti Topo") + " URL", items: [
+            {label: "Open in new tab", action: function() {
+                if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener");
+            }, disabled: !/^https?:\/\//i.test(url)},
+            {label: "Copy URL", action: function() { ctxMenu.copy(url); }, disabled: !url},
+            {label: "Clear and save", danger: true, confirm: "Clear this URL and save? Its header button goes away.", action: function() {
+                form[field].value = "";
+                window.saveLinks();
+            }, disabled: !url}
+        ]};
+    });
+    ctxMenu.register('page', function(el, ev) {
+        if (ev.target.closest('.header, .side-nav, .taskbar, .dos-menubar, .dos-fkeys, .dos-help, .page-footer')) return null;
+        return {title: "Settings", items: [
+            {label: "Reload", action: function() { window.location.reload(); }}
+        ]};
+    });
 })();
 </script>
 </body>

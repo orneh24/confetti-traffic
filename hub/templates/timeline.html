@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-ctx="page">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1144,7 +1144,8 @@ a { color: var(--blue); }
         var other = S.other.filter(visible);
         if (other.length) {
             var olim = S.otherExpanded ? other.length : EVENTS_SHOWN;
-            html += "<article class='card'><div class='inc-head'><span class='tag tag-closed'>OTHER</span><span class='inc-title'>Events not near an incident</span></div>";
+            var oFrom = other[other.length - 1].t, oTo = other[0].t; // sorted newest first
+            html += "<article data-ctx='incident' data-from='" + oFrom + "' data-to='" + oTo + "' class='card'><div class='inc-head'><span class='tag tag-closed'>OTHER</span><span class='inc-title'>Events not near an incident</span></div>";
             other.slice(0, olim).forEach(function(e) { html += eventRow(e, t); });
             if (other.length > olim) html += "<div class='inc-foot'><button type='button' class='more' data-more='other'>Show all " + other.length + " events</button></div>";
             html += "</article>";
@@ -1257,6 +1258,7 @@ a { color: var(--blue); }
         return {title: time ? time.textContent : "Event", items: [
             {label: "Copy event text", action: function() { ctxMenu.copy(text); }},
             {label: "Copy time", action: function() { ctxMenu.copy(time ? time.textContent : ""); }},
+            {label: "Replay to this time", action: function() { moveTo(ms); }},
             {label: "Open syslog around this event", action: function() { window.location.href = syslogHref(ms, ms); }}
         ]};
     });
@@ -1269,6 +1271,16 @@ a { color: var(--blue); }
             {label: "Open dashboard", action: function() { window.location.href = "/"; }},
             {label: "Copy title", action: function() { ctxMenu.copy(title ? title.textContent : ""); }},
             {label: "Copy time span", action: function() { ctxMenu.copy(span ? span.textContent : ""); }}
+        ]};
+    });
+
+    // Empty space (header, nav and taskbar keep the browser's own menu).
+    ctxMenu.register('page', function(el, ev) {
+        if (ev.target.closest('.header, .side-nav, .taskbar, .dos-menubar, .dos-fkeys, .dos-help, .page-footer')) return null;
+        return {title: "Timeline", items: [
+            {label: "Jump to now", action: function() { document.getElementById("btn-now").click(); }},
+            {label: "Previous event", action: function() { document.getElementById("btn-prev").click(); }},
+            {label: "Next event", action: function() { document.getElementById("btn-next").click(); }}
         ]};
     });
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-ctx="page">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -800,6 +800,21 @@ td.sevcol { white-space: nowrap; }
             {label: "Pin 5 min around this line", action: function() {
                 window.location.href = "/syslog?from=" + encodeURIComponent(z(when - 300000)) + "&to=" + encodeURIComponent(z(when + 300000));
             }, disabled: !pinnable}
+        ]};
+    });
+
+    // Empty space (header, nav and taskbar keep the browser's own menu).
+    ctxMenu.register('page', function(el, ev) {
+        if (ev.target.closest('.header, .side-nav, .taskbar, .dos-menubar, .dos-fkeys, .dos-help, .page-footer')) return null;
+        var pinned = !!(pinFrom || pinTo);
+        return {title: "Syslog", items: [
+            {label: "Refresh now", action: refresh},
+            {label: "Live refresh: " + (liveRefresh ? "turn off" : "turn on"), action: function() {
+                document.getElementById("toggle-live").click();
+            }, disabled: pinned},
+            {label: "Clear pinned window", action: function() {
+                document.getElementById("clear-window").click();
+            }, disabled: !pinned}
         ]};
     });
 
