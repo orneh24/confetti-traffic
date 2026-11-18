@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 from flask import Flask, request, jsonify, render_template, g, Response, send_file
 
 from . import config
+from . import syslog_core
 from . import syslog_server
 from . import pathchange
 from . import changes
@@ -147,6 +148,9 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_syslog_received ON syslog(received_at);
         CREATE INDEX IF NOT EXISTS idx_syslog_host ON syslog(host);
     """)
+
+    # syslog.origin / origin_id / msg_hash: the same table in butler, traffic and topo.
+    syslog_core.migrate(db)
 
     # Migration for databases created before received_at existed.
     cols = {r[1] for r in db.execute("PRAGMA table_info(results)").fetchall()}

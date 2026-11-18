@@ -662,7 +662,8 @@ hub/
   serve.py            — production entrypoint (reads HUB_PORT at runtime)
   confettictl-run.sh              — foreground launcher for debugging
   app/                — Flask API (app.py, config.py, pathchange.py, changes.py,
-                        syslog_server.py, nodemgmt.py = push-update worker,
+                        syslog_server.py, syslog_core.py = syslog parser and insert (the SAME file as in butler and topo),
+                        nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
   templates/          — dashboard.html, syslog.html, timeline.html, config.html (the Settings page at `/config`, scaffold copied from syslog.html: the two URL fields; R31 compares it too). Colour themes (Dark, Light,
                         Monokai, High Contrast, Terminal green, Confetti Night, Rainbow) are inline in ALL THREE pages: a THEMES list in the
@@ -884,3 +885,9 @@ These were live bugs that a review caught; each has a comment at the site.
    whitespace or markup characters, is a 400 and changes nothing (all or nothing); an empty value clears. `static/confetti-links.js` (the same
    file as in confetti-butler and confetti-topo) turns them into small header buttons that open in a new tab with `noopener`, re-checks http(s)
    and never builds HTML from the URL. The hub never connects to them. Checked by R43 and R43-live.
+23. **Syslog is parsed and stored by one shared file, `hub/app/syslog_core.py`, the same in confetti-butler, confetti-traffic and confetti-topo.**
+    Copy it by hand and keep the three byte-identical, with `dev/samples/syslog_cases.json` (a line in, the fields out; also identical).
+    `parse()` never raises and never drops a line (RFC 3164 and Cisco, plus RFC 5424). `insert()` is the only way a row is stored, and it
+    never commits. It skips a message when its `(origin, origin_id)` is already stored, or when a copy was pulled from another server within `dedup_s` (`syslog.origin`, `origin_id`,
+    `msg_hash`); two copies this server received itself are both kept (a link that flaps twice is two messages). Pulling from another
+    server is not built yet; the table, the parser and the rule are. Checked by R44 and R44-sync.
