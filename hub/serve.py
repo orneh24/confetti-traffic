@@ -17,6 +17,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app.app import app  # noqa: E402
 from app import config  # noqa: E402
 from app import syslog_server  # noqa: E402
+from app import syslog_pull  # noqa: E402
+from app.app import connect_db, get_setting, set_setting  # noqa: E402
 
 
 def main():
@@ -29,6 +31,9 @@ def main():
     # bind — an unavailable syslog port must not stop the hub serving results,
     # which is the job that matters.
     syslog_server.start()
+    # Pulls syslog from the other Confetti servers, once an operator switches that on in Settings.
+    syslog_pull.start(connect_db, "traffic", get_setting, set_setting, config.SYSLOG_PULL_INTERVAL_S,
+                      config.SYSLOG_DEDUP_S)
 
     try:
         from waitress import serve

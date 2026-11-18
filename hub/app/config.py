@@ -23,6 +23,10 @@ SYSLOG_PORT = int(os.environ.get("HUB_SYSLOG_PORT", "514"))
 # retention period, and the cap is what actually bounds the file. Enforced
 # every 500 inserts by syslog_server, by id range — see the note there.
 SYSLOG_MAX_ROWS = int(os.environ.get("HUB_SYSLOG_MAX_ROWS", "300000"))
+# Pulling syslog from the other Confetti servers (syslog_pull.py): seconds between rounds (0 = never start the thread),
+# and the window in which a pulled copy of a message this server already has is dropped.
+SYSLOG_PULL_INTERVAL_S = int(os.environ.get("HUB_SYSLOG_PULL_INTERVAL_S", "15"))
+SYSLOG_DEDUP_S = int(os.environ.get("HUB_SYSLOG_DEDUP_S", "10"))
 # Optional age limit on top of the cap; 0 (default) means off. Swept on each
 # POST /results rather than in the listener, so it still runs — and still
 # bounds the hub-authored path-change rows — with HUB_SYSLOG_ENABLED=false.

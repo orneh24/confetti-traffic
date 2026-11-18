@@ -540,10 +540,23 @@ td.sevcol { white-space: nowrap; }
             <label for="l-butler" data-ctx="link" data-field="butler">Confetti Butler URL</label><input type="text" id="l-butler" name="butler" placeholder="http://confetti-butler.example">
             <label for="l-topo" data-ctx="link" data-field="topo">Confetti Topo URL</label><input type="text" id="l-topo" name="topo" placeholder="http://confetti-topo.example">
         </div>
-        <div class="hint">A small button for each URL that is filled in appears at the right of the top menu on every page and opens that project in a new tab. Only http:// or https://. Leave a field empty to remove its button. The hub never connects to these addresses; they are only links.</div>
+        <div class="hint">A small button for each URL that is filled in appears at the right of the top menu on every page and opens that project in a new tab. Only http:// or https://. Leave a field empty to remove its button. The hub connects to one of these addresses only for the syslog pull below, and only if you switch that on.</div>
         <button type="submit" class="btn-small">Save</button>
         <span class="msg" id="links-msg"></span>
     </form>
+</div>
+
+<div class="cfg">
+    <h2>Syslog from other servers</h2>
+    <div class="hint">Lets a device log to one Confetti server only. This hub then reads the other one's own messages every few seconds (nothing it pulled itself is passed on) and skips a message it already has. Switching a server on starts from its newest message; its history is not copied. Set its URL above first.</div>
+    <div class="hint" id="sp-status">loading</div>
+    <div id="sp-rows"></div>
+    <form id="sp-token-form" autocomplete="off">
+        <input type="password" name="token" placeholder="Confetti Topo access token (only if it has one)" size="42" aria-label="Confetti Topo access token" autocomplete="off">
+        <button type="submit" class="btn-small">Save token</button>
+        <span class="hint" id="sp-token-state"></span>
+    </form>
+    <span class="msg" id="sp-msg"></span>
 </div>
 
 <div class="page-footer">
@@ -551,6 +564,60 @@ td.sevcol { white-space: nowrap; }
     <button class="btn-small" type="button" onclick="confettiBlast(this)">Make it rain!</button>
 </div>
 
+<script>
+(function() {
+    var NAMES = {butler: "Confetti Butler", topo: "Confetti Topo"};
+    var msg = document.getElementById("sp-msg");
+    function load() {
+        fetch("/api/settings/syslog-pull").then(function(r) { return r.json(); }).then(function(s) {
+            var box = document.getElementById("sp-rows");
+            box.innerHTML = "";
+            Object.keys(NAMES).forEach(function(name) {
+                var sv = s.servers[name];
+                var row = document.createElement("div");
+                var label = document.createElement("label");
+                var cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.checked = sv.pull;
+                cb.disabled = !sv.url && !sv.pull;
+                cb.onchange = function() { save(name, {pull: cb.checked}); };
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(" Pull syslog from " + NAMES[name] + (sv.url ? "" : " (set its URL above first)")));
+                row.appendChild(label);
+                var info = document.createElement("div");
+                info.className = "hint";
+                if (sv.pull) {
+                    info.textContent = sv.last_error ? "last error: " + sv.last_error :
+                        (sv.last_ok ? "last pull " + new Date(sv.last_ok).toLocaleString() + ", " + sv.stored + " stored since start" : "waiting for the first pull");
+                }
+                row.appendChild(info);
+                box.appendChild(row);
+            });
+            document.getElementById("sp-token-state").textContent = s.servers.topo.token_set ? "a token is saved (not shown); save an empty field to remove it" : "no token saved";
+            document.getElementById("sp-status").textContent = s.running ? "Checks every " + s.interval_s + " s." : "The pull thread is not running.";
+        });
+    }
+    function save(name, part) {
+        var body = {};
+        body[name] = part;
+        fetch("/api/settings/syslog-pull", {
+            method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
+        }).then(function(r) {
+            return r.json().then(function(d) { return {ok: r.ok, d: d}; });
+        }).then(function(res) {
+            msg.className = "msg " + (res.ok ? "ok" : "err");
+            msg.textContent = res.ok ? "saved" : (res.d.error || "save failed");
+            load();
+        });
+    }
+    document.getElementById("sp-token-form").addEventListener("submit", function(ev) {
+        ev.preventDefault();
+        save("topo", {token: ev.target.token.value});
+        ev.target.token.value = "";
+    });
+    load();
+})();
+</script>
 <script src="/static/ctxmenu.js"></script>
 <script src="/static/confetti-links.js"></script>
 <script>

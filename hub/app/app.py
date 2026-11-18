@@ -14,6 +14,7 @@ from flask import Flask, request, jsonify, render_template, g, Response, send_fi
 
 from . import config
 from . import syslog_core
+from . import syslog_pull
 from . import syslog_server
 from . import pathchange
 from . import changes
@@ -40,6 +41,29 @@ def get_db():
         g.db.execute("PRAGMA journal_mode=WAL")
         g.db.execute("PRAGMA foreign_keys=ON")
     return g.db
+
+
+def connect_db():
+    """A plain connection for a background thread (get_db is per request)."""
+    db = sqlite3.connect(config.DB_PATH)
+    db.row_factory = sqlite3.Row
+    db.execute("PRAGMA busy_timeout={:d}".format(config.BUSY_TIMEOUT_MS))
+    db.execute("PRAGMA journal_mode=WAL")
+    return db
+
+
+def get_setting(db, key):
+    """A value from the settings table, or None."""
+    row = db.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    return row[0] if row else None
+
+
+def set_setting(db, key, value):
+    """Upsert one settings row. The caller commits."""
+    db.execute(
+        "INSERT INTO settings (key, value, updated) VALUES (?, ?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated = excluded.updated",
+        (key, value, sqlite_now()))
 
 
 @app.teardown_appcontext
@@ -1073,10 +1097,16 @@ def like_arg(value):
     return "%{}%".format(escaped)
 
 
-def syslog_row(r):
+SYSLOG_PULL_LIMIT = 500
+
+
+def syslog_row(r, pulling):
     """Render a syslog row, with received_at in ISO-8601 like every other route."""
     d = dict(r)
     d["received_at"] = iso(d["received_at"])
+    if not pulling:
+        d.pop("raw", None)
+        d.pop("msg_hash", None)
     return d
 
 
@@ -1088,27 +1118,47 @@ def api_syslog():
     when either is present, because a pinned window is an explicit request and
     should not be silently widened by a default. Also ?host= (matches the
     parsed hostname or the source IP), ?severity=N, ?q= substring, ?limit=N.
+
+    For another Confetti server pulling this one: ?after_id=N returns rows with id > N, oldest
+    first, at most 500, each with raw and msg_hash, and ignores the time window. ?origin=local
+    returns only messages this server received itself, so a pulled row is never passed on. A
+    pull never carries the hub's own path-change rows: they are not device syslog.
     """
     args = request.args
     where = []
     params = []
 
-    frm = sqlite_ts_arg(args.get("from"))
-    to = sqlite_ts_arg(args.get("to"))
-    if frm or to:
-        if frm:
-            where.append("received_at >= ?")
-            params.append(frm)
-        if to:
-            where.append("received_at <= ?")
-            params.append(to)
-    else:
+    after_id = None
+    if args.get("after_id") not in (None, ""):
         try:
-            minutes = int(args.get("minutes", "60"))
+            after_id = max(0, int(args["after_id"]))
         except ValueError:
-            minutes = 60
-        where.append("received_at >= datetime('now', ? || ' minutes')")
-        params.append("-{:d}".format(abs(minutes)))
+            return jsonify({"error": "after_id must be a number"}), 400
+        where.append("id > ?")
+        params.append(after_id)
+        where.append("NOT (source_ip = ? AND host = ?)")
+        params.extend([pathchange.SOURCE_IP, pathchange.HOST])
+    else:
+        frm = sqlite_ts_arg(args.get("from"))
+        to = sqlite_ts_arg(args.get("to"))
+        if frm or to:
+            if frm:
+                where.append("received_at >= ?")
+                params.append(frm)
+            if to:
+                where.append("received_at <= ?")
+                params.append(to)
+        else:
+            try:
+                minutes = int(args.get("minutes", "60"))
+            except ValueError:
+                minutes = 60
+            where.append("received_at >= datetime('now', ? || ' minutes')")
+            params.append("-{:d}".format(abs(minutes)))
+
+    if args.get("origin"):
+        where.append("origin = ?")
+        params.append(args["origin"])
 
     host = args.get("host")
     if host:
@@ -1141,25 +1191,32 @@ def api_syslog():
                      "OR raw LIKE ? ESCAPE '\\')")
         params.extend([like_arg(q)] * 3)
 
+    cap = SYSLOG_PULL_LIMIT if after_id is not None else SYSLOG_MAX_LIMIT
     try:
-        limit = int(args.get("limit", SYSLOG_MAX_LIMIT))
+        limit = int(args.get("limit", cap))
     except ValueError:
-        limit = SYSLOG_MAX_LIMIT
-    limit = max(1, min(limit, SYSLOG_MAX_LIMIT))
+        limit = cap
+    limit = max(1, min(limit, cap))
 
     sql = """SELECT id, received_at, source_ip, host, facility, severity,
-                    mnemonic, device_time, message
+                    mnemonic, device_time, message, origin, raw, msg_hash
              FROM syslog"""
     if where:
         sql += " WHERE " + " AND ".join(where)
     # id breaks ties: received_at has one-second resolution and a device can
     # emit a whole interface flap inside one second, which must stay in order.
-    sql += " ORDER BY received_at DESC, id DESC LIMIT ?"
+    if after_id is not None:
+        sql += " ORDER BY id ASC LIMIT ?"
+    else:
+        sql += " ORDER BY received_at DESC, id DESC LIMIT ?"
     params.append(limit)
 
     db = get_db()
     rows = db.execute(sql, params).fetchall()
-    return jsonify([syslog_row(r) for r in rows])
+    resp = jsonify([syslog_row(r, after_id is not None) for r in rows])
+    # A server pulling from this one reads this to notice that this database was reset.
+    resp.headers["X-Syslog-Max-Id"] = str(db.execute("SELECT COALESCE(MAX(id), 0) FROM syslog").fetchone()[0])
+    return resp
 
 
 @app.route("/api/syslog/sources", methods=["GET"])
@@ -1210,7 +1267,7 @@ def config_page():
 
 
 # The other Confetti projects: a header shortcut each (static/confetti-links.js). Only a link target in the browser,
-# the hub never fetches it. This app keeps the other two, so there is no url_traffic here.
+# the hub fetches one only for the syslog pull (syslog_pull.py), opt-in. This app keeps the other two, so there is no url_traffic here.
 LINK_KEYS = {"butler": "url_butler", "topo": "url_topo"}
 
 
@@ -1268,6 +1325,8 @@ def api_put_links():
     db = get_db()
     now = sqlite_now()
     for k, url in clean.items():
+        if url != (get_setting(db, LINK_KEYS[k]) or ""):
+            db.execute("DELETE FROM settings WHERE key = ?", ("syslog_cursor_" + k,))   # start from now again
         if url:
             db.execute(
                 "INSERT INTO settings (key, value, updated) VALUES (?, ?, ?) "
@@ -1278,6 +1337,75 @@ def api_put_links():
             db.execute("DELETE FROM settings WHERE key = ?", (LINK_KEYS[k],))
     db.commit()
     return jsonify(links_state(db))
+
+
+# Pull syslog from the other Confetti servers (syslog_pull.py, constraint 24). Off per server until switched on; a server
+# needs its URL set above first. A topo token is only needed if confetti-topo has TOPO_AUTH_TOKEN set; it is write-only.
+def clean_token(value):
+    if not isinstance(value, str) or len(value) > 200 or any(c.isspace() or ord(c) < 32 for c in value):
+        raise ValueError("not a usable token")
+    return value
+
+
+def syslog_pull_state(db):
+    servers = {}
+    for name in LINK_KEYS:
+        st = syslog_pull.status.get(name, {})
+        cursor = get_setting(db, "syslog_cursor_" + name)
+        servers[name] = {
+            "url": get_setting(db, LINK_KEYS[name]) or "",
+            "pull": get_setting(db, "syslog_pull_" + name) == "1",
+            "cursor": int(cursor) if cursor and cursor.isdigit() else None,
+            "token_set": bool(get_setting(db, "syslog_token_" + name)),
+            "last_ok": st.get("last_ok", ""), "last_error": st.get("last_error", ""), "stored": st.get("stored", 0),
+        }
+    return {"servers": servers, "running": syslog_pull.is_running(), "interval_s": config.SYSLOG_PULL_INTERVAL_S}
+
+
+@app.route("/api/settings/syslog-pull", methods=["GET"])
+def api_get_syslog_pull():
+    """Per other server: its URL, whether pulling is on, the cursor and the last result. Never a token."""
+    return jsonify(syslog_pull_state(get_db()))
+
+
+@app.route("/api/settings/syslog-pull", methods=["PUT"])
+def api_put_syslog_pull():
+    """Body {"topo": {"pull": true, "token": "..."}, "butler": {"pull": false}}; each part optional, "token": "" clears.
+    All or nothing. Switching a server on needs its URL set (Settings > other projects) and starts from its newest
+    message; switching it off forgets the cursor."""
+    data = request.get_json(force=True, silent=True)
+    if not isinstance(data, dict) or not data:
+        return jsonify({"error": "Body must be a JSON object like {\"topo\": {\"pull\": true}}"}), 400
+    db = get_db()
+    for name, body in data.items():
+        if name not in LINK_KEYS:
+            return jsonify({"error": "unknown server %r" % name, "servers": list(LINK_KEYS)}), 400
+        if not isinstance(body, dict) or not body or not set(body) <= {"pull", "token"}:
+            return jsonify({"error": "%s: body must have pull (true or false) and/or token" % name}), 400
+        if "pull" in body and not isinstance(body["pull"], bool):
+            return jsonify({"error": "%s: pull must be true or false" % name}), 400
+        if "token" in body:
+            if name != "topo":
+                return jsonify({"error": "%s has no access token" % name}), 400
+            try:
+                clean_token(body["token"])
+            except ValueError as e:
+                return jsonify({"error": "%s: %s" % (name, e)}), 400
+        if body.get("pull") and not get_setting(db, LINK_KEYS[name]):
+            return jsonify({"error": "%s: set its URL first" % name}), 400
+    for name, body in data.items():
+        if "token" in body:
+            if body["token"]:
+                set_setting(db, "syslog_token_" + name, body["token"])
+            else:
+                db.execute("DELETE FROM settings WHERE key = ?", ("syslog_token_" + name,))
+        if body.get("pull") is True:
+            if get_setting(db, "syslog_pull_" + name) != "1":
+                set_setting(db, "syslog_pull_" + name, "1")
+        elif body.get("pull") is False:
+            db.execute("DELETE FROM settings WHERE key IN (?, ?)", ("syslog_pull_" + name, "syslog_cursor_" + name))
+    db.commit()
+    return jsonify(syslog_pull_state(db))
 
 
 # ---------------------------------------------------------------------------

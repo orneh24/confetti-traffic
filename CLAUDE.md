@@ -663,6 +663,7 @@ hub/
   confettictl-run.sh              — foreground launcher for debugging
   app/                — Flask API (app.py, config.py, pathchange.py, changes.py,
                         syslog_server.py, syslog_core.py = syslog parser and insert (the SAME file as in butler and topo),
+                        syslog_pull.py = pulls syslog from the other servers (the SAME file as in butler and topo),
                         nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
   templates/          — dashboard.html, syslog.html, timeline.html, config.html (the Settings page at `/config`, scaffold copied from syslog.html: the two URL fields; R31 compares it too). Colour themes (Dark, Light,
@@ -879,15 +880,23 @@ These were live bugs that a review caught; each has a comment at the site.
    internet, so "it's an isolated lab" is not a valid defence for this one.
    The probe client never issues `DATA` either, so even a real external
    relay registered as a static target can't have mail sent through it.
-22. **The URLs of the other Confetti projects are only link targets: http(s) with a host, validated on write, never fetched.** The Settings
+22. **The URLs of the other Confetti projects are only link targets: http(s) with a host, validated on write, fetched only by the syslog pull.** The Settings
    page `/config` (not `/settings`: that is the JSON the nodes pull and must not change) keeps the Butler and Topo URLs (`settings` keys
    `url_butler` / `url_topo`, `GET|PUT /api/settings/links`); a value that is not http:// or https:// with a host, or has a user:password,
    whitespace or markup characters, is a 400 and changes nothing (all or nothing); an empty value clears. `static/confetti-links.js` (the same
    file as in confetti-butler and confetti-topo) turns them into small header buttons that open in a new tab with `noopener`, re-checks http(s)
-   and never builds HTML from the URL. The hub never connects to them. Checked by R43 and R43-live.
+   and never builds HTML from the URL. The hub connects to one only for the syslog pull (constraint 24), opt-in per server, and never otherwise. Checked by R43 and R43-live.
 23. **Syslog is parsed and stored by one shared file, `hub/app/syslog_core.py`, the same in confetti-butler, confetti-traffic and confetti-topo.**
     Copy it by hand and keep the three byte-identical, with `dev/samples/syslog_cases.json` (a line in, the fields out; also identical).
     `parse()` never raises and never drops a line (RFC 3164 and Cisco, plus RFC 5424). `insert()` is the only way a row is stored, and it
     never commits. It skips a message when its `(origin, origin_id)` is already stored, or when a copy was pulled from another server within `dedup_s` (`syslog.origin`, `origin_id`,
     `msg_hash`); two copies this server received itself are both kept (a link that flaps twice is two messages). Pulling from another
-    server is not built yet; the table, the parser and the rule are. Checked by R44 and R44-sync.
+    server is constraint 24. Checked by R44 and R44-sync.
+24. **Syslog may be pulled from the other Confetti servers, opt-in per server, and only their own device messages.** The Settings page (`GET|PUT /api/settings/syslog-pull`,
+    `hub/app/syslog_pull.py`, the same file as in confetti-butler and confetti-topo, `HUB_SYSLOG_PULL_INTERVAL_S` 15) has a switch per server (`syslog_pull_<name>`, off by default; it needs
+    the URL from constraint 22 first). Switching on starts from the other server's newest message, never its history (`syslog_cursor_<name>`; a different URL or an id that goes
+    backwards resets it). The request is `GET <url>/api/syslog?after_id=N&origin=local` only, http(s) only, no redirect followed, a server that does not answer with
+    `X-Syslog-Max-Id` is refused, every field is length-limited text and `msg_hash` is recomputed here. `origin=local` is what stops a message travelling around a loop; the hub's own
+    path-change rows (`pathchange.SOURCE_IP` + `HOST`) are not device syslog and are never served to a puller. Rows go through `syslog_core.insert` (constraint 23). A failed request stores nothing
+    and keeps the cursor; one server failing never stops the other. The topo token (`syslog_token_topo`) is write-only: sent in an `Authorization` header, never in a URL, never
+    returned by a GET. Checked by R45.
