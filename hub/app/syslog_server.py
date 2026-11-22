@@ -8,8 +8,8 @@ Deliberately minimal: no relay, no TLS, no authentication. UDP syslog is lossy
 and anything on the segment can inject into it — this is a troubleshooting aid,
 never an audit trail.
 
-Parsing and the row insert are syslog_core.py, the same file in confetti-butler,
-confetti-traffic and confetti-topo, so all three read a line the same way.
+Parsing and the row insert are syslog_core.py, the same file in
+confetti-traffic and confetti-topo, so both read a line the same way.
 """
 
 import socket

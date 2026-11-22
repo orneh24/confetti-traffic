@@ -881,7 +881,7 @@ def _():
 
 @check("R43", "header shortcuts to the other Confetti projects: shared script, every page has the span and the Settings link, script never builds HTML")
 def _():
-    # hub/static/confetti-links.js is one file for traffic, butler and topo. The URLs are link targets only:
+    # hub/static/confetti-links.js is one file for traffic and topo. The URLs are link targets only:
     # validated on write (R43-live), set as href in the browser, never built into HTML, fetched only by the syslog pull.
     p = []
     js = read("hub/static/confetti-links.js")
@@ -889,7 +889,7 @@ def _():
     need("noopener" in js and "_blank" in js and "https?" in js, "confetti-links.js must open in a new tab with noopener and re-check http(s)", p)
     topo = "../confetti-topo/topo/static/confetti-links.js"
     if os.path.exists(topo):
-        need(read(topo) == js, "confetti-links.js differs from confetti-topo's copy: keep the three identical", p)
+        need(read(topo) == js, "confetti-links.js differs from confetti-topo's copy: keep the two identical", p)
     for name in ("dashboard", "syslog", "timeline", "config"):
         f = "hub/templates/%s.html" % name
         src = read(f)
@@ -1035,7 +1035,7 @@ SYSLOG_CORE = "hub/app/syslog_core.py"
 SYSLOG_CASES = "dev/samples/syslog_cases.json"
 SYSLOG_PULL = "hub/app/syslog_pull.py"
 # The other two repos: (repo directory, the directory in it that holds syslog_core.py)
-SYSLOG_SIBLINGS = (("../confetti-butler", "butler/app"), ("../confetti-topo", "topo/app"))
+SYSLOG_SIBLINGS = (("../confetti-topo", "topo/app"),)
 
 
 def _syslog_core():
@@ -1047,7 +1047,7 @@ def _syslog_core():
 
 @check("R44", "syslog_core: every fixture line parses as expected, a copy pulled from another server is stored once, two local repeats are both kept")
 def _():
-    # syslog_core.py is the SAME file in confetti-butler, confetti-traffic and here. It imports no
+    # syslog_core.py is the SAME file in confetti-traffic and here. It imports no
     # app code, so this check needs no app packages.
     p = []
     sc = _syslog_core()
@@ -1078,17 +1078,17 @@ def _():
     b = sc.insert(db, rec, "2026-11-18 10:00:02")
     need(a and b, "two identical messages this server received itself must both be kept (a real repeat)", p)
     pulled = dict(rec, received_at="2026-11-18T10:00:01Z")
-    need(sc.insert(db, pulled, t0, origin="butler", origin_id=7) is None,
+    need(sc.insert(db, pulled, t0, origin="topo", origin_id=7) is None,
          "a copy pulled from another server within the window must not be stored again", p)
     later = dict(rec, received_at="2026-11-18T10:05:00Z")
-    need(sc.insert(db, later, t0, origin="butler", origin_id=8) is not None,
+    need(sc.insert(db, later, t0, origin="topo", origin_id=8) is not None,
          "the same text five minutes later is a new message and must be stored", p)
-    need(sc.insert(db, later, t0, origin="butler", origin_id=8) is None,
+    need(sc.insert(db, later, t0, origin="topo", origin_id=8) is None,
          "the same (origin, origin_id) twice must store once", p)
     other = sc.parse(rec["raw"], "192.0.2.2")
     need(sc.insert(db, dict(other, received_at="2026-11-18T10:05:01Z"), t0, origin="traffic", origin_id=1) is not None,
          "the same line from a different source IP is a different message", p)
-    first_pull = sc.insert(db, dict(rec, received_at="2026-11-18T11:00:00Z"), t0, origin="butler", origin_id=9)
+    first_pull = sc.insert(db, dict(rec, received_at="2026-11-18T11:00:00Z"), t0, origin="topo", origin_id=9)
     need(first_pull is not None and sc.insert(db, rec, "2026-11-18 11:00:03") is None,
          "a local copy arriving just after a pulled copy must not be stored again", p)
     need(sc.insert(db, dict(rec, received_at="2026-11-18T11:00:02Z"), t0, origin="traffic", origin_id=3) is None,
@@ -1108,7 +1108,7 @@ def _lf_bytes(path):
         return f.read().replace(b"\r\n", b"\n")
 
 
-@check("R44-sync", "syslog_core.py, syslog_pull.py and syslog_cases.json are byte-identical in confetti-butler, confetti-traffic and confetti-topo")
+@check("R44-sync", "syslog_core.py, syslog_pull.py and syslog_cases.json are byte-identical in confetti-traffic and confetti-topo")
 def _():
     p = []
     for repo, appdir in SYSLOG_SIBLINGS:
@@ -1285,7 +1285,7 @@ LIVE = [("T2-live", "real node cycle posts to a live hub"),
         ("R2-live", "timestamps leave the hub as ISO-8601 Z"),
         ("R9-live", "hub still rejects latency_ms 0000"),
         ("R33-live", "group override beats register, drives mesh rules, dies with the endpoint"),
-        ("R34-live", "/endpoints stays a bare array with the keys confetti-butler and confetti-topo import"),
+        ("R34-live", "/endpoints stays a bare array with the keys confetti-topo imports"),
         ("R18-live", "syslog window and filter input"),
         ("R19-live", "null row keeps the batch; bad bodies get 400"),
         ("R21", "/api/time answers 200 on every chrony failure"),
@@ -1293,7 +1293,7 @@ LIVE = [("T2-live", "real node cycle posts to a live hub"),
         ("R22-live", "correlation window round trip"),
         ("R41-live", "/api/changes answers JSON and plain text"),
         ("R29-live", "every hub page answers 200 and links to the others"),
-        ("R43-live", "other Confetti projects' URLs: http(s) only, all-or-nothing, empty clears, nodes' /settings unchanged")]
+        ("R43-live", "other Confetti project's URL: http(s) only, refused values change nothing, empty clears, nodes' /settings unchanged")]
 
 
 def live_checks(base, db, tmp):
@@ -1467,9 +1467,9 @@ def live_checks(base, db, tmp):
             http("DELETE", base + "/endpoints/" + h)
         return p
 
-    @check("R34-live", "/endpoints stays a bare array with the keys confetti-butler and confetti-topo import")
+    @check("R34-live", "/endpoints stays a bare array with the keys confetti-topo imports")
     def _():
-        # confetti-butler and confetti-topo (companion repos) read hostname, ip and
+        # confetti-topo (companion repo) reads hostname, ip and
         # group_name from every element and iterate the body directly; see
         # CLAUDE.md "Companion projects".
         p = []
@@ -1481,7 +1481,7 @@ def live_checks(base, db, tmp):
         need(mine is not None, "the registered node is missing from /endpoints", p)
         if mine is not None:
             need({"hostname", "ip", "group_name"} <= set(mine),
-                 "/endpoints row lost a key butler or topo imports: has %s" % sorted(mine), p)
+                 "/endpoints row lost a key topo imports: has %s" % sorted(mine), p)
         http("DELETE", base + "/endpoints/rt34a")
         return p
 
@@ -1558,28 +1558,25 @@ def live_checks(base, db, tmp):
                     p.append("%s has no nav link to %s" % (path, link))
         return p
 
-    @check("R43-live", "other Confetti projects' URLs: http(s) only, all-or-nothing, empty clears, nodes' /settings unchanged")
+    @check("R43-live", "other Confetti project's URL: http(s) only, refused values change nothing, empty clears, nodes' /settings unchanged")
     def _():
         p = []
         url = base + "/api/settings/links"
         get = lambda: json.loads(http("GET", url)[1])
         nodes_before = http("GET", base + "/settings")[1]
-        need(get() == {"butler": "", "topo": ""}, "nothing set yet: %r" % get(), p)
-        c, b = http("PUT", url, {"butler": " http://butler.example:8080/ "})
-        need(c == 200 and json.loads(b) == {"butler": "http://butler.example:8080", "topo": ""}, "a good URL is trimmed and leaves the other field: %s %s" % (c, b), p)
-        c, b = http("PUT", url, {"topo": "https://topo.example"})
-        need(json.loads(b) == {"butler": "http://butler.example:8080", "topo": "https://topo.example"}, "a partial PUT must keep the other field: %s" % b, p)
+        need(get() == {"topo": ""}, "nothing set yet: %r" % get(), p)
+        c, b = http("PUT", url, {"topo": " https://topo.example:8080/ "})
+        need(c == 200 and json.loads(b) == {"topo": "https://topo.example:8080"}, "a good URL is trimmed and has no trailing slash: %s %s" % (c, b), p)
         before = get()
         for v in ["javascript:alert(1)", "ftp://x.example", "http://", "x.example", "http://u:p@h.example", "http://a b.example",
                   "http://h.example/\"x", "http://h.example:99999", "http://" + "a" * 300, 123, None, ["http://h.example"]]:
-            c, b = http("PUT", url, {"butler": v})
+            c, b = http("PUT", url, {"topo": v})
             need(c == 400 and get() == before and "error" in json.loads(b), "%r must be refused (400) and change nothing: %s" % (v, c), p)
-        c, b = http("PUT", url, {"butler": "http://other.example", "topo": "javascript:x"})
-        need(c == 400 and get() == before, "one bad value must change neither field (all or nothing)", p)
-        for body in ({}, {"unknown": "http://h.example"}, [], "text"):
-            need(http("PUT", url, body)[0] == 400, "body %r must be refused" % (body,), p)
-        c, b = http("PUT", url, {"butler": ""})
-        need(json.loads(b) == {"butler": "", "topo": "https://topo.example"}, "an empty value must clear that field only: %s" % b, p)
+        for body in ({}, {"unknown": "http://h.example"}, {"butler": "http://h.example"}, [], "text"):
+            c, b = http("PUT", url, body)
+            need(c == 400 and get() == before, "body %r must be refused and change nothing" % (body,), p)
+        c, b = http("PUT", url, {"topo": ""})
+        need(json.loads(b) == {"topo": ""}, "an empty value must clear the field: %s" % b, p)
         need(http("POST", url, {})[0] == 405 and http("DELETE", url)[0] == 405, "only GET and PUT", p)
         need(http("GET", base + "/settings")[1] == nodes_before, "the nodes' GET /settings must not change when links are saved", p)
         need("url_" not in http("GET", base + "/settings")[1], "GET /settings leaks a link key", p)
@@ -1670,7 +1667,7 @@ def live_checks(base, db, tmp):
         client = A.app.test_client()
         url = "/api/settings/syslog-pull"
         state = client.get(url).get_json()
-        need(set(state["servers"]) == {"butler", "topo"} and not any(v["pull"] for v in state["servers"].values()),
+        need(set(state["servers"]) == {"topo"} and not any(v["pull"] for v in state["servers"].values()),
              "pulling must be off for every server by default: %r" % state, p)
         r = client.put(url, json={"topo": {"pull": True}})
         need(r.status_code == 400 and conn.execute("SELECT COUNT(*) FROM settings").fetchone()[0] == 0,
@@ -1681,7 +1678,7 @@ def live_checks(base, db, tmp):
         need("s3cret-token" not in client.get(url).get_data(as_text=True) and r.get_json()["servers"]["topo"]["token_set"] is True
              and "s3cret-token" not in r.get_data(as_text=True), "a token must never be returned, only token_set", p)
         for bad in ({"topo": True}, {"topo": {"pull": "yes"}}, {"nope": {"pull": True}}, {}, {"topo": {"pull": True, "x": 1}},
-                    {"topo": {"pull": False}, "butler": {"pull": True}}, {"butler": {"token": "x"}}, {"topo": {"token": "a b"}}, [1], "x"):
+                    {"topo": {"pull": False}, "nope": {"pull": True}}, {"butler": {"pull": True}}, {"butler": {"token": "x"}}, {"topo": {"token": "a b"}}, [1], "x"):
             r = client.put(url, json=bad)
             need(r.status_code == 400, "%r was accepted (%s)" % (bad, r.status_code), p)
         need(client.get(url).get_json()["servers"]["topo"]["pull"] is True, "a rejected PUT changed something (all or nothing)", p)

@@ -173,7 +173,7 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_syslog_host ON syslog(host);
     """)
 
-    # syslog.origin / origin_id / msg_hash: the same table in butler, traffic and topo.
+    # syslog.origin / origin_id / msg_hash: the same table in traffic and topo.
     syslog_core.migrate(db)
 
     # Migration for databases created before received_at existed.
@@ -1267,8 +1267,8 @@ def config_page():
 
 
 # The other Confetti projects: a header shortcut each (static/confetti-links.js). Only a link target in the browser,
-# the hub fetches one only for the syslog pull (syslog_pull.py), opt-in. This app keeps the other two, so there is no url_traffic here.
-LINK_KEYS = {"butler": "url_butler", "topo": "url_topo"}
+# the hub fetches one only for the syslog pull (syslog_pull.py), opt-in. This app keeps the other one, so there is no url_traffic here.
+LINK_KEYS = {"topo": "url_topo"}
 
 
 def clean_link(value):
@@ -1309,7 +1309,7 @@ def api_get_links():
 
 @app.route("/api/settings/links", methods=["PUT"])
 def api_put_links():
-    """Partial update: body {"butler": url, "topo": url}; "" clears one. All or nothing: a bad value changes nothing."""
+    """Partial update: body {"topo": url}; "" clears it. All or nothing: a bad value changes nothing."""
     data = request.get_json(force=True, silent=True)
     if not isinstance(data, dict):
         return jsonify({"error": "Body must be a JSON object"}), 400
@@ -1370,7 +1370,7 @@ def api_get_syslog_pull():
 
 @app.route("/api/settings/syslog-pull", methods=["PUT"])
 def api_put_syslog_pull():
-    """Body {"topo": {"pull": true, "token": "..."}, "butler": {"pull": false}}; each part optional, "token": "" clears.
+    """Body {"topo": {"pull": true, "token": "..."}}; optional, "token": "" clears.
     All or nothing. Switching a server on needs its URL set (Settings > other projects) and starts from its newest
     message; switching it off forgets the cursor."""
     data = request.get_json(force=True, silent=True)

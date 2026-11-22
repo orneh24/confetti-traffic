@@ -35,7 +35,7 @@ Pages: `/` (dashboard), `/syslog`, `/timeline`.
 
 Themes are switched in the page with `javascript_tool`:
 `setTheme('<name>')`. Names are in the `THEMES` list in each page's head
-script (dark, light, monokai, contrast, terminal,
+script (dark, light, monokai, terminal,
 confetti-night, rainbow). **This saves to the browser's localStorage**, which is
 the user's own theme choice: read `localStorage.getItem('confetti-theme')`
 first and put it back with `setTheme(...)` before you finish.

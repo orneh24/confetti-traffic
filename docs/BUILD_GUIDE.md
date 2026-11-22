@@ -387,8 +387,8 @@ click it again to close. An overridden group shows a pencil mark and appears und
 the matrix headers.
 
 **Colour themes.** The menu at the right of each page's header picks one of
-seven themes: Dark, Light, Monokai (military green), High
-Contrast, Terminal green, Confetti Night and Rainbow. **Shuffle**
+six themes: Dark, Light, Monokai (military green),
+Terminal green, Confetti Night and Rainbow. **Shuffle**
 changes to a different theme every 5–10 minutes, with a confetti rain each time. On the dashboard it also picks a random layout each time. The choice is saved in your
 browser and shared by all three pages. Every theme has confetti in its
 header in its own colours, except Rainbow, which has a navy header with a rainbow strip.

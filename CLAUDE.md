@@ -13,15 +13,14 @@ configuration, and deployment belong to a separate project — this system
 treats the network between nodes as an opaque path it tests, not something it
 configures.
 
-**Companion projects: `../confetti-butler`** (separate repo — inventory, IPAM,
-config templates, running-config backup and drift, syslog, alerting) **and
-`../confetti-topo`** (separate repo — the topology map: LLDP, BGP and OSPF
-neighbors, split out of butler on 2026-10-14). Both import `GET /endpoints`
-(they read `hostname`, `ip` and `group_name`; the group becomes the device's
-`site`, so a group set on the hub flows into it), both web UIs copy this hub's
-look by hand (themes, layouts, the MS-DOS keyboard layer, `confettiBlast`, Shuffle, the right-click menu `ctxmenu.js`), and butler's syslog receiver
+**Companion project: `../confetti-topo`** (separate repo — the topology map (LLDP, BGP and OSPF neighbors), plus
+inventory, IPAM, config templates, running-config backup and drift, syslog and alerting; it absorbed the former
+confetti-butler on 2026-11-21). It imports `GET /endpoints`
+(it reads `hostname`, `ip` and `group_name`; the group becomes the device's
+`site`, so a group set on the hub flows into it), its web UI copies this hub's
+look by hand (themes, layouts, the MS-DOS keyboard layer, `confettiBlast`, Shuffle, the right-click menu `ctxmenu.js`), and its syslog receiver
 is a port of ours. Keep `/endpoints` a bare array with those keys. The
-`confetti-interop-checker` agent (user level) checks all three sides.
+`confetti-interop-checker` agent (user level) checks both sides.
 
 ## Architecture
 
@@ -488,10 +487,8 @@ On a hub, `confettictl-update` first backs up the database (`sqlite3 .backup` in
 hub never comes up (or the build fails), puts the old code back by itself and exits 1.
 `confettictl-update --rollback` does the same by hand. The database is not restored
 on a rollback (new versions only add tables and columns); `/etc/confetti-release` is
-written only once the hub is healthy. Ported from confetti-butler's `butler-update.sh`
-(tested with a fake `rc-service` in an `alpine:3.20` container: good update, unhealthy
-start, build failure, `--rollback`, closed stdin); the other way round, butler took this
-script's `-y`/confirm. A node has no database and none of this.
+written only once the hub is healthy. Tested with a fake `rc-service` in an `alpine:3.20` container: good update, unhealthy
+start, build failure, `--rollback`, closed stdin; confetti-topo's update script follows the same flow. A node has no database and none of this.
 
 Afterwards the hub restarts; a configured node re-runs `confettictl-setup.sh`. Update
 the hub first, then push the nodes: they can only get what the hub's bundle
@@ -662,12 +659,12 @@ hub/
   serve.py            — production entrypoint (reads HUB_PORT at runtime)
   confettictl-run.sh              — foreground launcher for debugging
   app/                — Flask API (app.py, config.py, pathchange.py, changes.py,
-                        syslog_server.py, syslog_core.py = syslog parser and insert (the SAME file as in butler and topo),
-                        syslog_pull.py = pulls syslog from the other servers (the SAME file as in butler and topo),
+                        syslog_server.py, syslog_core.py = syslog parser and insert (the SAME file as in topo),
+                        syslog_pull.py = pulls syslog from the other server (the SAME file as in topo),
                         nodemgmt.py = push-update worker,
                         bandwidth.py = on-demand bandwidth test)
   templates/          — dashboard.html, syslog.html, timeline.html, config.html (the Settings page at `/config`, scaffold copied from syslog.html: the two URL fields; R31 compares it too). Colour themes (Dark, Light,
-                        Monokai, High Contrast, Terminal green, Confetti Night, Rainbow) are inline in ALL THREE pages: a THEMES list in the
+                        Monokai, Terminal green, Confetti Night, Rainbow) are inline in ALL THREE pages: a THEMES list in the
                         head <script> plus one :root[data-theme=NAME] block each, shared
                         localStorage key confetti-theme. A "Shuffle" option (a mode, not a palette) rotates them every 5-10 min; its current pick and next-change time live in a second key, confetti-theme-shuffle, so all pages stay in step. On the dashboard the same state carries a `layout` pick (random, not the current one, not saved as the viewer's layout choice; a hand pick while shuffling updates it): shuffleStep calls window.onShuffleStep(st), which only dashboard.html defines. Each timer-driven change also fires confettiBlast() (rain only; not on page load or a selector pick). Adding or changing a theme means
                         editing all three pages. Each page also has one shared header-confetti rule (an SVG
@@ -692,9 +689,9 @@ hub/
                         MS-DOS (msdos: blue screen, the 16 DOS colours as solid blocks that keep their letter) has two colour variants, DOS Blue and Neon Green (`data-variant="green"` on `:root`, a header dropdown shown only in MS-DOS, saved in `confetti-dos-variant`); it is the own-colours pattern, one shared block driven by --crt-* palettes,
                         with a blue-only override block after it (`:not([data-variant="green"])`). MS-DOS alone (both variants) adds a keyboard layer (.dos-menubar, .dos-fkeys, .dos-help and a matrix cursor; one keydown handler that returns at once in any other layout, reusing onCellClick, refresh(), setCollapsed and the detail-close click). The CRT palettes are one hue, so status must not rest on colour: a pass is a green boxed cell, a fail is an inverted solid block (red, in the matrix), slow is
                         bright + underlined. Local fonts only (a hub may be offline), except VT323 (SIL OFL), bundled in static/fonts/ and loaded by an @font-face in dashboard.html.
-  static/             — fonts/, plus ctxmenu.js + ctxmenu.css: right-click menus for the dashboard, syslog, timeline and Settings (/config) pages; each page also has a `page` menu (`data-ctx="page"` on `<html>`, returns null over the header, nav, taskbar and footer) for empty space, and the dashboard's hub-reach cells, Test Detail panel, Hub Health badges and excluded/self matrix cells have their own (outside the head theme block that R31 compares). A row carries data-ctx="<type>" and the page calls ctxMenu.register(type, fn) inside its own function; one document-level listener finds the row. Fill data-* attributes with ctxMenu.attr(), not esc(). Destructive items are last and red and always ask confirm() (a menu item that clicks a row button relies on that button's own confirm). The browser's own menu stays on inputs and selected text. R42 checks it. The SAME ctxmenu.js is in confetti-butler and confetti-topo; copy it by hand and keep the three identical
-  static/confetti-links.js — the header shortcut buttons to the other Confetti projects (Butler and Topo URLs from the Settings page, `GET /api/settings/links`); every page has `<span id="confetti-links"></span>` in its header `.status` and loads it; opens in a new tab; the SAME file as in confetti-butler and confetti-topo, copy it by hand and keep the three identical (R43)
-  static/dashgrid.js  — the dashboard's movable/resizable boxes (main column only; the sidebar stays fixed): drag a `.section[data-box]` of `.main-grid` by its header, drag the corner grip to resize (width snaps to grid columns, height free), "Reset layout" button (placed under the boxes by `.main-col > .dg-bar { order }`); saved per browser in `confetti-dashboard-layout`. `.page-footer` must stay outside `.main-grid` (the script appends boxes to the end of their container). Default look = every box full row, Recent Changes + Test Detail half each; zebra shading is by `data-box` id. Injects its own CSS. The SAME file is in confetti-topo and confetti-butler; copy it by hand and keep the three identical
+  static/             — fonts/, plus ctxmenu.js + ctxmenu.css: right-click menus for the dashboard, syslog, timeline and Settings (/config) pages; each page also has a `page` menu (`data-ctx="page"` on `<html>`, returns null over the header, nav, taskbar and footer) for empty space, and the dashboard's hub-reach cells, Test Detail panel, Hub Health badges and excluded/self matrix cells have their own (outside the head theme block that R31 compares). A row carries data-ctx="<type>" and the page calls ctxMenu.register(type, fn) inside its own function; one document-level listener finds the row. Fill data-* attributes with ctxMenu.attr(), not esc(). Destructive items are last and red and always ask confirm() (a menu item that clicks a row button relies on that button's own confirm). The browser's own menu stays on inputs and selected text. R42 checks it. The SAME ctxmenu.js is in confetti-topo; copy it by hand and keep the two identical
+  static/confetti-links.js — the header shortcut buttons to the other Confetti projects (the Topo URL from the Settings page, `GET /api/settings/links`); every page has `<span id="confetti-links"></span>` in its header `.status` and loads it; opens in a new tab; the SAME file as in confetti-topo, copy it by hand and keep the two identical (R43)
+  static/dashgrid.js  — the dashboard's movable/resizable boxes (main column only; the sidebar stays fixed): drag a `.section[data-box]` of `.main-grid` by its header, drag the corner grip to resize (width snaps to grid columns, height free), "Reset layout" button (placed under the boxes by `.main-col > .dg-bar { order }`); saved per browser in `confetti-dashboard-layout`. `.page-footer` must stay outside `.main-grid` (the script appends boxes to the end of their container). Default look = every box full row, Recent Changes + Test Detail half each; zebra shading is by `data-box` id. Injects its own CSS. The SAME file is in confetti-topo; copy it by hand and keep the two identical
   agent/              — scripts served to nodes (created at build time)
   bundle/             — node bundle + RELEASE (created at build time)
   services/           — firstboot.initd, confettictl-login-setup.sh (also prints the installed build)
@@ -881,19 +878,19 @@ These were live bugs that a review caught; each has a comment at the site.
    The probe client never issues `DATA` either, so even a real external
    relay registered as a static target can't have mail sent through it.
 22. **The URLs of the other Confetti projects are only link targets: http(s) with a host, validated on write, fetched only by the syslog pull.** The Settings
-   page `/config` (not `/settings`: that is the JSON the nodes pull and must not change) keeps the Butler and Topo URLs (`settings` keys
-   `url_butler` / `url_topo`, `GET|PUT /api/settings/links`); a value that is not http:// or https:// with a host, or has a user:password,
+   page `/config` (not `/settings`: that is the JSON the nodes pull and must not change) keeps the Topo URL (`settings` key
+   `url_topo`, `GET|PUT /api/settings/links`); a value that is not http:// or https:// with a host, or has a user:password,
    whitespace or markup characters, is a 400 and changes nothing (all or nothing); an empty value clears. `static/confetti-links.js` (the same
-   file as in confetti-butler and confetti-topo) turns them into small header buttons that open in a new tab with `noopener`, re-checks http(s)
+   file as in confetti-topo) turns them into small header buttons that open in a new tab with `noopener`, re-checks http(s)
    and never builds HTML from the URL. The hub connects to one only for the syslog pull (constraint 24), opt-in per server, and never otherwise. Checked by R43 and R43-live.
-23. **Syslog is parsed and stored by one shared file, `hub/app/syslog_core.py`, the same in confetti-butler, confetti-traffic and confetti-topo.**
-    Copy it by hand and keep the three byte-identical, with `dev/samples/syslog_cases.json` (a line in, the fields out; also identical).
+23. **Syslog is parsed and stored by one shared file, `hub/app/syslog_core.py`, the same in confetti-traffic and confetti-topo.**
+    Copy it by hand and keep the two byte-identical, with `dev/samples/syslog_cases.json` (a line in, the fields out; also identical).
     `parse()` never raises and never drops a line (RFC 3164 and Cisco, plus RFC 5424). `insert()` is the only way a row is stored, and it
     never commits. It skips a message when its `(origin, origin_id)` is already stored, or when a copy was pulled from another server within `dedup_s` (`syslog.origin`, `origin_id`,
     `msg_hash`); two copies this server received itself are both kept (a link that flaps twice is two messages). Pulling from another
     server is constraint 24. Checked by R44 and R44-sync.
 24. **Syslog may be pulled from the other Confetti servers, opt-in per server, and only their own device messages.** The Settings page (`GET|PUT /api/settings/syslog-pull`,
-    `hub/app/syslog_pull.py`, the same file as in confetti-butler and confetti-topo, `HUB_SYSLOG_PULL_INTERVAL_S` 15) has a switch per server (`syslog_pull_<name>`, off by default; it needs
+    `hub/app/syslog_pull.py`, the same file as in confetti-topo, `HUB_SYSLOG_PULL_INTERVAL_S` 15) has a switch per server (`syslog_pull_<name>`, off by default; it needs
     the URL from constraint 22 first). Switching on starts from the other server's newest message, never its history (`syslog_cursor_<name>`; a different URL or an id that goes
     backwards resets it). The request is `GET <url>/api/syslog?after_id=N&origin=local` only, http(s) only, no redirect followed, a server that does not answer with
     `X-Syslog-Max-Id` is refused, every field is length-limited text and `msg_hash` is recomputed here. `origin=local` is what stops a message travelling around a loop; the hub's own

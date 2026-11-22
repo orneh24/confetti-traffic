@@ -14,7 +14,6 @@ var THEMES = [
     ['dark', 'Dark'],
     ['light', 'Light'],
     ['monokai', 'Monokai'],
-    ['contrast', 'High Contrast'],
     ['terminal', 'Terminal green'],
     ['confetti-night', 'Confetti Night'],
     ['rainbow', 'Rainbow'],
@@ -230,26 +229,6 @@ function confettiBlast(btn) {
     --blue:      #66d9ef;
     --gray:      #9a9f7c;
     --cyan:      #66d9ef;
-}
-/* High Contrast — pure black, full-strength colours, for legibility */
-:root[data-theme="contrast"] {
-    --bg:        #000000;
-    --bg-card:   #0a0a0a;
-    --bg-hover:  #1a1a1a;
-    --bg-muted:  #1a1a1a;
-    --border:    #ffffff;
-    --row-line:  rgba(255,255,255,.35);
-    --text:      #ffffff;
-    --text-dim:  #e0e0e0;
-    --green:     #00ff66;
-    --green-bg:  #003318;
-    --red:       #ff3b3b;
-    --red-bg:    #3a0000;
-    --yellow:    #ffdd00;
-    --yellow-bg: #332b00;
-    --blue:      #4db8ff;
-    --gray:      #c8c8c8;
-    --cyan:      #00ffff;
 }
 /* Terminal green — mostly one hue by design; red and amber stay distinct so failures still read */
 :root[data-theme="terminal"] {
@@ -537,7 +516,6 @@ td.sevcol { white-space: nowrap; }
     <h2>Other Confetti projects</h2>
     <form id="links-form" autocomplete="off" onsubmit="saveLinks(); return false;">
         <div class="grid">
-            <label for="l-butler" data-ctx="link" data-field="butler">Confetti Butler URL</label><input type="text" id="l-butler" name="butler" placeholder="http://confetti-butler.example">
             <label for="l-topo" data-ctx="link" data-field="topo">Confetti Topo URL</label><input type="text" id="l-topo" name="topo" placeholder="http://confetti-topo.example">
         </div>
         <div class="hint">A small button for each URL that is filled in appears at the right of the top menu on every page and opens that project in a new tab. Only http:// or https://. Leave a field empty to remove its button. The hub connects to one of these addresses only for the syslog pull below, and only if you switch that on.</div>
@@ -566,7 +544,7 @@ td.sevcol { white-space: nowrap; }
 
 <script>
 (function() {
-    var NAMES = {butler: "Confetti Butler", topo: "Confetti Topo"};
+    var NAMES = {topo: "Confetti Topo"};
     var msg = document.getElementById("sp-msg");
     function load() {
         fetch("/api/settings/syslog-pull").then(function(r) { return r.json(); }).then(function(s) {
@@ -627,14 +605,13 @@ td.sevcol { white-space: nowrap; }
     function say(ok, text) { msg.className = "msg " + (ok ? "ok" : "err"); msg.textContent = text; }
     function load() {
         fetch("/api/settings/links").then(function(r) { return r.json(); }).then(function(l) {
-            form.butler.value = l.butler || "";
             form.topo.value = l.topo || "";
         });
     }
     window.saveLinks = function() {
         fetch("/api/settings/links", {
             method: "PUT", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({butler: form.butler.value, topo: form.topo.value})
+            body: JSON.stringify({topo: form.topo.value})
         }).then(function(r) {
             return r.json().then(function(d) { return {ok: r.ok, d: d}; });
         }).then(function(res) {
@@ -652,7 +629,7 @@ td.sevcol { white-space: nowrap; }
     // The label is the target: text fields keep the browser's own menu.
     ctxMenu.register('link', function(el) {
         var field = el.getAttribute("data-field"), url = urlOf(field);
-        return {title: (field === "butler" ? "Confetti Butler" : "Confetti Topo") + " URL", items: [
+        return {title: "Confetti Topo URL", items: [
             {label: "Open in new tab", action: function() {
                 if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener");
             }, disabled: !/^https?:\/\//i.test(url)},
