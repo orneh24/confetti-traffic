@@ -89,7 +89,7 @@ derive_subnet() {
 
 # -------------------------------------------------------------------
 # Check an IP/prefix and print the subnet's first address (network + 1),
-# the default offered for the gateway: 172.16.200.214/16 -> 172.16.0.1.
+# the default offered for the gateway: 10.99.200.214/16 -> 10.99.0.1.
 # Exits 1 if the input is not IP/prefix. Prints nothing for /31 and /32,
 # which have no separate gateway address. Same integer method as
 # derive_subnet above. confettictl-hub-setup.sh has an identical copy.
