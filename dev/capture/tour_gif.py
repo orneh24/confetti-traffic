@@ -51,11 +51,11 @@ def frames(pg):
     yield "Timeline: paths start failing after a router change"
     scrub(pg, 1000)
     yield "Timeline: incidents, with nearby syslog"
-    pg.evaluate("localStorage.setItem('confetti-theme', 'confetti-night')")
+    pg.evaluate("localStorage.setItem('confetti-theme', 'rainbow')")
     pg.goto(HUB + "/")
     pg.wait_for_selector(FAILING)
     pg.wait_for_timeout(1200)
-    yield "Seven colour themes, each with its own confetti; this is Confetti Night"
+    yield "Five colour themes; this is Rainbow"
     pg.evaluate("localStorage.removeItem('confetti-theme')")
 
 

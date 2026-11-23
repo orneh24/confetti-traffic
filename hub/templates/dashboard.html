@@ -16,7 +16,6 @@ var THEMES = [
     ['light', 'Light'],
     ['monokai', 'Monokai'],
     ['terminal', 'Terminal green'],
-    ['confetti-night', 'Confetti Night'],
     ['rainbow', 'Rainbow'],
 ];
 // "Shuffle" is a mode, not a palette: it shows a random palette from THEMES
@@ -269,30 +268,6 @@ function confettiBlast(btn) {
 }
 /* The bright --green is a text colour here; as a fill under the cells' white letters it was unreadable. */
 :root[data-theme="terminal"] .indicator.pass { background: #14803a; }
-/* Confetti Night — navy with a gold accent */
-:root[data-theme="confetti-night"] {
-    --bg:        #0f1222;
-    --bg-card:   #171c34;
-    --bg-hover:  #1e2442;
-    --bg-muted:  #20264a;
-    --bg-code:   #0a0d1a;
-    --stripe:    #272e50;
-    --border:    #2b3256;
-    --border-soft: #20264a;
-    --badge-bg:  #1d2346;
-    --badge-border: #333b6b;
-    --text:      #e8eaf6;
-    --text-dim:  #a3a9cf;
-    --green:     #2fbf71;
-    --green-bg:  #0f2d20;
-    --red:       #ff5d73;
-    --red-bg:    #3a1420;
-    --yellow:    #ffb347;
-    --yellow-bg: #33240f;
-    --gray:      #3a4170;
-    --blue:      #4cc9f0;
-    --cyan:      #ffd166;
-}
 /* Rainbow — pale lavender page, white boxes with bold dark borders, a navy header with a rainbow strip,
    a different colour on each table column header. The structure rules below skip Retro 95 and the CRT
    layouts, which bring their own colours. */

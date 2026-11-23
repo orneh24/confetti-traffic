@@ -28,7 +28,7 @@ A Timeline page groups failures, route changes, syslog and bandwidth tests into 
 ![Animated tour of the hub's Dashboard, Syslog and Timeline pages](docs/img/hub-pages.gif)
 
 *The three hub pages: Dashboard, Syslog and Timeline, then the dashboard in
-the Confetti Night theme. Mock data from a synthetic 6-node mesh, not a real
+the Rainbow theme. Mock data from a synthetic 6-node mesh, not a real
 lab. See [Running the hub locally](#running-the-hub-locally).*
 
 ## Tests
