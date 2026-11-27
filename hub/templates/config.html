@@ -45,7 +45,9 @@ function shuffleStep(fromTimer) {
         var avoid = st && themeKnown(st.theme) ? st.theme : currentTheme();
         var pick;
         do { pick = THEMES[Math.floor(Math.random() * THEMES.length)][0]; } while (pick === avoid);
-        st = { theme: pick, until: now + SHUFFLE_MIN_MS + Math.random() * (SHUFFLE_MAX_MS - SHUFFLE_MIN_MS) };
+        // The layout shown last is kept for the next layout pick, which must differ from it.
+        var last = st ? st.layout || st.last : undefined;
+        st = { theme: pick, until: now + SHUFFLE_MIN_MS + Math.random() * (SHUFFLE_MAX_MS - SHUFFLE_MIN_MS), last: last };
         try { localStorage.setItem('confetti-theme-shuffle', JSON.stringify(st)); } catch (e) {}
     }
     applyTheme(st.theme);

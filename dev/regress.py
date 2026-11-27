@@ -965,6 +965,82 @@ def _():
     return p
 
 
+@check("R46", "Shuffle picks layouts fairly: on the timer and on a page load after the pick ran out, every layout can come up (the viewer's own too) and never the last one again")
+def _():
+    import shutil, subprocess, tempfile
+    node = shutil.which("node")
+    if not node:
+        raise Skip("node not found")
+    dash = read(DASH)
+    head = re.search(r"<head>.*?<script>\n(.*?)</script>", dash, re.S)
+    late = [s for s in re.findall(r"<script>(.*?)</script>", dash, re.S) if "function shuffleLayout" in s]
+    if not head or len(late) != 1:
+        return ["dashboard.html: the head script or the shuffleLayout script was not found"]
+    script = "const head = %s;\nconst late = %s;\n" % (json.dumps(head.group(1)), json.dumps(late[0])) + r"""
+const vm = require('vm');
+const bad = [];
+let now = 1e12;
+const KEY = 'confetti-theme-shuffle';
+function openPage(store, layouts) {
+  const attrs = {};
+  let timer = null;
+  const quiet = () => {};
+  const el = { getAttribute: (k) => (k in attrs ? attrs[k] : null), setAttribute: (k, v) => { attrs[k] = v; },
+               removeAttribute: (k) => { delete attrs[k]; } };
+  const ctx = {
+    document: { documentElement: el, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [],
+                addEventListener: quiet, dispatchEvent: quiet, body: null, readyState: 'loading' },
+    localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); },
+                    removeItem: (k) => { delete store[k]; } },
+    matchMedia: () => ({ matches: false, addEventListener: quiet }),
+    setTimeout: (fn) => { timer = fn; return 1; }, clearTimeout: quiet, setInterval: quiet, Event: function () {},
+    Date: { now: () => now }, Math, JSON, console, fetch: () => new Promise(quiet), addEventListener: quiet,
+    location: {}, navigator: {},
+  };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(head, ctx);
+  if (layouts && late) { vm.runInContext(late, ctx); }
+  return { layout: () => attrs['data-layout'] || 'classic', fire: () => { const f = timer; timer = null; f(); } };
+}
+const expire = (store) => { now = JSON.parse(store[KEY]).until + 1; };
+function judge(name, seen, repeats) {
+  ['classic', 'modern', 'retro95', 'msdos'].forEach((l) => { if (!seen[l]) { bad.push(name + ': ' + l + ' is never picked'); } });
+  if (repeats) { bad.push(name + ': the same layout twice in a row, ' + repeats + ' times'); }
+}
+function run(name, own, step) {
+  const store = { 'confetti-theme': 'shuffle', 'confetti-layout': own };
+  let page = openPage(store, true), was = page.layout(), repeats = 0;
+  const seen = {};
+  for (let i = 0; i < 600; i++) {
+    page = step(store, page);
+    const shown = page.layout();
+    seen[shown] = true;
+    if (shown === was) { repeats++; }
+    was = shown;
+  }
+  judge(name, seen, repeats);
+}
+run('timer', 'classic', (store, page) => { expire(store); page.fire(); return page; });
+for (const own of ['classic', 'msdos']) {
+  run('page load, own layout ' + own, own, (store) => { expire(store); return openPage(store, true); });
+  // two picks are made on pages that show no layouts, then a page that does is opened
+  run('pick made on a page without layouts, own layout ' + own, own,
+      (store) => { expire(store); openPage(store, false); expire(store); openPage(store, false); return openPage(store, true); });
+}
+console.log(JSON.stringify(bad));
+"""
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as t:
+        t.write(script)
+    try:
+        r = subprocess.run([node, t.name], capture_output=True, text=True, timeout=120)
+    finally:
+        os.unlink(t.name)
+    if r.returncode:
+        return ["the dashboard's theme scripts did not run: " + r.stderr.strip()[:300]]
+    return json.loads(r.stdout.strip().splitlines()[-1])
+
+
 @check("R32", "flapping: same threshold on dashboard and node, flap_note never fails a cycle")
 def _():
     p = []

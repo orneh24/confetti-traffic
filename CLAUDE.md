@@ -897,3 +897,8 @@ These were live bugs that a review caught; each has a comment at the site.
     path-change rows (`pathchange.SOURCE_IP` + `HOST`) are not device syslog and are never served to a puller. Rows go through `syslog_core.insert` (constraint 23). A failed request stores nothing
     and keeps the cursor; one server failing never stops the other. The topo token (`syslog_token_topo`) is write-only: sent in an `Authorization` header, never in a URL, never
     returned by a GET. Checked by R45.
+
+25. **A Shuffle layout pick avoids the last shuffled layout, never just the one on screen.** During a page load the dashboard shows
+    the viewer's own saved layout, so avoiding it meant that layout was never picked and the last one could repeat. Only the dashboard
+    picks layouts, but every page picks themes, so `shuffleStep` (the same code in all four pages) keeps the last layout as `last`
+    through picks made on the other pages. The same fix is in confetti-topo's `static/theme.js`. Checked by R46.
